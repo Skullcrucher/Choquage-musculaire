@@ -18,9 +18,11 @@ const TABS = {
 const view = document.getElementById("view");
 const topbarTitle = document.getElementById("topbar-title");
 let activeTab = localStorage.getItem("fonte_last_tab") || "seance";
+let renderToken = 0;
 
 async function switchTab(tab) {
   activeTab = tab;
+  const myToken = ++renderToken;
   localStorage.setItem("fonte_last_tab", tab);
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   topbarTitle.textContent = TABS[tab].label;
@@ -29,7 +31,9 @@ async function switchTab(tab) {
     await TABS[tab].render(view);
   } catch (e) {
     console.error(e);
-    view.innerHTML = `<div class="empty-state">Erreur de chargement.<br><span class="muted">${e.message}</span></div>`;
+    if (myToken === renderToken) {
+      view.innerHTML = `<div class="empty-state">Erreur de chargement.<br><span class="muted">${e.message}</span></div>`;
+    }
   }
 }
 

@@ -153,43 +153,56 @@ export async function listAllSets(max = 5000) {
 // -> un même fichier réimporté (ou un export qui chevauche l'historique)
 // n'écrira jamais deux fois la même série : on vérifie l'existence du
 // document avant d'écrire, et on ne le remplace pas s'il existe déjà.
+//
+// Étapes : 1) résoudre les séances uniques (peu nombreuses, en série),
+// 2) créer les exercices manquants (peu nombreux, en série),
+// 3) écrire les séries par lots concurrents (nombreuses, en parallèle)
+// pour ne pas saturer la connexion pendant de longues minutes.
+async function runPool(items, concurrency, worker) {
+  let cursor = 0;
+  async function next() {
+    while (cursor < items.length) {
+      const i = cursor++;
+      await worker(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, next));
+}
+
 export async function importRows(rows, onProgress = () => {}) {
   const stats = { workoutsCreated: 0, setsImported: 0, setsSkippedDuplicate: 0, errors: 0 };
-  const workoutCache = new Map(); // clé titre|start_time -> workoutId
-  const exerciseSeen = new Set(); // évite de revérifier le même exercice à chaque ligne
 
-  let i = 0;
-  for (const row of rows) {
-    i++;
+  // ---- 1) séances uniques ----
+  const workoutKeys = [...new Set(rows.map(r => `${r.title}|${r.start_time_iso}`))];
+  const workoutMeta = new Map(rows.map(r => [`${r.title}|${r.start_time_iso}`, r]));
+  const workoutCache = new Map();
+  for (const key of workoutKeys) {
+    const r = workoutMeta.get(key);
+    const workoutHash = "w_" + (await sha1(key));
+    const wRef = doc(dbase, "workouts", workoutHash);
+    const wSnap = await getDoc(wRef);
+    if (!wSnap.exists()) {
+      await setDoc(wRef, {
+        title: r.title, start_time: r.start_time_iso, end_time: r.end_time_iso || null,
+        notes: r.description || "", created_manually: false, imported_at: new Date().toISOString()
+      });
+      stats.workoutsCreated++;
+    }
+    workoutCache.set(key, workoutHash);
+  }
+
+  // ---- 2) exercices uniques ----
+  const exerciseNames = new Map(rows.map(r => [r.exercise_title, r.muscle_group_guess]));
+  for (const [name, group] of exerciseNames) {
+    await upsertExercise(name, group, "", false);
+  }
+
+  // ---- 3) séries, par lots concurrents ----
+  let done = 0;
+  await runPool(rows, 15, async (row) => {
     try {
       const workoutKey = `${row.title}|${row.start_time_iso}`;
-      let workoutId = workoutCache.get(workoutKey);
-
-      if (!workoutId) {
-        const workoutHash = "w_" + (await sha1(workoutKey));
-        const wRef = doc(dbase, "workouts", workoutHash);
-        const wSnap = await getDoc(wRef);
-        if (!wSnap.exists()) {
-          await setDoc(wRef, {
-            title: row.title,
-            start_time: row.start_time_iso,
-            end_time: row.end_time_iso || null,
-            notes: row.description || "",
-            created_manually: false,
-            imported_at: new Date().toISOString()
-          });
-          stats.workoutsCreated++;
-        }
-        workoutId = workoutHash;
-        workoutCache.set(workoutKey, workoutId);
-      }
-
-      // s'assure que l'exercice existe dans la bibliothèque (une seule vérification par exercice)
-      if (!exerciseSeen.has(row.exercise_title)) {
-        exerciseSeen.add(row.exercise_title);
-        await upsertExercise(row.exercise_title, row.muscle_group_guess, "", false);
-      }
-
+      const workoutId = workoutCache.get(workoutKey);
       const setKey = `${workoutKey}|${row.exercise_title}|${row.set_index}`;
       const setHash = "s_" + (await sha1(setKey));
       const sRef = doc(dbase, "workouts", workoutId, "sets", setHash);
@@ -213,11 +226,13 @@ export async function importRows(rows, onProgress = () => {}) {
         stats.setsImported++;
       }
     } catch (e) {
-      console.error("Erreur import ligne", i, e);
+      console.error("Erreur import série", e);
       stats.errors++;
     }
-    if (i % 25 === 0) onProgress(i, rows.length, stats);
-  }
+    done++;
+    if (done % 25 === 0) onProgress(done, rows.length, stats);
+  });
+
   onProgress(rows.length, rows.length, stats);
   return stats;
 }

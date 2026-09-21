@@ -51,26 +51,29 @@ export async function renderReglages(container) {
     resultEl.innerHTML = "";
     try {
       const stats = await importCsvFile(file, (done, total) => {
+        if (!fill.isConnected) return; // l'utilisateur a changé d'onglet, on n'écrit plus dans le DOM
         const pct = Math.round((done / total) * 100);
         fill.style.width = pct + "%";
         text.textContent = `${done} / ${total} lignes traitées…`;
       });
-      progressWrap.style.display = "none";
-      resultEl.innerHTML = `
-        <p style="color:var(--green)">Import terminé.</p>
-        <p class="muted">
-          ${stats.workoutsCreated} séance(s) créée(s) ·
-          ${stats.setsImported} série(s) importée(s) ·
-          ${stats.setsSkippedDuplicate} doublon(s) ignoré(s)
-          ${stats.errors ? ` · ${stats.errors} erreur(s)` : ""}
-        </p>
-      `;
+      if (resultEl.isConnected) {
+        progressWrap.style.display = "none";
+        resultEl.innerHTML = `
+          <p style="color:var(--green)">Import terminé.</p>
+          <p class="muted">
+            ${stats.workoutsCreated} séance(s) créée(s) ·
+            ${stats.setsImported} série(s) importée(s) ·
+            ${stats.setsSkippedDuplicate} doublon(s) ignoré(s)
+            ${stats.errors ? ` · ${stats.errors} erreur(s)` : ""}
+          </p>
+        `;
+      }
       invalidateStatsCache();
       toast("Import terminé");
-      renderExerciseLib(container);
+      renderExerciseLib(container); // no-op silencieux si l'onglet a changé (voir garde ci-dessous)
     } catch (err) {
-      progressWrap.style.display = "none";
-      resultEl.innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
+      if (progressWrap.isConnected) progressWrap.style.display = "none";
+      if (resultEl.isConnected) resultEl.innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
     }
     e.target.value = "";
   };
@@ -83,6 +86,7 @@ export async function renderReglages(container) {
 async function renderExerciseLib(container) {
   const exercises = await db.listExercises();
   const wrap = container.querySelector("#exercise-lib");
+  if (!wrap) return; // l'utilisateur a changé d'onglet pendant le chargement
   wrap.innerHTML = exercises.length === 0
     ? `<p class="muted">Aucun exercice pour l'instant.</p>`
     : exercises.map(ex => `
