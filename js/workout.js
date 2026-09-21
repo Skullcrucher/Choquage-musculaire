@@ -29,7 +29,7 @@ export async function renderSeance(container) {
     }
     renderActiveWorkout(container);
   } else {
-    renderStartScreen(container);
+    await renderStartScreen(container);
   }
 }
 
