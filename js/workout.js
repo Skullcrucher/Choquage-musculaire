@@ -3,20 +3,14 @@
 // ============================================================
 import * as db from "./db.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce } from "./utils.js";
+import { getExercises, getRoutines, invalidate } from "./cache.js";
 
-let exerciseCache = null;
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
 let restTimerInterval = null;
 let restTimerEnd = null;
 
 const LS_KEY = "fonte_active_workout_id";
 const LS_STATE_KEY = "fonte_active_workout_state";
-
-async function getExerciseCache(force = false) {
-  if (exerciseCache && !force) return exerciseCache;
-  exerciseCache = await db.listExercises();
-  return exerciseCache;
-}
 
 function saveLocalState() {
   if (currentWorkout) localStorage.setItem(LS_STATE_KEY, JSON.stringify(currentWorkout));
@@ -40,7 +34,7 @@ export async function renderSeance(container) {
 }
 
 async function renderStartScreen(container) {
-  const routines = await db.listRoutines();
+  const routines = await getRoutines();
   container.innerHTML = `
     <h1 class="section-title">Séance</h1>
     <button class="btn btn-primary" id="start-empty">+ Démarrer une séance vide</button>
@@ -182,7 +176,7 @@ function setRowHtml(s, exIdx, sIdx) {
 }
 
 async function openAddExerciseModal() {
-  const exercises = await getExerciseCache();
+  const exercises = await getExercises();
   const groups = [...new Set(exercises.map(e => e.muscle_group))].sort();
   const modal = openModal(`
     <h3>Ajouter un exercice</h3>
@@ -201,7 +195,7 @@ async function openAddExerciseModal() {
     const existing = exercises.find(e => e.name.toLowerCase() === name.toLowerCase());
     if (!existing) {
       await db.upsertExercise(name, group);
-      await getExerciseCache(true);
+      invalidate("exercises");
     }
     currentWorkout.exercises.push({
       exercise_title: existing ? existing.name : name,
@@ -251,6 +245,7 @@ async function finishWorkout() {
   await db.updateWorkout(currentWorkout.id, { end_time: new Date().toISOString() });
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
+  invalidate("workouts");
   clearInterval(restTimerInterval);
   restTimerEnd = null;
   document.querySelectorAll(".rest-timer").forEach(el => el.remove());
@@ -266,6 +261,7 @@ async function cancelWorkout() {
   await db.deleteWorkout(currentWorkout.id);
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
+  invalidate("workouts");
   clearInterval(restTimerInterval);
   restTimerEnd = null;
   document.querySelectorAll(".rest-timer").forEach(el => el.remove());

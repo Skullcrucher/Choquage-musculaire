@@ -1,10 +1,11 @@
-const CACHE_NAME = "fonte-cache-v3";
+const CACHE_NAME = "fonte-cache-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
   "./css/style.css",
   "./js/app.js",
+  "./js/cache.js",
   "./js/db.js",
   "./js/firebase-config.js",
   "./js/import.js",
@@ -16,6 +17,7 @@ const APP_SHELL = [
   "./js/utils.js",
   "./js/vendor/chart.umd.js",
   "./js/vendor/papaparse.min.js",
+  "./js/exercises-seed.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
 ];

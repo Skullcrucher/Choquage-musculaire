@@ -6,6 +6,8 @@ import { importCsvFile } from "./import.js";
 import { toast, openModal, closeModal } from "./utils.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { invalidateStatsCache } from "./stats.js";
+import { getExercises, invalidate } from "./cache.js";
+import { EXERCISE_SEED } from "./exercises-seed.js";
 
 export async function renderReglages(container) {
   container.innerHTML = `
@@ -24,6 +26,9 @@ export async function renderReglages(container) {
 
     <div class="card">
       <div class="card-title">Bibliothèque d'exercices</div>
+      <p class="muted" style="margin-top:0;">Complète ta bibliothèque avec ${EXERCISE_SEED.length} exercices standards (barre, haltère, machine, poulie, poids du corps) — les exercices déjà présents ne sont pas dupliqués.</p>
+      <button class="btn btn-secondary" id="load-seed">Charger la bibliothèque standard</button>
+      <div style="height:12px"></div>
       <div id="exercise-lib"></div>
     </div>
 
@@ -69,6 +74,7 @@ export async function renderReglages(container) {
         `;
       }
       invalidateStatsCache();
+      invalidate("exercises", "workouts");
       toast("Import terminé");
       renderExerciseLib(container); // no-op silencieux si l'onglet a changé (voir garde ci-dessous)
     } catch (err) {
@@ -79,12 +85,35 @@ export async function renderReglages(container) {
   };
 
   container.querySelector("#export-csv").onclick = exportCsv;
+  container.querySelector("#load-seed").onclick = () => loadSeedLibrary(container);
 
   await renderExerciseLib(container);
 }
 
+async function loadSeedLibrary(container) {
+  const btn = container.querySelector("#load-seed");
+  btn.disabled = true;
+  btn.textContent = "Chargement…";
+  let added = 0;
+  const existing = await getExercises();
+  const existingNames = new Set(existing.map(e => e.name.toLowerCase()));
+  for (const [name, group] of EXERCISE_SEED) {
+    if (!existingNames.has(name.toLowerCase())) {
+      await db.upsertExercise(name, group, "", false);
+      added++;
+    }
+  }
+  invalidate("exercises");
+  if (btn.isConnected) {
+    btn.disabled = false;
+    btn.textContent = "Charger la bibliothèque standard";
+  }
+  toast(added > 0 ? `${added} exercice(s) ajouté(s)` : "Bibliothèque déjà à jour");
+  if (container.querySelector("#exercise-lib")) renderExerciseLib(container);
+}
+
 async function renderExerciseLib(container) {
-  const exercises = await db.listExercises();
+  const exercises = await getExercises();
   const wrap = container.querySelector("#exercise-lib");
   if (!wrap) return; // l'utilisateur a changé d'onglet pendant le chargement
   wrap.innerHTML = exercises.length === 0
@@ -123,6 +152,7 @@ function openExerciseEditModal(ex, container) {
         muscle_group: modalEl.querySelector("#edit-group").value,
         rest_timer_seconds: parseInt(modalEl.querySelector("#edit-rest").value, 10) || 90
       });
+      invalidate("exercises");
       closeModal();
       toast("Exercice mis à jour");
       renderExerciseLib(container);
@@ -131,6 +161,7 @@ function openExerciseEditModal(ex, container) {
     if (delBtn) delBtn.onclick = async () => {
       if (!confirm("Supprimer cet exercice de la bibliothèque ? (les séries déjà loggées sont conservées)")) return;
       await db.deleteExercise(ex.id);
+      invalidate("exercises");
       closeModal();
       renderExerciseLib(container);
     };

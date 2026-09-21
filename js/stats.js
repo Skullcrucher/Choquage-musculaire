@@ -3,6 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { isoWeek, estimate1RM } from "./utils.js";
+import { getExercises, getWorkouts } from "./cache.js";
 
 let chartInstance = null;
 let allSetsCache = null;
@@ -14,11 +15,13 @@ async function getAllSets(force = false) {
 }
 
 export async function renderStats(container) {
-  const sets = await getAllSets();
-  const exercises = await db.listExercises();
+  const [sets, exercises, workouts] = await Promise.all([
+    getAllSets(),
+    getExercises(),
+    getWorkouts()
+  ]);
   const exerciseNames = [...new Set(sets.map(s => s.exercise_title))].sort();
 
-  const workouts = await db.listWorkouts(500);
   const totalVolume = sets.reduce((acc, s) => acc + (s.weight_kg || 0) * (s.reps || 0), 0);
 
   container.innerHTML = `

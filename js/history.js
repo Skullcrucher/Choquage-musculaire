@@ -3,6 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { openModal, closeModal, fmtDateTime, fmtDuration, estimate1RM } from "./utils.js";
+import { getWorkouts, invalidate } from "./cache.js";
 
 let viewMonth = new Date();
 let workoutsCache = [];
@@ -11,7 +12,7 @@ let selectedDay = null;
 const DOW = ["L", "M", "M", "J", "V", "S", "D"];
 
 export async function renderHistorique(container) {
-  workoutsCache = await db.listWorkouts(300);
+  workoutsCache = await getWorkouts();
   container.innerHTML = `
     <h1 class="section-title">Historique</h1>
     <div class="card">
@@ -125,6 +126,7 @@ async function openWorkoutDetail(workout) {
     modalEl.querySelector("#del-workout").onclick = async () => {
       if (!confirm("Supprimer cette séance et toutes ses séries ?")) return;
       await db.deleteWorkout(workout.id);
+      invalidate("workouts");
       closeModal();
       await renderHistorique(document.getElementById("view"));
     };

@@ -3,17 +3,10 @@
 // ============================================================
 import * as db from "./db.js";
 import { toast, openModal, closeModal } from "./utils.js";
-
-let exerciseCache = null;
-
-async function getExercises(force = false) {
-  if (exerciseCache && !force) return exerciseCache;
-  exerciseCache = await db.listExercises();
-  return exerciseCache;
-}
+import { getExercises, getRoutines, invalidate } from "./cache.js";
 
 export async function renderRoutines(container) {
-  const routines = await db.listRoutines();
+  const routines = await getRoutines();
   container.innerHTML = `
     <h1 class="section-title">Routines</h1>
     <button class="btn btn-primary" id="new-routine">+ Nouvelle routine</button>
@@ -39,6 +32,7 @@ export async function renderRoutines(container) {
       e.stopPropagation();
       if (!confirm("Supprimer cette routine ?")) return;
       await db.deleteRoutine(b.dataset.del);
+      invalidate("routines");
       await renderRoutines(container);
     };
   });
@@ -74,6 +68,7 @@ async function openRoutineEditor(routine) {
       if (!state.name) { toast("Donne un nom à la routine"); return; }
       state.exercises = state.exercises.filter(e => e.exercise_name.trim());
       await db.saveRoutine(state, routine?.id || null);
+      invalidate("routines");
       closeModal();
       toast("Routine enregistrée");
       await renderRoutines(document.getElementById("view"));
