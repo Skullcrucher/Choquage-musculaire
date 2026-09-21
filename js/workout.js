@@ -48,31 +48,49 @@ async function renderStartScreen(container) {
     `).join("")}
     ${routines.length === 0 ? `<p class="muted">Pas encore de routine — crée-en une dans l'onglet Routines, ou démarre une séance vide.</p>` : ""}
   `;
-  container.querySelector("#start-empty").onclick = () => startWorkout(null);
+  container.querySelector("#start-empty").onclick = (e) => startWorkout(null, null, e.currentTarget);
   container.querySelectorAll("[data-start-routine]").forEach(el => {
-    el.onclick = () => startWorkout(el.dataset.startRoutine, routines.find(r => r.id === el.dataset.startRoutine));
+    el.onclick = (e) => startWorkout(el.dataset.startRoutine, routines.find(r => r.id === el.dataset.startRoutine), e.currentTarget);
   });
 }
 
-async function startWorkout(routineId, routine = null) {
-  const now = new Date();
-  const title = routine ? routine.name : `Séance du ${now.toLocaleDateString("fr-FR")}`;
-  const id = await db.createWorkout({ title, start_time: now.toISOString() });
-  currentWorkout = {
-    id, title, start_time: now.toISOString(),
-    exercises: (routine?.exercises || []).map(ex => ({
-      exercise_title: ex.exercise_name,
-      muscle_group: ex.muscle_group || "Autre",
-      rest_timer_seconds: ex.rest_seconds || 90,
-      sets: Array.from({ length: ex.target_sets || 3 }, (_, i) => ({
-        id: null, set_index: i + 1, set_type: "normal", weight_kg: null, reps: null,
-        target_reps: ex.reps_target || "", done: false
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} n'a pas répondu (délai dépassé). Vérifie ta connexion ou désactive un éventuel bloqueur de contenu pour ce site.`)), ms))
+  ]);
+}
+
+async function startWorkout(routineId, routine = null, triggerEl = null) {
+  if (triggerEl) {
+    if (triggerEl.dataset.busy) return; // évite le double-tap
+    triggerEl.dataset.busy = "1";
+    triggerEl.style.opacity = "0.6";
+  }
+  try {
+    const now = new Date();
+    const title = routine ? routine.name : `Séance du ${now.toLocaleDateString("fr-FR")}`;
+    const id = await withTimeout(db.createWorkout({ title, start_time: now.toISOString() }), 15000, "Création de la séance");
+    currentWorkout = {
+      id, title, start_time: now.toISOString(),
+      exercises: (routine?.exercises || []).map(ex => ({
+        exercise_title: ex.exercise_name,
+        muscle_group: ex.muscle_group || "Autre",
+        rest_timer_seconds: ex.rest_seconds || 90,
+        sets: Array.from({ length: ex.target_sets || 3 }, (_, i) => ({
+          id: null, set_index: i + 1, set_type: "normal", weight_kg: null, reps: null,
+          target_reps: ex.reps_target || "", done: false
+        }))
       }))
-    }))
-  };
-  localStorage.setItem(LS_KEY, id);
-  saveLocalState();
-  await renderSeance(document.getElementById("view"));
+    };
+    localStorage.setItem(LS_KEY, id);
+    saveLocalState();
+    await renderSeance(document.getElementById("view"));
+  } catch (err) {
+    console.error("Erreur démarrage séance", err);
+    toast(err.message || "Impossible de démarrer la séance");
+    if (triggerEl) { delete triggerEl.dataset.busy; triggerEl.style.opacity = ""; }
+  }
 }
 
 function renderActiveWorkout(container) {

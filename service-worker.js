@@ -1,9 +1,16 @@
-const CACHE_NAME = "fonte-cache-v6";
+const CACHE_NAME = "fonte-cache-v7";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
   "./css/style.css",
+  "./fonts/inter-latin-400-normal.woff2",
+  "./fonts/inter-latin-500-normal.woff2",
+  "./fonts/inter-latin-600-normal.woff2",
+  "./fonts/inter-latin-700-normal.woff2",
+  "./fonts/barlow-condensed-latin-500-normal.woff2",
+  "./fonts/barlow-condensed-latin-600-normal.woff2",
+  "./fonts/barlow-condensed-latin-700-normal.woff2",
   "./js/app.js",
   "./js/cache.js",
   "./js/db.js",
