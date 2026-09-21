@@ -3,19 +3,26 @@
 // ============================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc,
+  initializeFirestore, persistentLocalCache, persistentSingleTabManager,
+  collection, doc, setDoc, getDoc, getDocs, deleteDoc,
   updateDoc, addDoc, query, orderBy, where, collectionGroup, limit,
-  enableIndexedDbPersistence, writeBatch
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
-export const dbase = getFirestore(app);
 
-// Persistance hors-ligne : les données restent utilisables sans réseau
-// et se synchronisent automatiquement au retour de la connexion.
-enableIndexedDbPersistence(dbase).catch((err) => {
-  console.warn("Persistance hors-ligne non activée :", err.code);
+// experimentalAutoDetectLongPolling évite le blocage de ~30s au premier
+// chargement : par défaut Firestore tente une connexion en streaming
+// (WebChannel) et attend son échec avant de basculer sur le long-polling
+// compatible avec les réseaux restrictifs / bloqueurs de contenu. Ce
+// réglage détecte l'environnement d'emblée et saute cette attente.
+// persistentLocalCache remplace l'ancienne enableIndexedDbPersistence()
+// (dépréciée) pour la même fonctionnalité hors-ligne.
+export const dbase = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() }),
+  experimentalAutoDetectLongPolling: true,
+  useFetchStreams: false
 });
 
 // ---------- Utilitaire : clé déterministe pour la déduplication ----------

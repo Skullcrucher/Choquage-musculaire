@@ -28,11 +28,16 @@ async function switchTab(tab) {
   topbarTitle.textContent = TABS[tab].label;
   view.innerHTML = `<div class="empty-state"><span class="num">···</span>Chargement</div>`;
   try {
-    await TABS[tab].render(view);
+    await Promise.race([
+      TABS[tab].render(view),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Ça prend trop de temps à charger. Vérifie ta connexion, ou qu'aucun bloqueur de contenu ne bride ce site.")), 20000))
+    ]);
   } catch (e) {
     console.error(e);
     if (myToken === renderToken) {
-      view.innerHTML = `<div class="empty-state">Erreur de chargement.<br><span class="muted">${e.message}</span></div>`;
+      view.innerHTML = `<div class="empty-state">Erreur de chargement.<br><span class="muted">${e.message}</span><br><br><button class="btn btn-secondary" id="retry-tab" style="width:auto; display:inline-flex;">Réessayer</button></div>`;
+      const retryBtn = document.getElementById("retry-tab");
+      if (retryBtn) retryBtn.onclick = () => switchTab(tab);
     }
   }
 }
