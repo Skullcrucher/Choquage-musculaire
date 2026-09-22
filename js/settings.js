@@ -17,6 +17,9 @@ export async function renderReglages(container) {
       <div class="card-title">Importer un CSV</div>
       <p class="muted" style="margin-top:0;">Export Hevy (Profil → Réglages → Exporter les données). Les séries déjà importées sont détectées et ignorées automatiquement — aucun doublon possible, même en réimportant plusieurs fois le même fichier.</p>
       <input type="file" id="csv-file" accept=".csv,text/csv">
+      <p class="muted" id="csv-filename" style="margin:8px 0 0;"></p>
+      <div style="height:10px"></div>
+      <button class="btn btn-primary" id="start-import" disabled>Importer</button>
       <div id="import-progress" style="display:none;">
         <div class="progress-bar"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
         <p class="muted" id="progress-text"></p>
@@ -45,13 +48,30 @@ export async function renderReglages(container) {
     </div>
   `;
 
-  container.querySelector("#csv-file").onchange = async (e) => {
-    const file = e.target.files[0];
+  const fileInput = container.querySelector("#csv-file");
+  const filenameEl = container.querySelector("#csv-filename");
+  const importBtn = container.querySelector("#start-import");
+
+  fileInput.onchange = () => {
+    const file = fileInput.files[0];
+    if (file) {
+      filenameEl.textContent = `Fichier sélectionné : ${file.name}`;
+      importBtn.disabled = false;
+    } else {
+      filenameEl.textContent = "";
+      importBtn.disabled = true;
+    }
+  };
+
+  importBtn.onclick = async () => {
+    const file = fileInput.files[0];
     if (!file) return;
     const progressWrap = container.querySelector("#import-progress");
     const fill = container.querySelector("#progress-fill");
     const text = container.querySelector("#progress-text");
     const resultEl = container.querySelector("#import-result");
+    importBtn.disabled = true;
+    importBtn.textContent = "Import en cours…";
     progressWrap.style.display = "block";
     resultEl.innerHTML = "";
     try {
@@ -81,7 +101,12 @@ export async function renderReglages(container) {
       if (progressWrap.isConnected) progressWrap.style.display = "none";
       if (resultEl.isConnected) resultEl.innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
     }
-    e.target.value = "";
+    if (importBtn.isConnected) {
+      importBtn.disabled = false;
+      importBtn.textContent = "Importer";
+    }
+    fileInput.value = "";
+    filenameEl.textContent = "";
   };
 
   container.querySelector("#export-csv").onclick = exportCsv;

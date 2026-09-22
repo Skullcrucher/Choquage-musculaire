@@ -132,7 +132,7 @@ function drawMuscleView(content, sets, exercises, muscleGroups) {
     const values = labels.map(l => Math.round((perGroup[l] / weeksSpan) * 10) / 10);
     chartMuscle = new Chart(canvasEl, {
       type: "bar",
-      data: { labels, datasets: [{ label: "Séries / semaine", data: values, backgroundColor: "#C4884A", borderRadius: 4 }] },
+      data: { labels, datasets: [{ label: "Séries / semaine", data: values, backgroundColor: "#FFB020", borderRadius: 4 }] },
       options: chartOptions(false)
     });
     content.querySelector("#muscle-exlist").innerHTML = "";
@@ -147,7 +147,7 @@ function drawMuscleView(content, sets, exercises, muscleGroups) {
     const weeks = Object.keys(perWeek).sort();
     chartMuscle = new Chart(canvasEl, {
       type: "line",
-      data: { labels: weeks, datasets: [{ label: `Séries — ${state.muscle}`, data: weeks.map(w => perWeek[w]), borderColor: "#C4884A", backgroundColor: "transparent", tension: 0.25 }] },
+      data: { labels: weeks, datasets: [{ label: `Séries — ${state.muscle}`, data: weeks.map(w => perWeek[w]), borderColor: "#FFB020", backgroundColor: "transparent", tension: 0.25 }] },
       options: chartOptions(true)
     });
 
@@ -214,8 +214,8 @@ function renderExerciseChart(content, allSets, exerciseName) {
     data: {
       labels: weeks,
       datasets: [
-        { label: "1RM estimée (kg)", data: weeks.map(w => perWeek[w].oneRM), borderColor: "#C4884A", backgroundColor: "transparent", tension: 0.25 },
-        { label: "Charge max (kg)", data: weeks.map(w => perWeek[w].maxWeight), borderColor: "#5C8AA6", backgroundColor: "transparent", tension: 0.25 }
+        { label: "1RM estimée (kg)", data: weeks.map(w => perWeek[w].oneRM), borderColor: "#FFB020", backgroundColor: "transparent", tension: 0.25 },
+        { label: "Charge max (kg)", data: weeks.map(w => perWeek[w].maxWeight), borderColor: "#4C8DFF", backgroundColor: "transparent", tension: 0.25 }
       ]
     },
     options: chartOptions(true, true)
@@ -230,10 +230,10 @@ function renderExerciseChart(content, allSets, exerciseName) {
 function chartOptions(showLegend, legendLabels = false) {
   return {
     responsive: true,
-    plugins: { legend: { display: showLegend, labels: { color: "#E8E6E0" } } },
+    plugins: { legend: { display: showLegend, labels: { color: "#F1EFEA" } } },
     scales: {
-      x: { ticks: { color: "#8B93A0" }, grid: { display: false } },
-      y: { ticks: { color: "#8B93A0" }, grid: { color: "#2A313B" } }
+      x: { ticks: { color: "#8B8D96" }, grid: { display: false } },
+      y: { ticks: { color: "#8B8D96" }, grid: { color: "#2C2C36" } }
     }
   };
 }

@@ -3,7 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce } from "./utils.js";
-import { getExercises, getRoutines, invalidate } from "./cache.js";
+import { getExercises, getRoutines, getWorkouts, invalidate } from "./cache.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
 let restTimerInterval = null;
@@ -11,6 +11,15 @@ let restTimerEnd = null;
 
 const LS_KEY = "fonte_active_workout_id";
 const LS_STATE_KEY = "fonte_active_workout_state";
+
+function countThisWeek(workouts) {
+  const now = new Date();
+  const day = (now.getDay() + 6) % 7; // lundi = 0
+  const monday = new Date(now);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(now.getDate() - day);
+  return workouts.filter(w => w.start_time && new Date(w.start_time) >= monday).length;
+}
 
 function saveLocalState() {
   if (currentWorkout) localStorage.setItem(LS_STATE_KEY, JSON.stringify(currentWorkout));
@@ -34,12 +43,18 @@ export async function renderSeance(container) {
 }
 
 async function renderStartScreen(container) {
-  const routines = await getRoutines();
+  const [routines, workouts] = await Promise.all([getRoutines(), getWorkouts()]);
+  const weekCount = countThisWeek(workouts);
   container.innerHTML = `
     <h1 class="section-title">Séance</h1>
+    <div class="card-hero">
+      <div class="muted" style="margin-bottom:2px;">Cette semaine</div>
+      <span class="num" style="font-size:56px; color:var(--amber); display:block; line-height:1;">${weekCount}</span>
+      <div class="muted">séance${weekCount > 1 ? "s" : ""} bouclée${weekCount > 1 ? "s" : ""}</div>
+    </div>
     <button class="btn btn-primary" id="start-empty">+ Démarrer une séance vide</button>
     <div style="height:18px"></div>
-    ${routines.length ? `<h3 class="muted" style="margin-bottom:8px;">Depuis une routine</h3>` : ""}
+    ${routines.length ? `<h3 class="muted" style="margin-bottom:8px; text-transform:none; font-family:'Inter',sans-serif; font-weight:600; font-size:14px;">Depuis une routine</h3>` : ""}
     ${routines.map(r => `
       <div class="card" style="cursor:pointer" data-start-routine="${r.id}">
         <div class="card-title">${r.name}</div>
@@ -269,7 +284,7 @@ async function finishWorkout() {
   document.querySelectorAll(".rest-timer").forEach(el => el.remove());
   const finished = currentWorkout;
   currentWorkout = null;
-  toast("Séance enregistrée");
+  toast("Séance enregistrée", 2200, { horns: true });
   await renderSeance(document.getElementById("view"));
   return finished;
 }
