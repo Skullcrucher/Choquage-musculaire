@@ -199,25 +199,41 @@ export async function importRows(rows, onProgress = () => {}) {
   const workoutKeys = [...new Set(rows.map(r => `${r.title}|${r.start_time_iso}`))];
   const workoutMeta = new Map(rows.map(r => [`${r.title}|${r.start_time_iso}`, r]));
   const workoutCache = new Map();
+  let wDone = 0;
   for (const key of workoutKeys) {
-    const r = workoutMeta.get(key);
-    const workoutHash = "w_" + (await sha1(key));
-    const wRef = doc(dbase, "workouts", workoutHash);
-    const wSnap = await getDoc(wRef);
-    if (!wSnap.exists()) {
-      await setDoc(wRef, {
-        title: r.title, start_time: r.start_time_iso, end_time: r.end_time_iso || null,
-        notes: r.description || "", created_manually: false, imported_at: new Date().toISOString()
-      });
-      stats.workoutsCreated++;
+    try {
+      const r = workoutMeta.get(key);
+      const workoutHash = "w_" + (await sha1(key));
+      const wRef = doc(dbase, "workouts", workoutHash);
+      const wSnap = await getDoc(wRef);
+      if (!wSnap.exists()) {
+        await setDoc(wRef, {
+          title: r.title, start_time: r.start_time_iso, end_time: r.end_time_iso || null,
+          notes: r.description || "", created_manually: false, imported_at: new Date().toISOString()
+        });
+        stats.workoutsCreated++;
+      }
+      workoutCache.set(key, workoutHash);
+    } catch (e) {
+      console.error("[Fonte] Erreur création séance", key, e);
+      stats.errors++;
     }
-    workoutCache.set(key, workoutHash);
+    wDone++;
+    if (wDone % 10 === 0) onProgress(0, rows.length, stats, `Séances : ${wDone}/${workoutKeys.length}`);
   }
 
   // ---- 2) exercices uniques ----
   const exerciseNames = new Map(rows.map(r => [r.exercise_title, r.muscle_group_guess]));
+  let exDone = 0;
   for (const [name, group] of exerciseNames) {
-    await upsertExercise(name, group, "", false);
+    try {
+      await upsertExercise(name, group, "", false);
+    } catch (e) {
+      console.error("[Fonte] Erreur création exercice", name, e);
+      stats.errors++;
+    }
+    exDone++;
+    if (exDone % 10 === 0) onProgress(0, rows.length, stats, `Exercices : ${exDone}/${exerciseNames.size}`);
   }
 
   // ---- 3) séries, par lots concurrents ----

@@ -75,11 +75,15 @@ export async function renderReglages(container) {
     progressWrap.style.display = "block";
     resultEl.innerHTML = "";
     try {
-      const stats = await importCsvFile(file, (done, total) => {
+      const stats = await importCsvFile(file, (done, total, _stats, label) => {
         if (!fill.isConnected) return; // l'utilisateur a changé d'onglet, on n'écrit plus dans le DOM
-        const pct = Math.round((done / total) * 100);
-        fill.style.width = pct + "%";
-        text.textContent = `${done} / ${total} lignes traitées…`;
+        if (label) {
+          text.textContent = label + "…";
+        } else {
+          const pct = Math.round((done / total) * 100);
+          fill.style.width = pct + "%";
+          text.textContent = `${done} / ${total} séries traitées…`;
+        }
       });
       if (resultEl.isConnected) {
         progressWrap.style.display = "none";
