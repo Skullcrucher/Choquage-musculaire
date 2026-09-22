@@ -43,6 +43,36 @@ service cloud.firestore {
 4. Un résumé s'affiche à la fin (séances créées, séries importées, doublons ignorés).
 5. Tu peux réimporter le même fichier ou un export plus récent à tout moment : tout ce qui existe déjà est automatiquement ignoré, rien n'est jamais dupliqué.
 
+## 5. Automatiser les index et règles Firestore (recommandé)
+
+Plutôt que de créer les index à la main en cliquant sur les liens que Firestore
+affiche dans la console au fil des erreurs, tu peux les définir une fois dans
+`firestore.indexes.json` (déjà fait dans ce dépôt) et les déployer via la CLI
+Firebase. Ça vaut aussi pour les règles (`firestore.rules`).
+
+1. Installe la CLI (une fois) :
+   ```
+   npm install -g firebase-tools
+   ```
+2. Connecte-toi :
+   ```
+   firebase login
+   ```
+3. Depuis le dossier du projet (celui qui contient `firebase.json`) :
+   ```
+   firebase deploy --only firestore:indexes,firestore:rules --project app-muscu-fee2e
+   ```
+
+Ça pousse `firestore.indexes.json` et `firestore.rules` en une commande — plus besoin
+de passer par l'interface web. La construction d'un nouvel index prend toujours
+le même temps côté Firestore (quelques minutes selon le volume de données), mais
+tu n'as plus à cliquer nulle part ni à attendre qu'une erreur te donne le lien.
+
+Si tu ajoutes plus tard une nouvelle requête qui a besoin d'un index, Firestore
+te redonnera un lien dans la console du navigateur comme avant — mais tu peux
+aussi juste ajouter l'entrée correspondante à la main dans `firestore.indexes.json`
+et redéployer, plutôt que de cliquer le lien.
+
 ## Limites connues (v1)
 
 - Pas d'authentification : toute personne avec le lien peut lire/écrire (voir note sur les règles ci-dessus).
