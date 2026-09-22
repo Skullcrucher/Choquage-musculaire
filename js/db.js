@@ -114,8 +114,16 @@ export async function deleteWorkout(id) {
 }
 
 export async function listWorkouts(max = 200) {
-  const snap = await getDocs(query(collection(dbase, "workouts"), orderBy("start_time", "desc"), limit(max)));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  console.log(`[Fonte] listWorkouts → requête démarrée (max ${max})…`);
+  try {
+    const snap = await getDocs(query(collection(dbase, "workouts"), orderBy("start_time", "desc"), limit(max)));
+    const result = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log(`[Fonte] listWorkouts → ${result.length} séance(s) reçue(s). Exemple :`, result[0]);
+    return result;
+  } catch (err) {
+    console.error("[Fonte] listWorkouts → erreur :", err);
+    throw err;
+  }
 }
 
 export async function getWorkout(id) {
@@ -151,8 +159,16 @@ export async function listSetsForExercise(exerciseName, max = 500) {
 }
 
 export async function listAllSets(max = 5000) {
-  const snap = await getDocs(query(collectionGroup(dbase, "sets"), limit(max)));
-  return snap.docs.map(d => ({ id: d.id, ...d.data(), workout_id: d.ref.parent.parent.id }));
+  console.log(`[Fonte] listAllSets → requête démarrée (max ${max})…`);
+  try {
+    const snap = await getDocs(query(collectionGroup(dbase, "sets"), orderBy("workout_start_time", "desc"), limit(max)));
+    const result = snap.docs.map(d => ({ id: d.id, ...d.data(), workout_id: d.ref.parent.parent.id }));
+    console.log(`[Fonte] listAllSets → ${result.length} série(s) reçue(s). Exemple :`, result[0]);
+    return result;
+  } catch (err) {
+    console.error("[Fonte] listAllSets → erreur :", err);
+    throw err;
+  }
 }
 
 // ==================== IMPORT CSV avec déduplication ====================
