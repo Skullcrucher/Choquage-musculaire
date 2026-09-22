@@ -3,7 +3,7 @@
 // ============================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  initializeFirestore, persistentLocalCache, persistentSingleTabManager,
+  initializeFirestore,
   collection, doc, setDoc, getDoc, getDocs, deleteDoc,
   updateDoc, addDoc, query, orderBy, where, collectionGroup, limit,
   writeBatch
@@ -12,18 +12,18 @@ import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 
-// experimentalAutoDetectLongPolling évite le blocage de ~30s au premier
-// chargement : par défaut Firestore tente une connexion en streaming
-// (WebChannel) et attend son échec avant de basculer sur le long-polling
-// compatible avec les réseaux restrictifs / bloqueurs de contenu. Ce
-// réglage détecte l'environnement d'emblée et saute cette attente.
-// persistentLocalCache remplace l'ancienne enableIndexedDbPersistence()
-// (dépréciée) pour la même fonctionnalité hors-ligne.
+// Version temporairement simplifiée (sans cache persistant IndexedDB) pour
+// isoler un blocage au chargement. experimentalForceLongPolling est requis
+// pour Safari : la détection automatique (experimentalAutoDetectLongPolling)
+// échoue silencieusement dans certaines versions de Safari/WebKit, qui gère
+// mal le streaming fetch utilisé par le mode de connexion par défaut de
+// Firestore — d'où le blocage indéfini observé uniquement sur Safari.
 export const dbase = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() }),
-  experimentalAutoDetectLongPolling: true,
+  experimentalForceLongPolling: true,
   useFetchStreams: false
 });
+
+console.log("[Fonte] Firestore initialisé, projet :", firebaseConfig.projectId);
 
 // ---------- Utilitaire : clé déterministe pour la déduplication ----------
 async function sha1(str) {
