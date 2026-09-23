@@ -1,4 +1,4 @@
-const CACHE_NAME = "fonte-cache-v18";
+const CACHE_NAME = "fonte-cache-v20";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -56,6 +56,20 @@ self.addEventListener("fetch", (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         return resp;
       }).catch(() => cached);
+    })
+  );
+});
+
+// Ramène l'app au premier plan (ou l'ouvre) quand on tape la notification
+// de fin de repos.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ("focus" in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow("./");
     })
   );
 });

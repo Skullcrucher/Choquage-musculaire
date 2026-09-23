@@ -3,7 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { importCsvFile } from "./import.js";
-import { toast, openModal, closeModal } from "./utils.js";
+import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled } from "./utils.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { invalidateStatsCache } from "./stats.js";
 import { getExercises, invalidate } from "./cache.js";
@@ -13,6 +13,19 @@ import { openExerciseDetail } from "./exercise-detail.js";
 export async function renderReglages(container) {
   container.innerHTML = `
     <h1 class="section-title">Réglages</h1>
+
+    <div class="card">
+      <div class="card-title">Minuteur de repos</div>
+      <p class="muted" style="margin-top:0;">Reçois une notification quand le repos se termine, même si tu as changé d'onglet ou que l'écran s'est éteint entre-temps. La durée par défaut se règle par exercice, dans la bibliothèque ci-dessous.</p>
+      <div class="list-row" style="cursor:default;">
+        <div class="list-row-title">Notifications de fin de repos</div>
+        <label class="switch">
+          <input type="checkbox" id="notify-toggle" ${restNotificationsEnabled() ? "checked" : ""}>
+          <span class="switch-track"></span>
+        </label>
+      </div>
+      <p class="muted" id="notify-status" style="margin-top:6px;"></p>
+    </div>
 
     <div class="card">
       <div class="card-title">Importer un CSV</div>
@@ -48,6 +61,25 @@ export async function renderReglages(container) {
       <p class="muted">Ajoute cette page à ton écran d'accueil (icône Partager → "Sur l'écran d'accueil") pour l'utiliser comme une app.</p>
     </div>
   `;
+
+  const notifyToggle = container.querySelector("#notify-toggle");
+  const notifyStatus = container.querySelector("#notify-status");
+  if (!("Notification" in window)) {
+    notifyToggle.disabled = true;
+    notifyStatus.textContent = "Les notifications ne sont pas prises en charge par ce navigateur.";
+  } else if (Notification.permission === "denied") {
+    notifyToggle.checked = false;
+    notifyStatus.textContent = "Notifications bloquées pour ce site — active-les dans les réglages de Safari pour ce site, puis reviens ici.";
+  }
+  notifyToggle.onchange = async () => {
+    const ok = await setRestNotificationsEnabled(notifyToggle.checked);
+    if (!ok) {
+      notifyToggle.checked = false;
+      notifyStatus.textContent = "Autorisation refusée — active les notifications pour ce site dans les réglages de Safari.";
+    } else {
+      notifyStatus.textContent = notifyToggle.checked ? "Notifications activées." : "";
+    }
+  };
 
   const fileInput = container.querySelector("#csv-file");
   const filenameEl = container.querySelector("#csv-filename");

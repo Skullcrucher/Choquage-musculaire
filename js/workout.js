@@ -2,8 +2,8 @@
 // ONGLET SÉANCE — démarrage, log de séries, minuteur de repos
 // ============================================================
 import * as db from "./db.js";
-import { toast, openModal, closeModal, fmtDateTime, debounce, attachAutocomplete } from "./utils.js";
-import { getExercises, getRoutines, getWorkouts, invalidate } from "./cache.js";
+import { toast, openModal, closeModal, fmtDateTime, debounce, attachAutocomplete, fireRestEndNotification } from "./utils.js";
+import { getExercises, getRoutines, getWorkouts, getAllSets, invalidate } from "./cache.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
 let restTimerInterval = null;
@@ -11,6 +11,7 @@ let restTimerEnd = null;
 
 const LS_KEY = "fonte_active_workout_id";
 const LS_STATE_KEY = "fonte_active_workout_state";
+const LS_REST_KEY = "fonte_rest_timer_end";
 
 function countThisWeek(workouts) {
   const now = new Date();
@@ -86,17 +87,32 @@ async function startWorkout(routineId, routine = null, triggerEl = null) {
     const now = new Date();
     const title = routine ? routine.name : `Séance du ${now.toLocaleDateString("fr-FR")}`;
     const id = await withTimeout(db.createWorkout({ title, start_time: now.toISOString() }), 15000, "Création de la séance");
+
+    const routineExercises = routine?.exercises || [];
+    const lastSetsByExercise = await Promise.all(routineExercises.map(ex => getLastSetsForExercise(ex.exercise_name)));
+
     currentWorkout = {
       id, title, start_time: now.toISOString(),
-      exercises: (routine?.exercises || []).map(ex => ({
-        exercise_title: ex.exercise_name,
-        muscle_group: ex.muscle_group || "Autre",
-        rest_timer_seconds: ex.rest_seconds || 90,
-        sets: Array.from({ length: ex.target_sets || 3 }, (_, i) => ({
-          id: null, set_index: i + 1, set_type: "normal", weight_kg: null, reps: null,
-          target_reps: ex.reps_target || "", done: false
-        }))
-      }))
+      exercises: routineExercises.map((ex, i) => {
+        const lastSets = lastSetsByExercise[i];
+        const targetCount = ex.target_sets || 3;
+        const sets = lastSets.length
+          ? Array.from({ length: targetCount }, (_, j) => ({
+              id: null, set_index: j + 1, set_type: "normal",
+              weight_kg: lastSets[j]?.weight_kg ?? null, reps: lastSets[j]?.reps ?? null,
+              target_reps: ex.reps_target || "", done: false
+            }))
+          : Array.from({ length: targetCount }, (_, j) => ({
+              id: null, set_index: j + 1, set_type: "normal", weight_kg: null, reps: null,
+              target_reps: ex.reps_target || "", done: false
+            }));
+        return {
+          exercise_title: ex.exercise_name,
+          muscle_group: ex.muscle_group || "Autre",
+          rest_timer_seconds: ex.rest_seconds || 90,
+          sets
+        };
+      })
     };
     localStorage.setItem(LS_KEY, id);
     saveLocalState();
@@ -124,7 +140,7 @@ function renderActiveWorkout(container) {
   container.querySelector("#add-exercise").onclick = () => openAddExerciseModal();
   container.querySelector("#finish-workout").onclick = finishWorkout;
   container.querySelector("#cancel-workout").onclick = cancelWorkout;
-  renderRestTimerBar();
+  resumeRestTimerIfAny();
 }
 
 function renderExerciseList(el) {
@@ -135,7 +151,7 @@ function renderExerciseList(el) {
         <div>#</div><div>kg</div><div>reps</div><div>type</div><div></div>
       </div>
       ${ex.sets.map((s, sIdx) => setRowHtml(s, exIdx, sIdx)).join("")}
-      <button class="add-set-link" data-add-set="${exIdx}">+ Ajouter une série</button>
+      <button class="add-set-btn" data-add-set="${exIdx}">＋ Ajouter une série</button>
     </div>
   `).join("") || `<div class="empty-state"><span class="num">＋</span>Ajoute un premier exercice pour commencer.</div>`;
 
@@ -159,7 +175,7 @@ function renderExerciseList(el) {
     const badge = row.querySelector(".set-type-badge");
     const check = row.querySelector(".set-done-check");
 
-    const persist = debounce(async () => {
+    const savePersist = async () => {
       if (set.weight_kg == null && set.reps == null) return;
       const ex = currentWorkout.exercises[exIdx];
       const payload = {
@@ -171,7 +187,8 @@ function renderExerciseList(el) {
       if (set.id) await db.updateSet(currentWorkout.id, set.id, payload);
       else set.id = await db.addSet(currentWorkout.id, payload);
       saveLocalState();
-    }, 500);
+    };
+    const persist = debounce(savePersist, 500);
 
     kgInput.oninput = () => { set.weight_kg = kgInput.value ? parseFloat(kgInput.value) : null; persist(); };
     repsInput.oninput = () => { set.reps = repsInput.value ? parseInt(repsInput.value, 10) : null; persist(); };
@@ -185,6 +202,11 @@ function renderExerciseList(el) {
 
     check.onclick = async () => {
       set.done = !set.done;
+      // Valeurs pré-remplies (depuis l'historique) jamais encore sauvegardées
+      // (aucune saisie n'a déclenché persist) : on force l'écriture ici.
+      if (set.done && !set.id && (set.weight_kg != null || set.reps != null)) {
+        await savePersist();
+      }
       if (set.done && set.weight_kg != null && set.reps != null) {
         const ex = currentWorkout.exercises[exIdx];
         startRestTimer(ex.rest_timer_seconds || 90);
@@ -208,6 +230,18 @@ function setRowHtml(s, exIdx, sIdx) {
   `;
 }
 
+// Dernières séries loggées pour un exercice (la séance la plus récente où
+// il a été fait), pour pré-remplir poids/reps plutôt que partir de zéro.
+async function getLastSetsForExercise(exerciseName) {
+  const allSets = await getAllSets();
+  const relevant = allSets.filter(s => s.exercise_title === exerciseName && s.workout_start_time);
+  if (!relevant.length) return [];
+  const latestTime = relevant.reduce((max, s) => (s.workout_start_time > max ? s.workout_start_time : max), relevant[0].workout_start_time);
+  return relevant
+    .filter(s => s.workout_start_time === latestTime)
+    .sort((a, b) => a.set_index - b.set_index);
+}
+
 async function openAddExerciseModal() {
   const exercises = await getExercises();
   const names = exercises.map(e => e.name);
@@ -229,30 +263,53 @@ async function openAddExerciseModal() {
     if (!name) return;
     const group = modal.querySelector("#ex-group").value;
     const existing = exercises.find(e => e.name.toLowerCase() === name.toLowerCase());
+    const finalName = existing ? existing.name : name;
     if (!existing) {
       await db.upsertExercise(name, group);
       invalidate("exercises");
     }
+    const confirmBtn = modal.querySelector("#confirm-add-ex");
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Ajout…";
+    const lastSets = await getLastSetsForExercise(finalName);
+    const sets = lastSets.length
+      ? lastSets.map((s, i) => ({ id: null, set_index: i + 1, set_type: "normal", weight_kg: s.weight_kg ?? null, reps: s.reps ?? null, done: false }))
+      : [
+          { id: null, set_index: 1, set_type: "normal", weight_kg: null, reps: null, done: false },
+          { id: null, set_index: 2, set_type: "normal", weight_kg: null, reps: null, done: false },
+          { id: null, set_index: 3, set_type: "normal", weight_kg: null, reps: null, done: false }
+        ];
     currentWorkout.exercises.push({
-      exercise_title: existing ? existing.name : name,
+      exercise_title: finalName,
       muscle_group: existing ? existing.muscle_group : group,
       rest_timer_seconds: existing?.rest_timer_seconds || 90,
-      sets: [
-        { id: null, set_index: 1, set_type: "normal", weight_kg: null, reps: null, done: false },
-        { id: null, set_index: 2, set_type: "normal", weight_kg: null, reps: null, done: false },
-        { id: null, set_index: 3, set_type: "normal", weight_kg: null, reps: null, done: false }
-      ]
+      sets
     });
     saveLocalState();
     closeModal();
     renderExerciseList(document.getElementById("exercise-list"));
+    if (lastSets.length) toast(`Séries pré-remplies depuis ta dernière séance de ${finalName}`);
   };
 }
 
 function startRestTimer(seconds) {
   clearInterval(restTimerInterval);
   restTimerEnd = Date.now() + seconds * 1000;
+  localStorage.setItem(LS_REST_KEY, String(restTimerEnd));
   renderRestTimerBar();
+  restTimerInterval = setInterval(renderRestTimerBar, 1000);
+}
+
+// Reprend un minuteur en cours après une fermeture/rechargement de l'app
+// (tant que l'échéance stockée n'est pas déjà dans le passé).
+function resumeRestTimerIfAny() {
+  const stored = localStorage.getItem(LS_REST_KEY);
+  if (!stored) return;
+  const end = parseInt(stored, 10);
+  if (!end || end <= Date.now()) { localStorage.removeItem(LS_REST_KEY); return; }
+  restTimerEnd = end;
+  renderRestTimerBar();
+  clearInterval(restTimerInterval);
   restTimerInterval = setInterval(renderRestTimerBar, 1000);
 }
 
@@ -263,8 +320,9 @@ function renderRestTimerBar() {
   if (remaining <= 0) {
     clearInterval(restTimerInterval);
     restTimerEnd = null;
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    toast("Repos terminé");
+    localStorage.removeItem(LS_REST_KEY);
+    fireRestEndNotification();
+    toast("Repos terminé", 2200, { horns: true });
     return;
   }
   const mm = Math.floor(remaining / 60);
@@ -273,14 +331,24 @@ function renderRestTimerBar() {
   bar.className = "rest-timer";
   bar.innerHTML = `<span>Repos · ${mm}:${ss}</span><span><button id="rt-add">+15s</button> <button id="rt-skip">passer</button></span>`;
   document.body.appendChild(bar);
-  bar.querySelector("#rt-add").onclick = () => { restTimerEnd += 15000; renderRestTimerBar(); };
-  bar.querySelector("#rt-skip").onclick = () => { clearInterval(restTimerInterval); restTimerEnd = null; renderRestTimerBar(); };
+  bar.querySelector("#rt-add").onclick = () => {
+    restTimerEnd += 15000;
+    localStorage.setItem(LS_REST_KEY, String(restTimerEnd));
+    renderRestTimerBar();
+  };
+  bar.querySelector("#rt-skip").onclick = () => {
+    clearInterval(restTimerInterval);
+    restTimerEnd = null;
+    localStorage.removeItem(LS_REST_KEY);
+    renderRestTimerBar();
+  };
 }
 
 async function finishWorkout() {
   await db.updateWorkout(currentWorkout.id, { end_time: new Date().toISOString() });
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
+  localStorage.removeItem(LS_REST_KEY);
   invalidate("workouts");
   clearInterval(restTimerInterval);
   restTimerEnd = null;
@@ -297,6 +365,7 @@ async function cancelWorkout() {
   await db.deleteWorkout(currentWorkout.id);
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
+  localStorage.removeItem(LS_REST_KEY);
   invalidate("workouts");
   clearInterval(restTimerInterval);
   restTimerEnd = null;

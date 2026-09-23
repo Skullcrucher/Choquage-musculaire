@@ -77,6 +77,46 @@ export function debounce(fn, ms = 300) {
   };
 }
 
+// ---------- Notifications (fin de minuteur de repos) ----------
+const LS_NOTIFY_KEY = "fonte_notify_rest";
+
+export function restNotificationsEnabled() {
+  return localStorage.getItem(LS_NOTIFY_KEY) === "1";
+}
+
+export async function setRestNotificationsEnabled(enabled) {
+  if (enabled) {
+    if (!("Notification" in window)) return false;
+    let perm = Notification.permission;
+    if (perm === "default") perm = await Notification.requestPermission();
+    if (perm !== "granted") return false;
+  }
+  localStorage.setItem(LS_NOTIFY_KEY, enabled ? "1" : "0");
+  return true;
+}
+
+export async function fireRestEndNotification() {
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  if (!restNotificationsEnabled()) return;
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification("Repos terminé 🤘", {
+        body: "C'est reparti pour la série suivante.",
+        icon: "icons/icon-192.png",
+        badge: "icons/icon-192.png",
+        tag: "fonte-rest-timer",
+        renotify: true
+      });
+    } else {
+      new Notification("Repos terminé", { body: "C'est reparti pour la série suivante." });
+    }
+  } catch (e) {
+    console.warn("[Fonte] Notification impossible :", e);
+  }
+}
+
 // ---------- Autocomplete léger ----------
 // Remplace <datalist>, peu fiable sur Safari iOS. Affiche une liste
 // filtrée (préfixe d'abord, puis sous-chaîne) sous le champ, au tap.
