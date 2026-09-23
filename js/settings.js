@@ -8,6 +8,7 @@ import { firebaseConfig } from "./firebase-config.js";
 import { invalidateStatsCache } from "./stats.js";
 import { getExercises, invalidate } from "./cache.js";
 import { EXERCISE_SEED } from "./exercises-seed.js";
+import { openExerciseDetail } from "./exercise-detail.js";
 
 export async function renderReglages(container) {
   container.innerHTML = `
@@ -148,7 +149,7 @@ async function renderExerciseLib(container) {
   wrap.innerHTML = exercises.length === 0
     ? `<p class="muted">Aucun exercice pour l'instant.</p>`
     : exercises.map(ex => `
-      <div class="list-row" data-ex="${ex.id}">
+      <div class="list-row" data-ex="${ex.id}" data-ex-name="${ex.name.replace(/"/g, "&quot;")}" data-ex-group="${ex.muscle_group}">
         <div>
           <div class="list-row-title">${ex.name}</div>
           <div class="list-row-sub">${ex.muscle_group}</div>
@@ -157,7 +158,13 @@ async function renderExerciseLib(container) {
       </div>
     `).join("");
   wrap.querySelectorAll("[data-edit-ex]").forEach(btn => {
-    btn.onclick = () => openExerciseEditModal(exercises.find(e => e.id === btn.dataset.editEx), container);
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      openExerciseEditModal(exercises.find(ex => ex.id === btn.dataset.editEx), container);
+    };
+  });
+  wrap.querySelectorAll(".list-row[data-ex]").forEach(row => {
+    row.onclick = () => openExerciseDetail(row.dataset.exName, row.dataset.exGroup);
   });
 }
 

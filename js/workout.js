@@ -2,7 +2,7 @@
 // ONGLET SÉANCE — démarrage, log de séries, minuteur de repos
 // ============================================================
 import * as db from "./db.js";
-import { toast, openModal, closeModal, fmtDateTime, debounce } from "./utils.js";
+import { toast, openModal, closeModal, fmtDateTime, debounce, attachAutocomplete } from "./utils.js";
 import { getExercises, getRoutines, getWorkouts, invalidate } from "./cache.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
@@ -210,17 +210,20 @@ function setRowHtml(s, exIdx, sIdx) {
 
 async function openAddExerciseModal() {
   const exercises = await getExercises();
-  const groups = [...new Set(exercises.map(e => e.muscle_group))].sort();
+  const names = exercises.map(e => e.name);
   const modal = openModal(`
     <h3>Ajouter un exercice</h3>
     <label>Nom de l'exercice</label>
-    <input id="ex-name" list="ex-list" placeholder="ex: Développé Couché (Barre)">
-    <datalist id="ex-list">${exercises.map(e => `<option value="${e.name}">`).join("")}</datalist>
+    <div style="position:relative;"><input id="ex-name" placeholder="ex: Développé Couché (Barre)"></div>
     <label>Groupe musculaire (si nouvel exercice)</label>
     <select id="ex-group">${db.EXO_GROUPS.map(g => `<option ${g === "Autre" ? "selected" : ""}>${g}</option>`).join("")}</select>
     <div style="height:16px"></div>
     <button class="btn btn-primary" id="confirm-add-ex">Ajouter</button>
   `);
+  attachAutocomplete(modal.querySelector("#ex-name"), names, (picked) => {
+    const ex = exercises.find(e => e.name === picked);
+    if (ex) modal.querySelector("#ex-group").value = ex.muscle_group;
+  });
   modal.querySelector("#confirm-add-ex").onclick = async () => {
     const name = modal.querySelector("#ex-name").value.trim();
     if (!name) return;

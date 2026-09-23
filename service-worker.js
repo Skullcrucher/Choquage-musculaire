@@ -1,4 +1,4 @@
-const CACHE_NAME = "fonte-cache-v16";
+const CACHE_NAME = "fonte-cache-v18";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -23,6 +23,8 @@ const APP_SHELL = [
   "./js/vendor/chart.umd.js",
   "./js/vendor/papaparse.min.js",
   "./js/exercises-seed.js",
+  "./js/exercise-guides.js",
+  "./js/exercise-detail.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
 ];

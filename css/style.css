@@ -239,6 +239,31 @@ label {
 .field-row { display: flex; gap: 10px; }
 .field-row > div { flex: 1; }
 
+/* ---------- Autocomplete ---------- */
+.autocomplete-list {
+  display: none;
+  position: absolute;
+  left: 0; right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 8px);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 60;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+.autocomplete-list.show { display: block; }
+.autocomplete-item {
+  padding: 11px 13px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.autocomplete-item:last-child { border-bottom: none; }
+.autocomplete-item:active { background: var(--surface); }
+
 /* ---------- Tab bar ---------- */
 .tabbar {
   position: fixed;

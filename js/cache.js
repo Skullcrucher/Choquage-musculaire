@@ -5,7 +5,7 @@
 // ============================================================
 import * as db from "./db.js";
 
-const store = { exercises: null, routines: null, workouts: null };
+const store = { exercises: null, routines: null, workouts: null, sets: null };
 const inflight = {}; // évite les doubles requêtes si deux onglets demandent en même temps
 
 async function cached(key, fetcher) {
@@ -24,6 +24,7 @@ async function cached(key, fetcher) {
 export const getExercises = () => cached("exercises", () => db.listExercises());
 export const getRoutines = () => cached("routines", () => db.listRoutines());
 export const getWorkouts = (max = 500) => cached("workouts", () => db.listWorkouts(max));
+export const getAllSets = (max = 8000) => cached("sets", () => db.listAllSets(max));
 
 export function invalidate(...keys) {
   keys.forEach(k => { store[k] = null; });

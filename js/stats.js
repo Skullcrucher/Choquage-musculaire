@@ -2,13 +2,12 @@
 // ONGLET STATISTIQUES — filtres période / muscle / exercice,
 // évolution dans le temps
 // ============================================================
-import * as db from "./db.js";
 import { isoWeek, estimate1RM } from "./utils.js";
-import { getExercises, getWorkouts } from "./cache.js";
+import { getExercises, getWorkouts, getAllSets, invalidate } from "./cache.js";
+import { openExerciseDetail } from "./exercise-detail.js";
 
 let chartMuscle = null;
 let chartExercise = null;
-let allSetsCache = null;
 
 const PERIODS = [
   { label: "4 sem.", weeks: 4 },
@@ -18,12 +17,44 @@ const PERIODS = [
   { label: "Tout", weeks: null }
 ];
 
-const state = { periodWeeks: 8, mode: "muscle", muscle: "all", exercise: null };
+const state = {
+  periodWeeks: 8, mode: "muscle", muscle: "all", exercise: null,
+  customY: "1rm", customX: "week", customScope: "all", customScopeValue: null
+};
 
-async function getAllSets(force = false) {
-  if (allSetsCache && !force) return allSetsCache;
-  allSetsCache = await db.listAllSets(8000);
-  return allSetsCache;
+const Y_METRICS = [
+  { key: "1rm", label: "1RM estimée (kg)" },
+  { key: "maxweight", label: "Charge max (kg)" },
+  { key: "volume", label: "Volume (séries)" },
+  { key: "tonnage", label: "Tonnage (kg)" },
+  { key: "reps", label: "Répétitions" }
+];
+const X_DIMENSIONS = [
+  { key: "week", label: "Semaine" },
+  { key: "exercise", label: "Exercice" },
+  { key: "muscle", label: "Groupe musculaire" }
+];
+
+function aggregate(setsArr, metricKey) {
+  const withWeight = setsArr.filter(s => s.weight_kg != null && s.reps != null);
+  switch (metricKey) {
+    case "1rm": {
+      const vals = withWeight.map(s => estimate1RM(s.weight_kg, s.reps));
+      return vals.length ? Math.max(...vals) : null;
+    }
+    case "maxweight": {
+      const vals = withWeight.map(s => s.weight_kg);
+      return vals.length ? Math.max(...vals) : null;
+    }
+    case "volume":
+      return setsArr.length;
+    case "tonnage":
+      return Math.round(setsArr.reduce((a, s) => a + (s.weight_kg || 0) * (s.reps || 0), 0));
+    case "reps":
+      return setsArr.reduce((a, s) => a + (s.reps || 0), 0);
+    default:
+      return null;
+  }
 }
 
 function muscleGroupOf(exerciseName, exercises) {
@@ -61,6 +92,7 @@ export async function renderStats(container) {
       <div class="chip-row" id="mode-chips">
         <div class="chip ${state.mode === "muscle" ? "active" : ""}" data-mode="muscle">Par muscle</div>
         <div class="chip ${state.mode === "exercise" ? "active" : ""}" data-mode="exercise">Par exercice</div>
+        <div class="chip ${state.mode === "custom" ? "active" : ""}" data-mode="custom">Personnalisé</div>
       </div>
     </div>
 
@@ -90,8 +122,10 @@ function drawContent(container, sets, exercises, exerciseNames, muscleGroups) {
   if (!content) return;
   if (state.mode === "muscle") {
     drawMuscleView(content, sets, exercises, muscleGroups);
-  } else {
+  } else if (state.mode === "exercise") {
     drawExerciseView(content, sets, exerciseNames);
+  } else {
+    drawCustomView(content, sets, exercises, exerciseNames, muscleGroups);
   }
 }
 
@@ -179,6 +213,7 @@ function drawExerciseView(content, allSets, exerciseNames) {
       <select id="exercise-picker">
         ${exerciseNames.map(n => `<option value="${n}" ${n === state.exercise ? "selected" : ""}>${n}</option>`).join("")}
       </select>
+      <button class="btn btn-secondary btn-sm" id="exercise-sheet-btn" style="margin-top:10px;">Voir la fiche de l'exercice</button>
       <canvas id="exercise-canvas" height="220" style="margin-top:12px;"></canvas>
       <div id="exercise-1rm" class="muted" style="margin-top:10px;"></div>
     </div>
@@ -191,6 +226,7 @@ function drawExerciseView(content, allSets, exerciseNames) {
     return;
   }
   picker.onchange = () => { state.exercise = picker.value; drawExerciseView(content, allSets, exerciseNames); };
+  content.querySelector("#exercise-sheet-btn").onclick = () => openExerciseDetail(state.exercise);
   renderExerciseChart(content, allSets, state.exercise);
 }
 
@@ -227,6 +263,149 @@ function renderExerciseChart(content, allSets, exerciseName) {
     : "Pas de série sur cette période.";
 }
 
+// ==================== VUE PERSONNALISÉE ====================
+let chartCustom = null;
+
+function drawCustomView(content, allSets, exercises, exerciseNames, muscleGroups) {
+  content.innerHTML = `
+    <div class="card">
+      <div class="muted" style="margin-bottom:4px;">Axe Y — mesure</div>
+      <select id="custom-y">
+        ${Y_METRICS.map(m => `<option value="${m.key}" ${state.customY === m.key ? "selected" : ""}>${m.label}</option>`).join("")}
+      </select>
+      <div class="muted" style="margin:12px 0 4px;">Axe X — regroupement</div>
+      <select id="custom-x">
+        ${X_DIMENSIONS.map(d => `<option value="${d.key}" ${state.customX === d.key ? "selected" : ""}>${d.label}</option>`).join("")}
+      </select>
+      <div id="custom-scope-wrap"></div>
+      <canvas id="custom-canvas" height="240" style="margin-top:14px;"></canvas>
+      <p class="muted" id="custom-note" style="margin-top:8px;"></p>
+    </div>
+  `;
+
+  content.querySelector("#custom-y").onchange = (e) => { state.customY = e.target.value; drawCustomView(content, allSets, exercises, exerciseNames, muscleGroups); };
+  content.querySelector("#custom-x").onchange = (e) => { state.customX = e.target.value; drawCustomView(content, allSets, exercises, exerciseNames, muscleGroups); };
+
+  const scopeWrap = content.querySelector("#custom-scope-wrap");
+  if (state.customX === "week") {
+    scopeWrap.innerHTML = `
+      <div class="muted" style="margin:12px 0 4px;">Portée</div>
+      <div class="chip-row" id="custom-scope-chips">
+        <div class="chip ${state.customScope === "all" ? "active" : ""}" data-scope="all">Tout confondu</div>
+        <div class="chip ${state.customScope === "exercise" ? "active" : ""}" data-scope="exercise">Un exercice</div>
+        <div class="chip ${state.customScope === "muscle" ? "active" : ""}" data-scope="muscle">Un groupe</div>
+      </div>
+      <div id="custom-scope-picker" style="margin-top:8px;"></div>
+    `;
+    scopeWrap.querySelectorAll("#custom-scope-chips .chip").forEach(chip => {
+      chip.onclick = () => {
+        state.customScope = chip.dataset.scope;
+        state.customScopeValue = null;
+        drawCustomView(content, allSets, exercises, exerciseNames, muscleGroups);
+      };
+    });
+    const pickerWrap = scopeWrap.querySelector("#custom-scope-picker");
+    if (state.customScope === "exercise") {
+      if (!state.customScopeValue) state.customScopeValue = exerciseNames[0] || null;
+      pickerWrap.innerHTML = `<select id="custom-scope-value">${exerciseNames.map(n => `<option value="${n}" ${n === state.customScopeValue ? "selected" : ""}>${n}</option>`).join("")}</select>`;
+      pickerWrap.querySelector("#custom-scope-value")?.addEventListener("change", (e) => {
+        state.customScopeValue = e.target.value;
+        renderCustomChart(content, allSets, exercises);
+      });
+    } else if (state.customScope === "muscle") {
+      if (!state.customScopeValue) state.customScopeValue = muscleGroups[0] || null;
+      pickerWrap.innerHTML = `<select id="custom-scope-value">${muscleGroups.map(g => `<option value="${g}" ${g === state.customScopeValue ? "selected" : ""}>${g}</option>`).join("")}</select>`;
+      pickerWrap.querySelector("#custom-scope-value")?.addEventListener("change", (e) => {
+        state.customScopeValue = e.target.value;
+        renderCustomChart(content, allSets, exercises);
+      });
+    } else {
+      pickerWrap.innerHTML = "";
+    }
+  } else {
+    scopeWrap.innerHTML = "";
+  }
+
+  renderCustomChart(content, allSets, exercises);
+}
+
+function renderCustomChart(content, allSets, exercises) {
+  const canvasEl = content.querySelector("#custom-canvas");
+  const noteEl = content.querySelector("#custom-note");
+  if (chartCustom) { chartCustom.destroy(); chartCustom = null; }
+
+  let filtered = allSets.filter(s => inPeriod(s.workout_start_time, state.periodWeeks) && s.set_type !== "warmup");
+
+  const yMetric = Y_METRICS.find(m => m.key === state.customY);
+  let labels = [];
+  let values = [];
+  let chartType = "bar";
+  let note = "";
+
+  if (state.customX === "week") {
+    if (state.customScope === "exercise" && state.customScopeValue) {
+      filtered = filtered.filter(s => s.exercise_title === state.customScopeValue);
+      note = `Portée : ${state.customScopeValue}`;
+    } else if (state.customScope === "muscle" && state.customScopeValue) {
+      filtered = filtered.filter(s => muscleGroupOf(s.exercise_title, exercises) === state.customScopeValue);
+      note = `Portée : ${state.customScopeValue}`;
+    } else {
+      note = "Portée : tous les exercices confondus";
+    }
+    const byWeek = {};
+    filtered.forEach(s => {
+      const wk = isoWeek(s.workout_start_time);
+      (byWeek[wk] = byWeek[wk] || []).push(s);
+    });
+    labels = Object.keys(byWeek).sort();
+    values = labels.map(w => aggregate(byWeek[w], state.customY));
+    chartType = "line";
+  } else if (state.customX === "exercise") {
+    const byExercise = {};
+    filtered.forEach(s => { (byExercise[s.exercise_title] = byExercise[s.exercise_title] || []).push(s); });
+    let entries = Object.entries(byExercise).map(([name, arr]) => [name, aggregate(arr, state.customY)]);
+    entries = entries.filter(([, v]) => v != null).sort((a, b) => b[1] - a[1]);
+    if (entries.length > 20) { note = `${entries.length} exercices — 20 premiers affichés`; entries = entries.slice(0, 20); }
+    labels = entries.map(e => e[0]);
+    values = entries.map(e => e[1]);
+    chartType = "bar";
+  } else {
+    const byMuscle = {};
+    filtered.forEach(s => {
+      const g = muscleGroupOf(s.exercise_title, exercises);
+      (byMuscle[g] = byMuscle[g] || []).push(s);
+    });
+    let entries = Object.entries(byMuscle).map(([name, arr]) => [name, aggregate(arr, state.customY)]);
+    entries = entries.filter(([, v]) => v != null).sort((a, b) => b[1] - a[1]);
+    labels = entries.map(e => e[0]);
+    values = entries.map(e => e[1]);
+    chartType = "bar";
+  }
+
+  noteEl.textContent = note;
+
+  if (!labels.length) {
+    canvasEl.replaceWith(Object.assign(document.createElement("p"), { className: "muted", textContent: "Pas de donnée pour cette combinaison." }));
+    return;
+  }
+
+  chartCustom = new Chart(canvasEl, {
+    type: chartType,
+    data: {
+      labels,
+      datasets: [{
+        label: yMetric.label,
+        data: values,
+        borderColor: "#FFB020",
+        backgroundColor: chartType === "bar" ? "#FFB020" : "transparent",
+        borderRadius: chartType === "bar" ? 4 : 0,
+        tension: 0.25
+      }]
+    },
+    options: chartOptions(false)
+  });
+}
+
 function chartOptions(showLegend, legendLabels = false) {
   return {
     responsive: true,
@@ -239,5 +418,5 @@ function chartOptions(showLegend, legendLabels = false) {
 }
 
 export function invalidateStatsCache() {
-  allSetsCache = null;
+  invalidate("sets");
 }

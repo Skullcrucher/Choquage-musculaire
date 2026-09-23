@@ -2,7 +2,7 @@
 // ONGLET ROUTINES — modèles de séances réutilisables
 // ============================================================
 import * as db from "./db.js";
-import { toast, openModal, closeModal } from "./utils.js";
+import { toast, openModal, closeModal, attachAutocomplete } from "./utils.js";
 import { getExercises, getRoutines, invalidate } from "./cache.js";
 
 export async function renderRoutines(container) {
@@ -80,7 +80,7 @@ function renderExerciseRows(modalEl, state, exercises) {
   const wrap = modalEl.querySelector("#r-exercises");
   wrap.innerHTML = state.exercises.map((ex, i) => `
     <div class="card" style="padding:12px; margin-bottom:8px;">
-      <input class="r-ex-name" data-i="${i}" list="r-ex-list" value="${ex.exercise_name}" placeholder="Nom de l'exercice">
+      <div style="position:relative;"><input class="r-ex-name" data-i="${i}" value="${ex.exercise_name}" placeholder="Nom de l'exercice"></div>
       <div class="field-row" style="margin-top:8px;">
         <div><label>Séries</label><input class="r-ex-sets" data-i="${i}" type="number" value="${ex.target_sets}"></div>
         <div><label>Reps cible</label><input class="r-ex-reps" data-i="${i}" value="${ex.reps_target}" placeholder="8-10"></div>
@@ -89,16 +89,18 @@ function renderExerciseRows(modalEl, state, exercises) {
       <button class="btn btn-sm btn-danger" data-remove="${i}" style="margin-top:8px;">Retirer</button>
     </div>
   `).join("");
-  if (!modalEl.querySelector("#r-ex-list")) {
-    const dl = document.createElement("datalist");
-    dl.id = "r-ex-list";
-    dl.innerHTML = exercises.map(e => `<option value="${e.name}">`).join("");
-    modalEl.appendChild(dl);
-  }
-  wrap.querySelectorAll(".r-ex-name").forEach(inp => inp.oninput = () => {
-    const ex = exercises.find(e => e.name.toLowerCase() === inp.value.trim().toLowerCase());
-    state.exercises[inp.dataset.i].exercise_name = inp.value;
-    state.exercises[inp.dataset.i].muscle_group = ex?.muscle_group || "Autre";
+  const names = exercises.map(e => e.name);
+  wrap.querySelectorAll(".r-ex-name").forEach(inp => {
+    attachAutocomplete(inp, names, (picked) => {
+      const ex = exercises.find(e => e.name === picked);
+      state.exercises[inp.dataset.i].exercise_name = picked;
+      state.exercises[inp.dataset.i].muscle_group = ex?.muscle_group || "Autre";
+    });
+    inp.oninput = () => {
+      const ex = exercises.find(e => e.name.toLowerCase() === inp.value.trim().toLowerCase());
+      state.exercises[inp.dataset.i].exercise_name = inp.value;
+      state.exercises[inp.dataset.i].muscle_group = ex?.muscle_group || "Autre";
+    };
   });
   wrap.querySelectorAll(".r-ex-sets").forEach(inp => inp.oninput = () => state.exercises[inp.dataset.i].target_sets = parseInt(inp.value, 10) || 3);
   wrap.querySelectorAll(".r-ex-reps").forEach(inp => inp.oninput = () => state.exercises[inp.dataset.i].reps_target = inp.value);

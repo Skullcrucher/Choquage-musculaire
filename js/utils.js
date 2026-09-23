@@ -76,3 +76,38 @@ export function debounce(fn, ms = 300) {
     t = setTimeout(() => fn(...args), ms);
   };
 }
+
+// ---------- Autocomplete léger ----------
+// Remplace <datalist>, peu fiable sur Safari iOS. Affiche une liste
+// filtrée (préfixe d'abord, puis sous-chaîne) sous le champ, au tap.
+export function attachAutocomplete(inputEl, items, onSelect) {
+  const wrap = document.createElement("div");
+  wrap.className = "autocomplete-list";
+  const parent = inputEl.parentElement;
+  if (getComputedStyle(parent).position === "static") parent.style.position = "relative";
+  parent.appendChild(wrap);
+  inputEl.setAttribute("autocomplete", "off");
+
+  function render(filter) {
+    const q = filter.trim().toLowerCase();
+    if (!q) { wrap.innerHTML = ""; wrap.classList.remove("show"); return; }
+    const starts = items.filter(i => i.toLowerCase().startsWith(q));
+    const rest = items.filter(i => !i.toLowerCase().startsWith(q) && i.toLowerCase().includes(q));
+    const matches = [...starts, ...rest].slice(0, 8);
+    if (!matches.length) { wrap.innerHTML = ""; wrap.classList.remove("show"); return; }
+    wrap.innerHTML = matches.map(m => `<div class="autocomplete-item">${m}</div>`).join("");
+    wrap.classList.add("show");
+    wrap.querySelectorAll(".autocomplete-item").forEach(el => {
+      el.onmousedown = (e) => e.preventDefault(); // évite que le blur ferme avant le clic
+      el.onclick = () => {
+        inputEl.value = el.textContent;
+        wrap.innerHTML = "";
+        wrap.classList.remove("show");
+        onSelect(el.textContent);
+      };
+    });
+  }
+  inputEl.addEventListener("input", () => render(inputEl.value));
+  inputEl.addEventListener("focus", () => render(inputEl.value));
+  inputEl.addEventListener("blur", () => setTimeout(() => { wrap.innerHTML = ""; wrap.classList.remove("show"); }, 120));
+}
