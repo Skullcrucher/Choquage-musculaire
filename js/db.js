@@ -8,6 +8,10 @@ import {
   updateDoc, addDoc, query, orderBy, where, collectionGroup, limit,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult,
+  onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
@@ -24,6 +28,43 @@ export const dbase = initializeFirestore(app, {
 });
 
 console.log("[Fonte] Firestore initialisé, projet :", firebaseConfig.projectId);
+
+// ==================== AUTHENTIFICATION ====================
+// signInWithRedirect (pas signInWithPopup) : les popups sont peu fiables
+// dans une PWA iOS en mode standalone — la redirection marche partout.
+export const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+
+export function getCurrentUser() {
+  return auth.currentUser;
+}
+
+export function requireUid() {
+  const u = auth.currentUser;
+  if (!u) throw new Error("Non connecté");
+  return u.uid;
+}
+
+export async function signInWithGoogle() {
+  await signInWithRedirect(auth, googleProvider);
+}
+
+export async function consumeRedirectResult() {
+  try {
+    return await getRedirectResult(auth);
+  } catch (e) {
+    console.error("[Fonte] Erreur de connexion :", e);
+    return null;
+  }
+}
+
+export function onAuthChange(cb) {
+  return onAuthStateChanged(auth, cb);
+}
+
+export async function signOutUser() {
+  await signOut(auth);
+}
 
 // ---------- Utilitaire : clé déterministe pour la déduplication ----------
 async function sha1(str) {
@@ -95,8 +136,11 @@ export async function deleteRoutine(id) {
 
 // ==================== SÉANCES (workouts) ====================
 export async function createWorkout({ title, start_time, end_time = null, notes = "" }) {
+  const u = auth.currentUser;
+  if (!u) throw new Error("Non connecté");
   const ref = await addDoc(collection(dbase, "workouts"), {
-    title, start_time, end_time, notes, created_manually: true
+    title, start_time, end_time, notes, created_manually: true,
+    owner_uid: u.uid, owner_name: u.displayName || u.email || "Utilisateur", owner_photo: u.photoURL || null
   });
   return ref.id;
 }
@@ -116,7 +160,12 @@ export async function deleteWorkout(id) {
 export async function listWorkouts(max = 200) {
   console.log(`[Fonte] listWorkouts → requête démarrée (max ${max})…`);
   try {
-    const snap = await getDocs(query(collection(dbase, "workouts"), orderBy("start_time", "desc"), limit(max)));
+    const snap = await getDocs(query(
+      collection(dbase, "workouts"),
+      where("owner_uid", "==", requireUid()),
+      orderBy("start_time", "desc"),
+      limit(max)
+    ));
     const result = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     console.log(`[Fonte] listWorkouts → ${result.length} séance(s) reçue(s). Exemple :`, result[0]);
     return result;
@@ -133,7 +182,9 @@ export async function getWorkout(id) {
 
 // ==================== SÉRIES (sets) ====================
 export async function addSet(workoutId, setData) {
-  const ref = await addDoc(collection(dbase, "workouts", workoutId, "sets"), setData);
+  const ref = await addDoc(collection(dbase, "workouts", workoutId, "sets"), {
+    ...setData, owner_uid: requireUid()
+  });
   return ref.id;
 }
 
@@ -153,7 +204,10 @@ export async function listSets(workoutId) {
 // Requête transversale : toutes les séries d'un exercice donné, toutes séances confondues
 export async function listSetsForExercise(exerciseName, max = 500) {
   const snap = await getDocs(
-    query(collectionGroup(dbase, "sets"), where("exercise_title", "==", exerciseName), limit(max))
+    query(collectionGroup(dbase, "sets"),
+      where("owner_uid", "==", requireUid()),
+      where("exercise_title", "==", exerciseName),
+      limit(max))
   );
   return snap.docs.map(d => ({ id: d.id, ...d.data(), workout_id: d.ref.parent.parent.id }));
 }
@@ -161,7 +215,12 @@ export async function listSetsForExercise(exerciseName, max = 500) {
 export async function listAllSets(max = 5000) {
   console.log(`[Fonte] listAllSets → requête démarrée (max ${max})…`);
   try {
-    const snap = await getDocs(query(collectionGroup(dbase, "sets"), orderBy("workout_start_time", "desc"), limit(max)));
+    const snap = await getDocs(query(
+      collectionGroup(dbase, "sets"),
+      where("owner_uid", "==", requireUid()),
+      orderBy("workout_start_time", "desc"),
+      limit(max)
+    ));
     const result = snap.docs.map(d => ({ id: d.id, ...d.data(), workout_id: d.ref.parent.parent.id }));
     console.log(`[Fonte] listAllSets → ${result.length} série(s) reçue(s). Exemple :`, result[0]);
     return result;
@@ -194,6 +253,11 @@ async function runPool(items, concurrency, worker) {
 
 export async function importRows(rows, onProgress = () => {}) {
   const stats = { workoutsCreated: 0, setsImported: 0, setsSkippedDuplicate: 0, errors: 0 };
+  const u = auth.currentUser;
+  if (!u) throw new Error("Non connecté");
+  const uid = u.uid;
+  const ownerName = u.displayName || u.email || "Utilisateur";
+  const ownerPhoto = u.photoURL || null;
 
   // ---- 1) séances uniques ----
   const workoutKeys = [...new Set(rows.map(r => `${r.title}|${r.start_time_iso}`))];
@@ -209,7 +273,8 @@ export async function importRows(rows, onProgress = () => {}) {
       if (!wSnap.exists()) {
         await setDoc(wRef, {
           title: r.title, start_time: r.start_time_iso, end_time: r.end_time_iso || null,
-          notes: r.description || "", created_manually: false, imported_at: new Date().toISOString()
+          notes: r.description || "", created_manually: false, imported_at: new Date().toISOString(),
+          owner_uid: uid, owner_name: ownerName, owner_photo: ownerPhoto
         });
         stats.workoutsCreated++;
       }
@@ -260,6 +325,7 @@ export async function importRows(rows, onProgress = () => {}) {
           distance_km: row.distance_km || null,
           duration_seconds: row.duration_seconds || null,
           rpe: row.rpe || null,
+          owner_uid: uid,
           workout_start_time: row.start_time_iso
         });
         stats.setsImported++;
@@ -274,4 +340,42 @@ export async function importRows(rows, onProgress = () => {}) {
 
   onProgress(rows.length, rows.length, stats);
   return stats;
+}
+
+// ==================== FEED — séances de tous les utilisateurs ====================
+// Lecture ouverte à tout utilisateur connecté (voir firestore.rules) ;
+// l'écriture reste réservée au propriétaire de chaque séance.
+export async function listFeedWorkouts(max = 60) {
+  console.log(`[Fonte] listFeedWorkouts → requête démarrée (max ${max})…`);
+  try {
+    const snap = await getDocs(query(collection(dbase, "workouts"), orderBy("start_time", "desc"), limit(max)));
+    const result = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log(`[Fonte] listFeedWorkouts → ${result.length} séance(s) reçue(s).`);
+    return result;
+  } catch (err) {
+    console.error("[Fonte] listFeedWorkouts → erreur :", err);
+    throw err;
+  }
+}
+
+// ==================== RESET — vider ses séances avant un réimport propre ====================
+// Supprime toutes les séances (et leurs séries) appartenant à l'utilisateur
+// connecté, ou sans owner_uid du tout (données d'avant l'activation des
+// comptes). Action destructrice, confirmée côté interface.
+export async function deleteAllMyWorkouts(onProgress = () => {}) {
+  const uid = requireUid();
+  const snap = await getDocs(collection(dbase, "workouts"));
+  const mine = snap.docs.filter(d => !d.data().owner_uid || d.data().owner_uid === uid);
+
+  let done = 0;
+  for (const wDoc of mine) {
+    const setsSnap = await getDocs(collection(dbase, "workouts", wDoc.id, "sets"));
+    const batch = writeBatch(dbase);
+    setsSnap.docs.forEach(s => batch.delete(s.ref));
+    batch.delete(wDoc.ref);
+    await batch.commit();
+    done++;
+    onProgress(done, mine.length);
+  }
+  return done;
 }

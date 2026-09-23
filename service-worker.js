@@ -1,4 +1,4 @@
-const CACHE_NAME = "fonte-cache-v20";
+const CACHE_NAME = "fonte-cache-v22";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -10,6 +10,7 @@ const APP_SHELL = [
   "./fonts/inter-latin-600-normal.woff2",
   "./fonts/inter-latin-700-normal.woff2",
   "./js/app.js",
+  "./js/auth.js",
   "./js/cache.js",
   "./js/db.js",
   "./js/firebase-config.js",

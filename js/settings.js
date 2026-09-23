@@ -9,10 +9,26 @@ import { invalidateStatsCache } from "./stats.js";
 import { getExercises, invalidate } from "./cache.js";
 import { EXERCISE_SEED } from "./exercises-seed.js";
 import { openExerciseDetail } from "./exercise-detail.js";
+import { getUser, signOutUser } from "./auth.js";
 
 export async function renderReglages(container) {
+  const user = getUser();
   container.innerHTML = `
     <h1 class="section-title">Réglages</h1>
+
+    <div class="card">
+      <div class="card-title">Compte</div>
+      <div class="list-row" style="cursor:default;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          ${user?.photoURL ? `<img src="${user.photoURL}" alt="" style="width:36px; height:36px; border-radius:50%;" onerror="this.style.display='none'">` : ""}
+          <div>
+            <div class="list-row-title">${user?.displayName || "Utilisateur"}</div>
+            <div class="list-row-sub">${user?.email || ""}</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-secondary" id="signout-btn" style="margin-top:10px;">Se déconnecter</button>
+    </div>
 
     <div class="card">
       <div class="card-title">Minuteur de repos</div>
@@ -25,6 +41,13 @@ export async function renderReglages(container) {
         </label>
       </div>
       <p class="muted" id="notify-status" style="margin-top:6px;"></p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Réinitialiser</div>
+      <p class="muted" style="margin-top:0;">Supprime toutes tes séances et leurs séries (les exercices et routines partagés ne sont pas touchés) — utile pour repartir propre avant un réimport.</p>
+      <button class="btn btn-danger" id="wipe-btn">Supprimer toutes mes séances</button>
+      <div id="wipe-result"></div>
     </div>
 
     <div class="card">
@@ -61,6 +84,32 @@ export async function renderReglages(container) {
       <p class="muted">Ajoute cette page à ton écran d'accueil (icône Partager → "Sur l'écran d'accueil") pour l'utiliser comme une app.</p>
     </div>
   `;
+
+  container.querySelector("#signout-btn").onclick = async () => {
+    if (!confirm("Se déconnecter de Fonte ?")) return;
+    await signOutUser();
+  };
+
+  container.querySelector("#wipe-btn").onclick = async () => {
+    if (!confirm("Supprimer TOUTES tes séances et leurs séries ? Cette action est irréversible.")) return;
+    if (!confirm("Vraiment sûr ? Il n'y a pas d'annulation possible.")) return;
+    const btn = container.querySelector("#wipe-btn");
+    const resultEl = container.querySelector("#wipe-result");
+    btn.disabled = true;
+    btn.textContent = "Suppression…";
+    try {
+      const count = await db.deleteAllMyWorkouts((done, total) => {
+        if (resultEl.isConnected) resultEl.innerHTML = `<p class="muted">${done} / ${total} séance(s) supprimée(s)…</p>`;
+      });
+      invalidate("workouts");
+      invalidateStatsCache();
+      if (resultEl.isConnected) resultEl.innerHTML = `<p style="color:var(--green)">${count} séance(s) supprimée(s). Tu peux réimporter ton CSV ci-dessous.</p>`;
+      toast(`${count} séance(s) supprimée(s)`);
+    } catch (err) {
+      if (resultEl.isConnected) resultEl.innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
+    }
+    if (btn.isConnected) { btn.disabled = false; btn.textContent = "Supprimer toutes mes séances"; }
+  };
 
   const notifyToggle = container.querySelector("#notify-toggle");
   const notifyStatus = container.querySelector("#notify-status");

@@ -1,11 +1,12 @@
 // ============================================================
-// POINT D'ENTRÉE — routage entre onglets
+// POINT D'ENTRÉE — authentification puis routage entre onglets
 // ============================================================
 import { renderSeance } from "./workout.js";
 import { renderRoutines } from "./routines.js";
 import { renderHistorique } from "./history.js";
 import { renderStats } from "./stats.js";
 import { renderReglages } from "./settings.js";
+import { initAuth, renderLoginGate, renderUnauthorizedGate, isAuthorized } from "./auth.js";
 
 const TABS = {
   seance: { label: "Fonte", render: renderSeance },
@@ -17,6 +18,7 @@ const TABS = {
 
 const view = document.getElementById("view");
 const topbarTitle = document.getElementById("topbar-title");
+const tabbar = document.getElementById("tabbar");
 let activeTab = localStorage.getItem("fonte_last_tab") || "seance";
 let renderToken = 0;
 
@@ -61,4 +63,22 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-switchTab(activeTab);
+let appStarted = false;
+
+initAuth((user) => {
+  if (user && isAuthorized(user)) {
+    tabbar.style.display = "flex";
+    if (!appStarted) {
+      appStarted = true;
+      switchTab(activeTab);
+    }
+    // si on revient d'une déconnexion suivie d'une reconnexion, on est déjà sur un onglet valide
+  } else {
+    appStarted = false;
+    tabbar.style.display = "none";
+    renderToken++; // invalide tout rendu en cours
+    if (user) renderUnauthorizedGate(view, user);
+    else renderLoginGate(view);
+  }
+});
+

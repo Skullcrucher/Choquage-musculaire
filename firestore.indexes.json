@@ -4,7 +4,24 @@
       "collectionGroup": "sets",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
+        { "fieldPath": "owner_uid", "order": "ASCENDING" },
         { "fieldPath": "workout_start_time", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sets",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "exercise_title", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "workouts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "start_time", "order": "DESCENDING" }
       ]
     }
   ],

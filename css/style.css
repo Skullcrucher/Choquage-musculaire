@@ -269,7 +269,7 @@ label {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   z-index: 30;
-  display: flex;
+  display: none;
   background: var(--surface);
   border-top: 1px solid var(--border);
   padding-bottom: var(--safe-bottom);
@@ -531,6 +531,28 @@ label {
 .stat-box .lbl { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
 
 canvas { max-width: 100%; }
+
+/* ---------- Login gate ---------- */
+.login-gate {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+}
+.login-logo { width: 84px; height: 84px; color: var(--amber); margin-bottom: 18px; }
+.login-title {
+  font-family: 'Anton', sans-serif;
+  font-size: 40px;
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 0 0 6px;
+}
+.login-gate .btn { max-width: 320px; }
 
 /* ---------- Switch (toggle) ---------- */
 .switch { position: relative; display: inline-block; width: 46px; height: 27px; flex-shrink: 0; }
