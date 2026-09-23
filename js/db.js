@@ -9,7 +9,7 @@ import {
   writeBatch
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult,
+  getAuth, GoogleAuthProvider, signInWithRedirect, signInWithPopup, getRedirectResult,
   onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -30,10 +30,17 @@ export const dbase = initializeFirestore(app, {
 console.log("[Fonte] Firestore initialisé, projet :", firebaseConfig.projectId);
 
 // ==================== AUTHENTIFICATION ====================
-// signInWithRedirect (pas signInWithPopup) : les popups sont peu fiables
-// dans une PWA iOS en mode standalone — la redirection marche partout.
+// Popup en onglet Safari normal (garde tout dans le même contexte, insensible
+// à l'ITP de Safari qui casse la redirection quand authDomain est un domaine
+// différent du site) ; redirection uniquement en repli pour l'app installée
+// en PWA sur l'écran d'accueil, où les popups ne fonctionnent pas.
 export const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
+
+function isStandalonePwa() {
+  return window.navigator.standalone === true ||
+    window.matchMedia("(display-mode: standalone)").matches;
+}
 
 export function getCurrentUser() {
   return auth.currentUser;
@@ -46,7 +53,11 @@ export function requireUid() {
 }
 
 export async function signInWithGoogle() {
-  await signInWithRedirect(auth, googleProvider);
+  if (isStandalonePwa()) {
+    await signInWithRedirect(auth, googleProvider);
+  } else {
+    await signInWithPopup(auth, googleProvider);
+  }
 }
 
 export async function consumeRedirectResult() {
