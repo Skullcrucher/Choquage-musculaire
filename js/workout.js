@@ -345,7 +345,20 @@ function renderRestTimerBar() {
 }
 
 async function finishWorkout() {
-  await db.updateWorkout(currentWorkout.id, { end_time: new Date().toISOString() });
+  const loggedSets = currentWorkout.exercises.reduce((n, ex) => n + ex.sets.filter(s => s.weight_kg != null || s.reps != null).length, 0);
+  const totalTonnage = Math.round(currentWorkout.exercises.reduce((sum, ex) =>
+    sum + ex.sets.reduce((s, set) => s + (set.weight_kg || 0) * (set.reps || 0), 0), 0));
+  const muscleSummary = [...new Set(
+    currentWorkout.exercises
+      .filter(ex => ex.sets.some(s => s.weight_kg != null || s.reps != null))
+      .map(ex => ex.muscle_group || "Autre")
+  )];
+  await db.updateWorkout(currentWorkout.id, {
+    end_time: new Date().toISOString(),
+    muscle_summary: muscleSummary,
+    total_sets: loggedSets,
+    total_tonnage: totalTonnage
+  });
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
   localStorage.removeItem(LS_REST_KEY);

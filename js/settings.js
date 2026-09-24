@@ -3,7 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { importCsvFile } from "./import.js";
-import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled } from "./utils.js";
+import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile } from "./utils.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { invalidateStatsCache } from "./stats.js";
 import { getExercises, invalidate } from "./cache.js";
@@ -13,20 +13,29 @@ import { getUser, signOutUser } from "./auth.js";
 
 export async function renderReglages(container) {
   const user = getUser();
+  const profile = user ? await db.getProfile(user.uid) : null;
+  const displayName = profile?.display_name || user?.displayName || "Utilisateur";
+  const photoSrc = profile?.photo_data_url || user?.photoURL || "";
+
   container.innerHTML = `
     <h1 class="section-title">Réglages</h1>
 
     <div class="card">
       <div class="card-title">Compte</div>
-      <div class="list-row" style="cursor:default;">
-        <div style="display:flex; align-items:center; gap:10px;">
-          ${user?.photoURL ? `<img src="${user.photoURL}" alt="" style="width:36px; height:36px; border-radius:50%;" onerror="this.style.display='none'">` : ""}
-          <div>
-            <div class="list-row-title">${user?.displayName || "Utilisateur"}</div>
-            <div class="list-row-sub">${user?.email || ""}</div>
-          </div>
+      <div style="display:flex; align-items:center; gap:14px; margin:10px 0 14px;">
+        <div style="position:relative; flex-shrink:0;">
+          <div id="profile-photo-preview" style="width:64px; height:64px; border-radius:50%; background:var(--surface-raised) center/cover no-repeat; ${photoSrc ? `background-image:url('${photoSrc}');` : ""} display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; color:var(--amber);">${photoSrc ? "" : displayName[0].toUpperCase()}</div>
+          <label for="profile-photo-input" style="position:absolute; bottom:-2px; right:-2px; width:24px; height:24px; border-radius:50%; background:var(--amber); display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; border:2px solid var(--bg-elevated);">✎</label>
+          <input type="file" id="profile-photo-input" accept="image/*" style="display:none;">
+        </div>
+        <div style="flex:1;">
+          <label style="margin-top:0;">Pseudo</label>
+          <input id="profile-name-input" value="${displayName.replace(/"/g, "&quot;")}" maxlength="30">
         </div>
       </div>
+      <p class="muted" style="margin:0 0 10px;">${user?.email || ""}</p>
+      <button class="btn btn-primary btn-sm" id="save-profile-btn">Enregistrer le profil</button>
+      <p class="muted" id="profile-save-status" style="margin-top:6px;"></p>
       <button class="btn btn-secondary" id="signout-btn" style="margin-top:10px;">Se déconnecter</button>
     </div>
 
@@ -88,6 +97,40 @@ export async function renderReglages(container) {
   container.querySelector("#signout-btn").onclick = async () => {
     if (!confirm("Se déconnecter de Fonte ?")) return;
     await signOutUser();
+  };
+
+  let pendingPhotoDataUrl = undefined;
+  const photoInput = container.querySelector("#profile-photo-input");
+  const photoPreview = container.querySelector("#profile-photo-preview");
+  photoInput.onchange = async () => {
+    const file = photoInput.files[0];
+    if (!file) return;
+    try {
+      pendingPhotoDataUrl = await resizeImageFile(file, 160, 0.75);
+      photoPreview.style.backgroundImage = `url('${pendingPhotoDataUrl}')`;
+      photoPreview.textContent = "";
+    } catch (e) {
+      toast("Impossible de lire cette image");
+    }
+  };
+
+  container.querySelector("#save-profile-btn").onclick = async () => {
+    const btn = container.querySelector("#save-profile-btn");
+    const statusEl = container.querySelector("#profile-save-status");
+    const name = container.querySelector("#profile-name-input").value.trim();
+    btn.disabled = true;
+    btn.textContent = "Enregistrement…";
+    try {
+      const patch = {};
+      if (name) patch.display_name = name;
+      if (pendingPhotoDataUrl !== undefined) patch.photo_data_url = pendingPhotoDataUrl;
+      await db.updateMyProfile(patch);
+      if (statusEl.isConnected) statusEl.textContent = "Profil enregistré.";
+      toast("Profil mis à jour");
+    } catch (e) {
+      if (statusEl.isConnected) statusEl.textContent = e.message;
+    }
+    if (btn.isConnected) { btn.disabled = false; btn.textContent = "Enregistrer le profil"; }
   };
 
   container.querySelector("#wipe-btn").onclick = async () => {

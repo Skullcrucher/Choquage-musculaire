@@ -13,6 +13,13 @@ service cloud.firestore {
              ];
     }
 
+    // Profils (pseudo + photo) : chacun lit tout le monde (pour le feed),
+    // mais ne modifie que le sien.
+    match /profiles/{uid} {
+      allow read: if isAllowed();
+      allow write: if isAllowed() && request.auth.uid == uid;
+    }
+
     // Bibliothèque d'exercices et routines : partagées entre tous les
     // utilisateurs autorisés (comme une salle de sport commune).
     match /exercises/{exerciseId} {
@@ -23,13 +30,18 @@ service cloud.firestore {
     }
 
     // Séances : lecture ouverte à tout utilisateur autorisé (pour le feed),
-    // mais création/modification/suppression réservées au propriétaire
-    // (owner_uid posé à la création, jamais modifiable après).
+    // création/modification/suppression réservées au propriétaire — sauf
+    // le champ `props` (réactions 🤘) que n'importe quel utilisateur
+    // autorisé peut modifier sur la séance de n'importe qui.
     match /workouts/{workoutId} {
       allow read: if isAllowed();
       allow create: if isAllowed()
                     && request.resource.data.owner_uid == request.auth.uid;
-      allow update, delete: if isAllowed()
+      allow update: if isAllowed() && (
+                      resource.data.owner_uid == request.auth.uid ||
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['props'])
+                    );
+      allow delete: if isAllowed()
                     && resource.data.owner_uid == request.auth.uid;
 
       match /sets/{setId} {

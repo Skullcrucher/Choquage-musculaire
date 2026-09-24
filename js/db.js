@@ -6,7 +6,7 @@ import {
   initializeFirestore,
   collection, doc, setDoc, getDoc, getDocs, deleteDoc,
   updateDoc, addDoc, query, orderBy, where, collectionGroup, limit,
-  writeBatch
+  writeBatch, deleteField
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
   getAuth, GoogleAuthProvider, signInWithRedirect, signInWithPopup, getRedirectResult,
@@ -75,6 +75,28 @@ export function onAuthChange(cb) {
 
 export async function signOutUser() {
   await signOut(auth);
+}
+
+// ==================== PROFIL (pseudo + photo) ====================
+// Stocké dans Firestore (pas Firebase Auth ni Cloud Storage) : la photo est
+// une miniature compressée en data URL, assez légère pour un document.
+export async function getProfile(uid) {
+  const snap = await getDoc(doc(dbase, "profiles", uid));
+  return snap.exists() ? snap.data() : null;
+}
+
+export async function getProfiles(uids) {
+  const uniq = [...new Set(uids)];
+  const results = await Promise.all(uniq.map(async (uid) => [uid, await getProfile(uid)]));
+  return Object.fromEntries(results.filter(([, p]) => p));
+}
+
+export async function updateMyProfile({ display_name, photo_data_url }) {
+  const uid = requireUid();
+  const patch = { updated_at: new Date().toISOString() };
+  if (display_name !== undefined) patch.display_name = display_name;
+  if (photo_data_url !== undefined) patch.photo_data_url = photo_data_url;
+  await setDoc(doc(dbase, "profiles", uid), patch, { merge: true });
 }
 
 // ---------- Utilitaire : clé déterministe pour la déduplication ----------
@@ -350,6 +372,37 @@ export async function importRows(rows, onProgress = () => {}) {
   });
 
   onProgress(rows.length, rows.length, stats);
+
+  // ---- 4) résumé par séance (muscles travaillés, nb de séries) ----
+  // pour un affichage de feed sympa sans avoir à relire toutes les séries.
+  try {
+    const byWorkout = new Map();
+    for (const r of rows) {
+      const key = `${r.title}|${r.start_time_iso}`;
+      if (!byWorkout.has(key)) byWorkout.set(key, []);
+      byWorkout.get(key).push(r);
+    }
+    const entries = [...byWorkout.entries()];
+    for (let i = 0; i < entries.length; i += 400) {
+      const chunk = entries.slice(i, i + 400);
+      const batch = writeBatch(dbase);
+      for (const [key, groupRows] of chunk) {
+        const workoutId = workoutCache.get(key);
+        if (!workoutId) continue;
+        const muscleSummary = [...new Set(groupRows.map(r => r.muscle_group_guess || "Autre"))];
+        const totalTonnage = Math.round(groupRows.reduce((s, r) => s + (r.weight_kg || 0) * (r.reps || 0), 0));
+        batch.update(doc(dbase, "workouts", workoutId), {
+          muscle_summary: muscleSummary,
+          total_sets: groupRows.length,
+          total_tonnage: totalTonnage
+        });
+      }
+      await batch.commit();
+    }
+  } catch (e) {
+    console.error("[Fonte] Erreur résumé séances importées", e);
+  }
+
   return stats;
 }
 
@@ -367,6 +420,18 @@ export async function listFeedWorkouts(max = 60) {
     console.error("[Fonte] listFeedWorkouts → erreur :", err);
     throw err;
   }
+}
+
+// Réaction "corne du diable" 🤘 sur une séance du feed — n'importe quel
+// utilisateur autorisé peut réagir, pas seulement le propriétaire (les
+// règles Firestore limitent cette écriture au seul champ `props`).
+export async function toggleProps(workoutId) {
+  const uid = requireUid();
+  const wRef = doc(dbase, "workouts", workoutId);
+  const snap = await getDoc(wRef);
+  const already = !!snap.data()?.props?.[uid];
+  await updateDoc(wRef, { [`props.${uid}`]: already ? deleteField() : true });
+  return !already;
 }
 
 // ==================== RESET — vider ses séances avant un réimport propre ====================
