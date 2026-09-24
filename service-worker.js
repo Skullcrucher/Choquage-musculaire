@@ -1,4 +1,4 @@
-const CACHE_NAME = "skullcrusher-cache-v32";
+const CACHE_NAME = "skullcrusher-cache-v34";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -34,7 +34,12 @@ const APP_SHELL = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
+    // cache: "reload" contourne le cache HTTP du navigateur (GitHub Pages
+    // sert les fichiers avec max-age=600) : sans ça, une nouvelle version du
+    // service worker pouvait mettre en cache l'ANCIENNE version des scripts.
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL.map((url) => new Request(url, { cache: "reload" }))))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -46,20 +51,20 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Cache-first pour l'app shell, réseau direct pour Firestore (géré par le SDK lui-même).
+// Réseau d'abord (toujours la dernière version déployée), cache en secours
+// hors connexion. Firestore/CDN ne sont pas interceptés (géré par le SDK).
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  if (url.origin !== location.origin) return; // laisse passer Firebase/CDN sans interception
+  if (event.request.method !== "GET" || url.origin !== location.origin) return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((resp) => {
+    fetch(event.request, { cache: "no-cache" }).then((resp) => {
+      if (resp.ok) {
         const clone = resp.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        return resp;
-      }).catch(() => cached);
-    })
+      }
+      return resp;
+    }).catch(() => caches.match(event.request, { ignoreSearch: true }))
   );
 });
 

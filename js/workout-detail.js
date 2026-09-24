@@ -2,13 +2,15 @@
 // DÉTAIL D'UNE SÉANCE — modale partagée entre Historique et Feed
 // ============================================================
 import * as db from "./db.js";
-import { openModal, closeModal, fmtDateTime, fmtDuration, estimate1RM } from "./utils.js";
+import { openModal, closeModal, fmtDateTime, fmtDuration, estimate1RM, toast } from "./utils.js";
 import { getUser } from "./auth.js";
 import { invalidate } from "./cache.js";
 
 export async function openWorkoutDetail(workout, onDeleted) {
-  const sets = await db.listSets(workout.id);
   const isOwner = !workout.owner_uid || workout.owner_uid === getUser()?.uid;
+  // N'affiche que les séries du propriétaire de la séance (quelqu'un d'autre
+  // pourrait en théorie en créer dans la sous-collection).
+  const sets = (await db.listSets(workout.id)).filter(s => !workout.owner_uid || s.owner_uid === workout.owner_uid);
   const byExercise = {};
   sets.forEach(s => {
     byExercise[s.exercise_title] = byExercise[s.exercise_title] || [];
@@ -30,12 +32,33 @@ export async function openWorkoutDetail(workout, onDeleted) {
         `).join("")}
       </div>
     `).join("") || `<p class="muted">Aucune série enregistrée.</p>`}
+    ${isOwner ? `
+      <p class="muted" id="share-status" style="margin:10px 0 6px;">${workout.shared ? "🌍 Partagée sur le feed" : "🔒 Privée — visible par toi seul"}</p>
+      <button class="btn btn-secondary" id="toggle-share">${workout.shared ? "Retirer du feed" : "Partager sur le feed"}</button>
+    ` : ""}
     <div class="btn-row" style="margin-top:10px;">
       <button class="btn btn-secondary" id="close-detail">Fermer</button>
       ${isOwner ? `<button class="btn btn-danger" id="del-workout">Supprimer</button>` : ""}
     </div>
   `, (modalEl) => {
     modalEl.querySelector("#close-detail").onclick = closeModal;
+    const shareBtn = modalEl.querySelector("#toggle-share");
+    if (shareBtn) shareBtn.onclick = async () => {
+      shareBtn.disabled = true;
+      try {
+        const next = !workout.shared;
+        await db.setWorkoutShared(workout.id, next);
+        workout.shared = next;
+        invalidate("workouts");
+        shareBtn.textContent = next ? "Retirer du feed" : "Partager sur le feed";
+        modalEl.querySelector("#share-status").textContent = next ? "🌍 Partagée sur le feed" : "🔒 Privée — visible par toi seul";
+        toast(next ? "Séance partagée sur le feed" : "Séance retirée du feed");
+      } catch (err) {
+        console.error("[Skullcrusher] Erreur partage séance", err);
+        toast("Impossible de modifier le partage");
+      }
+      shareBtn.disabled = false;
+    };
     const delBtn = modalEl.querySelector("#del-workout");
     if (delBtn) delBtn.onclick = async () => {
       if (!confirm("Supprimer cette séance et toutes ses séries ?")) return;

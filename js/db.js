@@ -110,7 +110,19 @@ function slugify(str) {
     .slice(0, 60);
 }
 
+// ==================== ADMINISTRATEUR ====================
+// Miroir de isAdmin() dans firestore.rules, uniquement pour adapter
+// l'interface : la vraie protection reste dans les règles.
+export const ADMIN_EMAIL = "bouvet.clement@gmail.com";
+export function isAdmin() {
+  return auth.currentUser?.email === ADMIN_EMAIL;
+}
+
 // ==================== EXERCICES ====================
+// Bibliothèque commune : tout le monde la lit et peut y ajouter un
+// exercice, mais seul son créateur (created_by) ou l'administrateur peut
+// le modifier ou le supprimer. Les exercices d'avant ce verrouillage
+// n'ont pas de created_by : seul l'administrateur peut les modifier.
 const EXO_GROUPS = [
   "Pectoraux", "Dos", "Épaules", "Biceps", "Triceps",
   "Jambes", "Fessiers", "Abdominaux", "Avant-bras", "Cardio", "Autre"
@@ -124,7 +136,7 @@ export async function upsertExercise(name, muscleGroup, equipment = "", isCustom
   if (!existing.exists()) {
     await setDoc(ref, {
       name, muscle_group: muscleGroup || "Autre", equipment: equipment || "",
-      is_custom: isCustom, rest_timer_seconds: 90
+      is_custom: isCustom, rest_timer_seconds: 90, created_by: requireUid()
     });
   }
   return id;
@@ -133,6 +145,10 @@ export async function upsertExercise(name, muscleGroup, equipment = "", isCustom
 export async function listExercises() {
   const snap = await getDocs(query(collection(dbase, "exercises"), orderBy("name")));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export function canEditExercise(ex) {
+  return isAdmin() || (!!ex?.created_by && ex.created_by === auth.currentUser?.uid);
 }
 
 export async function updateExercise(id, patch) {
@@ -144,17 +160,46 @@ export async function deleteExercise(id) {
 }
 
 // ==================== ROUTINES ====================
+// Personnelles : chacun ne voit et ne modifie que les siennes (owner_uid).
+const LS_ROUTINES_MIGRATED = "skullcrusher_routines_migrated";
+
+// Les routines créées avant qu'elles deviennent personnelles n'ont pas
+// d'owner_uid : l'administrateur (seul utilisateur à l'époque) se les
+// attribue une fois, au premier chargement.
+async function claimLegacyRoutines(uid) {
+  try { if (localStorage.getItem(LS_ROUTINES_MIGRATED) === uid) return; } catch (_) {}
+  try {
+    const snap = await getDocs(collection(dbase, "routines"));
+    const legacy = snap.docs.filter(d => !d.data().owner_uid);
+    for (let i = 0; i < legacy.length; i += 450) {
+      const batch = writeBatch(dbase);
+      legacy.slice(i, i + 450).forEach(d => batch.update(d.ref, { owner_uid: uid }));
+      await batch.commit();
+    }
+    if (legacy.length) console.log(`[Skullcrusher] ${legacy.length} routine(s) existante(s) rattachée(s) à ton compte.`);
+    try { localStorage.setItem(LS_ROUTINES_MIGRATED, uid); } catch (_) {}
+  } catch (e) {
+    console.error("[Skullcrusher] Migration des routines existantes impossible :", e);
+  }
+}
+
 export async function listRoutines() {
-  const snap = await getDocs(query(collection(dbase, "routines"), orderBy("name")));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const uid = requireUid();
+  if (isAdmin()) await claimLegacyRoutines(uid);
+  // Tri côté client : un orderBy("name") en plus du where exigerait un index composite.
+  const snap = await getDocs(query(collection(dbase, "routines"), where("owner_uid", "==", uid)));
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr"));
 }
 
 export async function saveRoutine(routine, id = null) {
+  const data = { ...routine, owner_uid: requireUid() };
   if (id) {
-    await setDoc(doc(dbase, "routines", id), routine);
+    await setDoc(doc(dbase, "routines", id), data);
     return id;
   }
-  const ref = await addDoc(collection(dbase, "routines"), routine);
+  const ref = await addDoc(collection(dbase, "routines"), data);
   return ref.id;
 }
 
@@ -167,7 +212,7 @@ export async function createWorkout({ title, start_time, end_time = null, notes 
   const u = auth.currentUser;
   if (!u) throw new Error("Non connecté");
   const ref = await addDoc(collection(dbase, "workouts"), {
-    title, start_time, end_time, notes, created_manually: true,
+    title, start_time, end_time, notes, created_manually: true, shared: false,
     owner_uid: u.uid, owner_name: u.displayName || u.email || "Utilisateur", owner_photo: u.photoURL || null
   });
   return ref.id;
@@ -259,24 +304,23 @@ export async function listAllSets(max = 5000) {
 }
 
 // ==================== IMPORT CSV avec déduplication ====================
-// Clé déterministe = hash(titre séance + date/heure début + exercice + n° série)
-// -> un même fichier réimporté (ou un export qui chevauche l'historique)
-// n'écrira jamais deux fois la même série : on vérifie l'existence du
-// document avant d'écrire, et on ne le remplace pas s'il existe déjà.
+// Identifiants déterministes -> un même fichier réimporté (ou un export qui
+// chevauche l'historique) n'écrit jamais deux fois la même série :
+//   séance = hash(uid + titre + date/heure début)
+//   série  = hash(titre + date/heure début + exercice + n° série [+ #occurrence])
+// L'uid dans l'id de séance évite que deux utilisateurs se partagent une
+// séance au même titre et à la même minute. Les séances importées avant
+// ce changement (id sans uid) sont retrouvées et réutilisées telles quelles.
 //
-// Étapes : 1) résoudre les séances uniques (peu nombreuses, en série),
-// 2) créer les exercices manquants (peu nombreux, en série),
-// 3) écrire les séries par lots concurrents (nombreuses, en parallèle)
-// pour ne pas saturer la connexion pendant de longues minutes.
-async function runPool(items, concurrency, worker) {
-  let cursor = 0;
-  async function next() {
-    while (cursor < items.length) {
-      const i = cursor++;
-      await worker(items[i], i);
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, next));
+// Les séries existantes sont lues une fois par séance déjà présente (pas
+// une lecture par série), et tout est écrit par lots (writeBatch) : ~500
+// écritures par aller-retour au lieu d'une, ce qui ramène un historique de
+// ~10 000 séries à quelques dizaines de requêtes.
+const IMPORT_BATCH_SIZE = 450;
+
+function importSetKey(row) {
+  const base = `${row.title}|${row.start_time_iso}|${row.exercise_title}|${row.set_index}`;
+  return row.exercise_occurrence > 1 ? `${base}|#${row.exercise_occurrence}` : base;
 }
 
 export async function importRows(rows, onProgress = () => {}) {
@@ -287,127 +331,151 @@ export async function importRows(rows, onProgress = () => {}) {
   const ownerName = u.displayName || u.email || "Utilisateur";
   const ownerPhoto = u.photoURL || null;
 
-  // ---- 1) séances uniques ----
-  const workoutKeys = [...new Set(rows.map(r => `${r.title}|${r.start_time_iso}`))];
-  const workoutMeta = new Map(rows.map(r => [`${r.title}|${r.start_time_iso}`, r]));
-  const workoutCache = new Map();
-  let wDone = 0;
-  for (const key of workoutKeys) {
+  // ---- 1) regroupement par séance ----
+  const byWorkout = new Map();
+  for (const r of rows) {
+    const key = `${r.title}|${r.start_time_iso}`;
+    if (!byWorkout.has(key)) byWorkout.set(key, []);
+    byWorkout.get(key).push(r);
+  }
+
+  onProgress(0, rows.length, stats, "Lecture de tes séances existantes");
+  const mySnap = await getDocs(query(collection(dbase, "workouts"), where("owner_uid", "==", uid)));
+  const myWorkoutIds = new Set(mySnap.docs.map(d => d.id));
+
+  // ---- 2) exercices manquants dans la bibliothèque partagée ----
+  onProgress(0, rows.length, stats, "Exercices");
+  const exSnap = await getDocs(collection(dbase, "exercises"));
+  const existingExIds = new Set(exSnap.docs.map(d => d.id));
+  const newExercises = new Map();
+  for (const r of rows) {
+    const id = slugify(r.exercise_title);
+    if (id && !existingExIds.has(id) && !newExercises.has(id)) newExercises.set(id, r);
+  }
+
+  // ---- 3) préparation des écritures ----
+  const exerciseOps = [];
+  for (const [id, r] of newExercises) {
+    exerciseOps.push({ ref: doc(dbase, "exercises", id), data: {
+      name: r.exercise_title, muscle_group: r.muscle_group_guess || "Autre", equipment: "",
+      is_custom: false, rest_timer_seconds: 90, created_by: uid
+    } });
+  }
+  // Lots séparés des séances : un exercice créé entre-temps par quelqu'un
+  // d'autre ferait refuser le lot (on ne peut pas écraser l'exercice d'un
+  // autre), sans que ça bloque l'import des séries.
+  for (let i = 0; i < exerciseOps.length; i += IMPORT_BATCH_SIZE) {
+    const batch = writeBatch(dbase);
+    exerciseOps.slice(i, i + IMPORT_BATCH_SIZE).forEach(op => batch.set(op.ref, op.data));
     try {
-      const r = workoutMeta.get(key);
-      const workoutHash = "w_" + (await sha1(key));
-      const wRef = doc(dbase, "workouts", workoutHash);
-      const wSnap = await getDoc(wRef);
-      if (!wSnap.exists()) {
-        await setDoc(wRef, {
-          title: r.title, start_time: r.start_time_iso, end_time: r.end_time_iso || null,
-          notes: r.description || "", created_manually: false, imported_at: new Date().toISOString(),
-          owner_uid: uid, owner_name: ownerName, owner_photo: ownerPhoto
-        });
-        stats.workoutsCreated++;
-      }
-      workoutCache.set(key, workoutHash);
+      await batch.commit();
     } catch (e) {
-      console.error("[Skullcrusher] Erreur création séance", key, e);
-      stats.errors++;
+      console.error("[Skullcrusher] Erreur création des exercices importés", e);
+    }
+  }
+
+  const ops = []; // { ref, data, kind, merge }
+  let wDone = 0;
+  for (const [key, groupRows] of byWorkout) {
+    const r = groupRows[0];
+    const legacyId = "w_" + (await sha1(key));
+    const workoutId = myWorkoutIds.has(legacyId) ? legacyId : "w_" + (await sha1(`${uid}|${key}`));
+    const exists = myWorkoutIds.has(workoutId);
+
+    let existingSetIds = new Set();
+    if (exists) {
+      try {
+        const setsSnap = await getDocs(collection(dbase, "workouts", workoutId, "sets"));
+        existingSetIds = new Set(setsSnap.docs.map(d => d.id));
+      } catch (e) {
+        console.error("[Skullcrusher] Erreur lecture séries existantes", key, e);
+        stats.errors += groupRows.length;
+        continue;
+      }
+    }
+
+    const newSets = [];
+    const seen = new Set();
+    for (const row of groupRows) {
+      const setId = "s_" + (await sha1(importSetKey(row)));
+      if (existingSetIds.has(setId) || seen.has(setId)) { stats.setsSkippedDuplicate++; continue; }
+      seen.add(setId);
+      newSets.push({ setId, row });
+    }
+
+    const summary = {
+      muscle_summary: [...new Set(groupRows.map(x => x.muscle_group_guess || "Autre"))],
+      total_sets: groupRows.length,
+      total_tonnage: Math.round(groupRows.reduce((s, x) => s + (x.weight_kg || 0) * (x.reps || 0), 0))
+    };
+    const wRef = doc(dbase, "workouts", workoutId);
+    if (!exists) {
+      ops.push({ ref: wRef, kind: "workout", data: {
+        title: r.title, start_time: r.start_time_iso, end_time: r.end_time_iso || null,
+        notes: r.description || "", created_manually: false, imported_at: new Date().toISOString(),
+        owner_uid: uid, owner_name: ownerName, owner_photo: ownerPhoto, shared: false,
+        ...summary
+      } });
+    } else if (newSets.length) {
+      ops.push({ ref: wRef, kind: "summary", merge: true, data: summary });
+    }
+    for (const { setId, row } of newSets) {
+      ops.push({ ref: doc(dbase, "workouts", workoutId, "sets", setId), kind: "set", data: {
+        exercise_title: row.exercise_title,
+        superset_id: row.superset_id || null,
+        exercise_notes: row.exercise_notes || "",
+        set_index: row.set_index,
+        set_type: row.set_type || "normal",
+        weight_kg: row.weight_kg,
+        reps: row.reps,
+        distance_km: row.distance_km || null,
+        duration_seconds: row.duration_seconds || null,
+        rpe: row.rpe || null,
+        owner_uid: uid,
+        workout_start_time: row.start_time_iso
+      } });
     }
     wDone++;
-    if (wDone % 10 === 0) onProgress(0, rows.length, stats, `Séances : ${wDone}/${workoutKeys.length}`);
+    if (wDone % 25 === 0) onProgress(0, rows.length, stats, `Analyse des séances : ${wDone}/${byWorkout.size}`);
   }
 
-  // ---- 2) exercices uniques ----
-  const exerciseNames = new Map(rows.map(r => [r.exercise_title, r.muscle_group_guess]));
-  let exDone = 0;
-  for (const [name, group] of exerciseNames) {
+  // ---- 4) écriture par lots ----
+  const totalSets = ops.filter(o => o.kind === "set").length;
+  let setsWritten = 0;
+  onProgress(stats.setsSkippedDuplicate, rows.length, stats);
+  for (let i = 0; i < ops.length; i += IMPORT_BATCH_SIZE) {
+    const chunk = ops.slice(i, i + IMPORT_BATCH_SIZE);
+    const batch = writeBatch(dbase);
+    for (const op of chunk) {
+      if (op.merge) batch.set(op.ref, op.data, { merge: true });
+      else batch.set(op.ref, op.data);
+    }
+    const chunkSets = chunk.filter(o => o.kind === "set").length;
     try {
-      await upsertExercise(name, group, "", false);
-    } catch (e) {
-      console.error("[Skullcrusher] Erreur création exercice", name, e);
-      stats.errors++;
-    }
-    exDone++;
-    if (exDone % 10 === 0) onProgress(0, rows.length, stats, `Exercices : ${exDone}/${exerciseNames.size}`);
-  }
-
-  // ---- 3) séries, par lots concurrents ----
-  let done = 0;
-  await runPool(rows, 15, async (row) => {
-    try {
-      const workoutKey = `${row.title}|${row.start_time_iso}`;
-      const workoutId = workoutCache.get(workoutKey);
-      const setKey = `${workoutKey}|${row.exercise_title}|${row.set_index}`;
-      const setHash = "s_" + (await sha1(setKey));
-      const sRef = doc(dbase, "workouts", workoutId, "sets", setHash);
-      const sSnap = await getDoc(sRef);
-      if (sSnap.exists()) {
-        stats.setsSkippedDuplicate++;
-      } else {
-        await setDoc(sRef, {
-          exercise_title: row.exercise_title,
-          superset_id: row.superset_id || null,
-          exercise_notes: row.exercise_notes || "",
-          set_index: row.set_index,
-          set_type: row.set_type || "normal",
-          weight_kg: row.weight_kg,
-          reps: row.reps,
-          distance_km: row.distance_km || null,
-          duration_seconds: row.duration_seconds || null,
-          rpe: row.rpe || null,
-          owner_uid: uid,
-          workout_start_time: row.start_time_iso
-        });
-        stats.setsImported++;
-      }
-    } catch (e) {
-      console.error("Erreur import série", e);
-      stats.errors++;
-    }
-    done++;
-    if (done % 25 === 0) onProgress(done, rows.length, stats);
-  });
-
-  onProgress(rows.length, rows.length, stats);
-
-  // ---- 4) résumé par séance (muscles travaillés, nb de séries) ----
-  // pour un affichage de feed sympa sans avoir à relire toutes les séries.
-  try {
-    const byWorkout = new Map();
-    for (const r of rows) {
-      const key = `${r.title}|${r.start_time_iso}`;
-      if (!byWorkout.has(key)) byWorkout.set(key, []);
-      byWorkout.get(key).push(r);
-    }
-    const entries = [...byWorkout.entries()];
-    for (let i = 0; i < entries.length; i += 400) {
-      const chunk = entries.slice(i, i + 400);
-      const batch = writeBatch(dbase);
-      for (const [key, groupRows] of chunk) {
-        const workoutId = workoutCache.get(key);
-        if (!workoutId) continue;
-        const muscleSummary = [...new Set(groupRows.map(r => r.muscle_group_guess || "Autre"))];
-        const totalTonnage = Math.round(groupRows.reduce((s, r) => s + (r.weight_kg || 0) * (r.reps || 0), 0));
-        batch.update(doc(dbase, "workouts", workoutId), {
-          muscle_summary: muscleSummary,
-          total_sets: groupRows.length,
-          total_tonnage: totalTonnage
-        });
-      }
       await batch.commit();
+      stats.workoutsCreated += chunk.filter(o => o.kind === "workout").length;
+      stats.setsImported += chunkSets;
+    } catch (e) {
+      console.error("[Skullcrusher] Erreur écriture lot d'import", e);
+      stats.errors += chunkSets;
+      stats.lastError = e.code || e.message;
     }
-  } catch (e) {
-    console.error("[Skullcrusher] Erreur résumé séances importées", e);
+    setsWritten += chunkSets;
+    onProgress(stats.setsSkippedDuplicate + setsWritten, rows.length, stats);
   }
+  if (totalSets === 0) onProgress(rows.length, rows.length, stats);
 
   return stats;
 }
 
-// ==================== FEED — séances de tous les utilisateurs ====================
-// Lecture ouverte à tout utilisateur connecté (voir firestore.rules) ;
-// l'écriture reste réservée au propriétaire de chaque séance.
+// ==================== FEED — séances partagées par les utilisateurs ====================
+// Une séance est privée par défaut ; elle n'apparaît dans le feed (et n'est
+// lisible par les autres, voir firestore.rules) que si son propriétaire
+// l'a partagée (champ `shared`).
 export async function listFeedWorkouts(max = 60) {
   console.log(`[Skullcrusher] listFeedWorkouts → requête démarrée (max ${max})…`);
   try {
-    const snap = await getDocs(query(collection(dbase, "workouts"), orderBy("start_time", "desc"), limit(max)));
+    const snap = await getDocs(query(collection(dbase, "workouts"), where("shared", "==", true), orderBy("start_time", "desc"), limit(max)));
     const result = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     console.log(`[Skullcrusher] listFeedWorkouts → ${result.length} séance(s) reçue(s).`);
     return result;
@@ -420,6 +488,10 @@ export async function listFeedWorkouts(max = 60) {
 // Réaction "corne du diable" 🤘 sur une séance du feed — n'importe quel
 // utilisateur autorisé peut réagir, pas seulement le propriétaire (les
 // règles Firestore limitent cette écriture au seul champ `props`).
+export async function setWorkoutShared(workoutId, shared) {
+  await updateDoc(doc(dbase, "workouts", workoutId), { shared: !!shared });
+}
+
 export async function toggleProps(workoutId) {
   const uid = requireUid();
   const wRef = doc(dbase, "workouts", workoutId);
@@ -431,12 +503,11 @@ export async function toggleProps(workoutId) {
 
 // ==================== RESET — vider ses séances avant un réimport propre ====================
 // Supprime toutes les séances (et leurs séries) appartenant à l'utilisateur
-// connecté, ou sans owner_uid du tout (données d'avant l'activation des
-// comptes). Action destructrice, confirmée côté interface.
+// connecté. Action destructrice, confirmée côté interface.
 export async function deleteAllMyWorkouts(onProgress = () => {}) {
   const uid = requireUid();
-  const snap = await getDocs(collection(dbase, "workouts"));
-  const mine = snap.docs.filter(d => !d.data().owner_uid || d.data().owner_uid === uid);
+  const snap = await getDocs(query(collection(dbase, "workouts"), where("owner_uid", "==", uid)));
+  const mine = snap.docs;
 
   let done = 0;
   for (const wDoc of mine) {
