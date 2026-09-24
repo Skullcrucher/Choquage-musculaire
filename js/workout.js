@@ -264,31 +264,43 @@ async function openAddExerciseModal() {
     const group = modal.querySelector("#ex-group").value;
     const existing = exercises.find(e => e.name.toLowerCase() === name.toLowerCase());
     const finalName = existing ? existing.name : name;
-    if (!existing) {
-      await db.upsertExercise(name, group);
-      invalidate("exercises");
-    }
     const confirmBtn = modal.querySelector("#confirm-add-ex");
     confirmBtn.disabled = true;
     confirmBtn.textContent = "Ajout…";
-    const lastSets = await getLastSetsForExercise(finalName);
-    const sets = lastSets.length
-      ? lastSets.map((s, i) => ({ id: null, set_index: i + 1, set_type: "normal", weight_kg: s.weight_kg ?? null, reps: s.reps ?? null, done: false }))
-      : [
-          { id: null, set_index: 1, set_type: "normal", weight_kg: null, reps: null, done: false },
-          { id: null, set_index: 2, set_type: "normal", weight_kg: null, reps: null, done: false },
-          { id: null, set_index: 3, set_type: "normal", weight_kg: null, reps: null, done: false }
-        ];
-    currentWorkout.exercises.push({
-      exercise_title: finalName,
-      muscle_group: existing ? existing.muscle_group : group,
-      rest_timer_seconds: existing?.rest_timer_seconds || 90,
-      sets
-    });
-    saveLocalState();
-    closeModal();
-    renderExerciseList(document.getElementById("exercise-list"));
-    if (lastSets.length) toast(`Séries pré-remplies depuis ta dernière séance de ${finalName}`);
+    try {
+      if (!existing) {
+        await db.upsertExercise(name, group);
+        invalidate("exercises");
+      }
+      let lastSets = [];
+      try {
+        lastSets = await getLastSetsForExercise(finalName);
+      } catch (histErr) {
+        console.error("[Fonte] Erreur récupération historique exercice (on continue sans pré-remplissage)", histErr);
+      }
+      const sets = lastSets.length
+        ? lastSets.map((s, i) => ({ id: null, set_index: i + 1, set_type: "normal", weight_kg: s.weight_kg ?? null, reps: s.reps ?? null, done: false }))
+        : [
+            { id: null, set_index: 1, set_type: "normal", weight_kg: null, reps: null, done: false },
+            { id: null, set_index: 2, set_type: "normal", weight_kg: null, reps: null, done: false },
+            { id: null, set_index: 3, set_type: "normal", weight_kg: null, reps: null, done: false }
+          ];
+      currentWorkout.exercises.push({
+        exercise_title: finalName,
+        muscle_group: existing ? existing.muscle_group : group,
+        rest_timer_seconds: existing?.rest_timer_seconds || 90,
+        sets
+      });
+      saveLocalState();
+      closeModal();
+      renderExerciseList(document.getElementById("exercise-list"));
+      if (lastSets.length) toast(`Séries pré-remplies depuis ta dernière séance de ${finalName}`);
+    } catch (err) {
+      console.error("[Fonte] Erreur ajout exercice", err);
+      toast(err.message || "Impossible d'ajouter cet exercice");
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "Ajouter";
+    }
   };
 }
 
