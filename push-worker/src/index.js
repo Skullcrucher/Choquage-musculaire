@@ -44,9 +44,10 @@ const enc = new TextEncoder();
 
 function corsHeaders(env, request) {
   const origin = request.headers.get("Origin") || "";
-  const allowed = env.ALLOWED_ORIGIN === "*" || origin === env.ALLOWED_ORIGIN;
+  const list = String(env.ALLOWED_ORIGIN || "").split(",").map(s => s.trim()).filter(Boolean);
+  const allowed = list.includes("*") || list.includes(origin);
   return {
-    "Access-Control-Allow-Origin": allowed ? origin || "*" : env.ALLOWED_ORIGIN,
+    "Access-Control-Allow-Origin": allowed ? origin || "*" : list[0] || "null",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",

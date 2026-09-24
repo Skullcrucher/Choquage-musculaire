@@ -46,7 +46,7 @@ n'a rien d'autre à faire.
   notifications : autorise l'app dans le mode utilisé à la salle.
 - L'offre gratuite de Cloudflare (100 000 requêtes/jour) couvre très largement
   l'usage : environ 2 requêtes par série.
-- Si le site change d'adresse, mets à jour `ALLOWED_ORIGIN` dans `wrangler.toml`.
+- Si le site change d'adresse, ajoute-la à `ALLOWED_ORIGIN` dans `wrangler.toml` (liste séparée par des virgules).
 
 ## Fonctionnement
 - `GET /vapid-public-key` : clé publique utilisée par l'app pour s'abonner.
