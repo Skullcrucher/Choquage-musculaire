@@ -59,7 +59,7 @@ export function renderLoginGate(container) {
           <line x1="61" y1="81" x2="61" y2="92"/>
         </g>
       </svg>
-      <h1 class="login-title">Fonte</h1>
+      <h1 class="login-title">Skullcrusher</h1>
       <p class="muted" style="margin-bottom:24px;">Connecte-toi pour accéder à tes séances.</p>
       <input id="login-email" type="email" autocomplete="email" placeholder="Email" style="margin-bottom:10px;">
       <input id="login-password" type="password" autocomplete="current-password" placeholder="Mot de passe" style="margin-bottom:14px;">
@@ -89,7 +89,7 @@ export function renderLoginGate(container) {
       errorEl.style.color = "var(--green)";
       errorEl.textContent = "Email de réinitialisation envoyé — vérifie ta boîte mail.";
     } catch (err) {
-      console.error("[Fonte] Erreur reset password", err);
+      console.error("[Skullcrusher] Erreur reset password", err);
       errorEl.style.color = "var(--red)";
       errorEl.textContent = friendlyAuthError(err);
     }
@@ -108,7 +108,7 @@ export function renderLoginGate(container) {
     try {
       await action(email, password);
     } catch (err) {
-      console.error("[Fonte] Erreur auth", err);
+      console.error("[Skullcrusher] Erreur auth", err);
       errorEl.textContent = friendlyAuthError(err);
     }
     signinBtn.disabled = false;

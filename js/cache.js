@@ -11,10 +11,10 @@ const inflight = {}; // évite les doubles requêtes si deux onglets demandent e
 async function cached(key, fetcher) {
   if (store[key]) return store[key];
   if (!inflight[key]) {
-    console.log(`[Fonte] Firestore → requête "${key}" démarrée…`);
+    console.log(`[Skullcrusher] Firestore → requête "${key}" démarrée…`);
     inflight[key] = fetcher()
-      .then((res) => { console.log(`[Fonte] Firestore → "${key}" reçu (${res.length} élément(s))`); return res; })
-      .catch((err) => { console.error(`[Fonte] Firestore → "${key}" a échoué :`, err); throw err; })
+      .then((res) => { console.log(`[Skullcrusher] Firestore → "${key}" reçu (${res.length} élément(s))`); return res; })
+      .catch((err) => { console.error(`[Skullcrusher] Firestore → "${key}" a échoué :`, err); throw err; })
       .finally(() => delete inflight[key]);
   }
   store[key] = await inflight[key];

@@ -52,5 +52,16 @@ service cloud.firestore {
                       && resource.data.owner_uid == request.auth.uid;
       }
     }
+
+    // Règle supplémentaire, syntaxe canonique pour les requêtes en GROUPE DE
+    // COLLECTIONS (celles utilisées par l'app pour lire "toutes mes séries,
+    // toutes séances confondues" — Stats, fiches d'exercice). La règle
+    // imbriquée ci-dessus suffit en théorie, mais certaines requêtes en
+    // groupe de collections l'évaluent mal ; celle-ci, avec {path=**}, est
+    // la forme que la documentation Firestore recommande explicitement pour
+    // ce cas précis.
+    match /{path=**}/sets/{setId} {
+      allow read: if isAllowed();
+    }
   }
 }

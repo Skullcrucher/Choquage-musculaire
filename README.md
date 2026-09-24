@@ -1,9 +1,9 @@
-# Fonte — installation
+# Skullcrusher — installation
 
 ## 1. Créer le projet Firebase (5 min)
 
-1. Va sur https://console.firebase.google.com et crée un nouveau projet (ex: `fonte-app`). Désactive Google Analytics, tu n'en as pas besoin.
-2. Une fois le projet créé : icône **</>** ("Ajouter une application Web") → donne-lui un nom (ex: "Fonte") → **pas besoin** de Firebase Hosting, tu vas utiliser GitHub Pages.
+1. Va sur https://console.firebase.google.com et crée un nouveau projet (ex: `skullcrusher-app`). Désactive Google Analytics, tu n'en as pas besoin.
+2. Une fois le projet créé : icône **</>** ("Ajouter une application Web") → donne-lui un nom (ex: "Skullcrusher") → **pas besoin** de Firebase Hosting, tu vas utiliser GitHub Pages.
 3. Firebase t'affiche un objet `firebaseConfig` — copie-le et colle-le dans `js/firebase-config.js`, à la place des valeurs `COLLE_TA_CLE_ICI` etc.
 4. Dans le menu de gauche : **Firestore Database** → **Créer une base de données** → mode **Production** → région `europe-west1` (ou `eur3`) pour rester en Europe.
 5. Une fois créée, onglet **Règles**, remplace le contenu par :
@@ -24,16 +24,16 @@ service cloud.firestore {
 
 ## 2. Déployer sur GitHub Pages
 
-1. Crée un nouveau dépôt GitHub (ex: `fonte`), public ou privé (GitHub Pages fonctionne dans les deux cas si tu as un compte payant ; sinon il faut un dépôt public).
+1. Crée un nouveau dépôt GitHub (ex: `skullcrusher`), public ou privé (GitHub Pages fonctionne dans les deux cas si tu as un compte payant ; sinon il faut un dépôt public).
 2. Pousse tout le contenu de ce dossier (`index.html`, `manifest.json`, `service-worker.js`, `css/`, `js/`, `icons/`) à la racine du dépôt.
 3. Paramètres du dépôt → **Pages** → Source : branche `main`, dossier `/ (root)`.
-4. Attends 1-2 minutes, ton app sera disponible à `https://<ton-user>.github.io/fonte/`.
+4. Attends 1-2 minutes, ton app sera disponible à `https://<ton-user>.github.io/skullcrusher/`.
 
 ## 3. Installer sur ton iPhone
 
 1. Ouvre l'URL GitHub Pages dans **Safari** (obligatoire, pas Chrome).
 2. Bouton **Partager** (carré avec flèche vers le haut) → **Sur l'écran d'accueil**.
-3. L'icône Fonte apparaît sur ton écran d'accueil et s'ouvre en plein écran, sans barre Safari.
+3. L'icône Skullcrusher apparaît sur ton écran d'accueil et s'ouvre en plein écran, sans barre Safari.
 
 ## 4. Premier import de ton historique Hevy
 

@@ -27,7 +27,7 @@ export const dbase = initializeFirestore(app, {
   useFetchStreams: false
 });
 
-console.log("[Fonte] Firestore initialisé, projet :", firebaseConfig.projectId);
+console.log("[Skullcrusher] Firestore initialisé, projet :", firebaseConfig.projectId);
 
 // ==================== AUTHENTIFICATION ====================
 // Email/mot de passe plutôt que Google Sign-In : Google bloque par
@@ -39,7 +39,7 @@ console.log("[Fonte] Firestore initialisé, projet :", firebaseConfig.projectId)
 export const auth = getAuth(app);
 
 setPersistence(auth, indexedDBLocalPersistence).catch((e) =>
-  console.error("[Fonte] Échec réglage persistance Auth :", e)
+  console.error("[Skullcrusher] Échec réglage persistance Auth :", e)
 );
 
 export function getCurrentUser() {
@@ -186,7 +186,7 @@ export async function deleteWorkout(id) {
 }
 
 export async function listWorkouts(max = 200) {
-  console.log(`[Fonte] listWorkouts → requête démarrée (max ${max})…`);
+  console.log(`[Skullcrusher] listWorkouts → requête démarrée (max ${max})…`);
   try {
     const snap = await getDocs(query(
       collection(dbase, "workouts"),
@@ -195,10 +195,10 @@ export async function listWorkouts(max = 200) {
       limit(max)
     ));
     const result = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    console.log(`[Fonte] listWorkouts → ${result.length} séance(s) reçue(s). Exemple :`, result[0]);
+    console.log(`[Skullcrusher] listWorkouts → ${result.length} séance(s) reçue(s). Exemple :`, result[0]);
     return result;
   } catch (err) {
-    console.error("[Fonte] listWorkouts → erreur :", err);
+    console.error("[Skullcrusher] listWorkouts → erreur :", err);
     throw err;
   }
 }
@@ -241,7 +241,7 @@ export async function listSetsForExercise(exerciseName, max = 500) {
 }
 
 export async function listAllSets(max = 5000) {
-  console.log(`[Fonte] listAllSets → requête démarrée (max ${max})…`);
+  console.log(`[Skullcrusher] listAllSets → requête démarrée (max ${max})…`);
   try {
     const snap = await getDocs(query(
       collectionGroup(dbase, "sets"),
@@ -250,10 +250,10 @@ export async function listAllSets(max = 5000) {
       limit(max)
     ));
     const result = snap.docs.map(d => ({ id: d.id, ...d.data(), workout_id: d.ref.parent.parent.id }));
-    console.log(`[Fonte] listAllSets → ${result.length} série(s) reçue(s). Exemple :`, result[0]);
+    console.log(`[Skullcrusher] listAllSets → ${result.length} série(s) reçue(s). Exemple :`, result[0]);
     return result;
   } catch (err) {
-    console.error("[Fonte] listAllSets → erreur :", err);
+    console.error("[Skullcrusher] listAllSets → erreur :", err);
     throw err;
   }
 }
@@ -308,7 +308,7 @@ export async function importRows(rows, onProgress = () => {}) {
       }
       workoutCache.set(key, workoutHash);
     } catch (e) {
-      console.error("[Fonte] Erreur création séance", key, e);
+      console.error("[Skullcrusher] Erreur création séance", key, e);
       stats.errors++;
     }
     wDone++;
@@ -322,7 +322,7 @@ export async function importRows(rows, onProgress = () => {}) {
     try {
       await upsertExercise(name, group, "", false);
     } catch (e) {
-      console.error("[Fonte] Erreur création exercice", name, e);
+      console.error("[Skullcrusher] Erreur création exercice", name, e);
       stats.errors++;
     }
     exDone++;
@@ -395,7 +395,7 @@ export async function importRows(rows, onProgress = () => {}) {
       await batch.commit();
     }
   } catch (e) {
-    console.error("[Fonte] Erreur résumé séances importées", e);
+    console.error("[Skullcrusher] Erreur résumé séances importées", e);
   }
 
   return stats;
@@ -405,14 +405,14 @@ export async function importRows(rows, onProgress = () => {}) {
 // Lecture ouverte à tout utilisateur connecté (voir firestore.rules) ;
 // l'écriture reste réservée au propriétaire de chaque séance.
 export async function listFeedWorkouts(max = 60) {
-  console.log(`[Fonte] listFeedWorkouts → requête démarrée (max ${max})…`);
+  console.log(`[Skullcrusher] listFeedWorkouts → requête démarrée (max ${max})…`);
   try {
     const snap = await getDocs(query(collection(dbase, "workouts"), orderBy("start_time", "desc"), limit(max)));
     const result = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    console.log(`[Fonte] listFeedWorkouts → ${result.length} séance(s) reçue(s).`);
+    console.log(`[Skullcrusher] listFeedWorkouts → ${result.length} séance(s) reçue(s).`);
     return result;
   } catch (err) {
-    console.error("[Fonte] listFeedWorkouts → erreur :", err);
+    console.error("[Skullcrusher] listFeedWorkouts → erreur :", err);
     throw err;
   }
 }

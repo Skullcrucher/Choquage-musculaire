@@ -95,7 +95,7 @@ export async function renderReglages(container) {
   `;
 
   container.querySelector("#signout-btn").onclick = async () => {
-    if (!confirm("Se déconnecter de Fonte ?")) return;
+    if (!confirm("Se déconnecter de Skullcrusher ?")) return;
     await signOutUser();
   };
 
@@ -346,7 +346,7 @@ async function exportCsv() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `fonte-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `skullcrusher-export-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }

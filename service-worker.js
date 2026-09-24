@@ -1,4 +1,4 @@
-const CACHE_NAME = "fonte-cache-v31";
+const CACHE_NAME = "skullcrusher-cache-v32";
 const APP_SHELL = [
   "./",
   "./index.html",

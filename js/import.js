@@ -17,7 +17,10 @@ function parseHevyDate(str) {
   if (!str) return null;
   const s = str.trim();
 
-  const fr = s.match(/^(\d{1,2}) (\S+) (\d{4}),\s*(\d{2}):(\d{2})$/);
+  // Hevy a changé son format d'export en cours de route : virgule avant
+  // l'heure dans les anciens exports ("9 sept. 2026, 12:15"), "à" dans les
+  // nouveaux ("24 sept. 2026 à 12:27"). On accepte les deux.
+  const fr = s.match(/^(\d{1,2}) (\S+) (\d{4})(?:,\s*|\s+à\s+)(\d{2}):(\d{2})$/);
   if (fr) {
     const [, day, moisTxt, year, h, mi] = fr;
     const mm = MOIS_FR[moisTxt.toLowerCase()];

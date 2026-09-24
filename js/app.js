@@ -9,7 +9,7 @@ import { renderReglages } from "./settings.js";
 import { initAuth, renderLoginGate, renderUnauthorizedGate, isAuthorized } from "./auth.js";
 
 const TABS = {
-  seance: { label: "Fonte", render: renderSeance },
+  seance: { label: "Skullcrusher", render: renderSeance },
   historique: { label: "Historique", render: renderHistorique },
   feed: { label: "Feed", render: renderFeedTab },
   stats: { label: "Statistiques", render: renderStats },
@@ -19,14 +19,14 @@ const TABS = {
 const view = document.getElementById("view");
 const topbarTitle = document.getElementById("topbar-title");
 const tabbar = document.getElementById("tabbar");
-let activeTab = localStorage.getItem("fonte_last_tab") || "seance";
+let activeTab = localStorage.getItem("skullcrusher_last_tab") || "seance";
 if (!TABS[activeTab]) activeTab = "seance";
 let renderToken = 0;
 
 async function switchTab(tab) {
   activeTab = tab;
   const myToken = ++renderToken;
-  localStorage.setItem("fonte_last_tab", tab);
+  localStorage.setItem("skullcrusher_last_tab", tab);
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   topbarTitle.textContent = TABS[tab].label;
   view.innerHTML = `<div class="empty-state"><span class="num">···</span>Chargement</div>`;
@@ -72,8 +72,8 @@ initAuth((user) => {
     // blanche des règles Firestore, pour repérer un éventuel décalage
     // (email non vérifié, compte différent, jeton périmé...).
     user.getIdTokenResult().then((token) => {
-      console.log("[Fonte] Diagnostic connexion → email:", JSON.stringify(user.email), "| email_verified:", token.claims.email_verified, "| uid:", user.uid, "| token émis:", token.issuedAtTime, "| token expire:", token.expirationTime);
-    }).catch((e) => console.error("[Fonte] Diagnostic connexion → erreur lecture token:", e));
+      console.log("[Skullcrusher] Diagnostic connexion → email:", JSON.stringify(user.email), "| email_verified:", token.claims.email_verified, "| uid:", user.uid, "| token émis:", token.issuedAtTime, "| token expire:", token.expirationTime);
+    }).catch((e) => console.error("[Skullcrusher] Diagnostic connexion → erreur lecture token:", e));
   }
   if (user && isAuthorized(user)) {
     tabbar.style.display = "flex";

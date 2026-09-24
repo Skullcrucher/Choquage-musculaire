@@ -103,7 +103,7 @@ export async function renderFeedTab(container) {
         const count = Object.keys(w.props).length;
         btn.querySelector("span").textContent = count > 0 ? count : "";
       } catch (err) {
-        console.error("[Fonte] Erreur réaction", err);
+        console.error("[Skullcrusher] Erreur réaction", err);
       }
       btn.disabled = false;
     };

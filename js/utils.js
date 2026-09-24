@@ -105,7 +105,7 @@ export function resizeImageFile(file, maxSize = 160, quality = 0.75) {
 }
 
 // ---------- Notifications (fin de minuteur de repos) ----------
-const LS_NOTIFY_KEY = "fonte_notify_rest";
+const LS_NOTIFY_KEY = "skullcrusher_notify_rest";
 
 export function restNotificationsEnabled() {
   return localStorage.getItem(LS_NOTIFY_KEY) === "1";
@@ -133,14 +133,14 @@ export async function fireRestEndNotification() {
         body: "C'est reparti pour la série suivante.",
         icon: "icons/icon-192.png",
         badge: "icons/icon-192.png",
-        tag: "fonte-rest-timer",
+        tag: "skullcrusher-rest-timer",
         renotify: true
       });
     } else {
       new Notification("Repos terminé", { body: "C'est reparti pour la série suivante." });
     }
   } catch (e) {
-    console.warn("[Fonte] Notification impossible :", e);
+    console.warn("[Skullcrusher] Notification impossible :", e);
   }
 }
 

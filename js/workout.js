@@ -9,9 +9,9 @@ let currentWorkout = null; // { id, title, start_time, exercises: [...] }
 let restTimerInterval = null;
 let restTimerEnd = null;
 
-const LS_KEY = "fonte_active_workout_id";
-const LS_STATE_KEY = "fonte_active_workout_state";
-const LS_REST_KEY = "fonte_rest_timer_end";
+const LS_KEY = "skullcrusher_active_workout_id";
+const LS_STATE_KEY = "skullcrusher_active_workout_state";
+const LS_REST_KEY = "skullcrusher_rest_timer_end";
 
 function countThisWeek(workouts) {
   const now = new Date();
@@ -276,7 +276,7 @@ async function openAddExerciseModal() {
       try {
         lastSets = await getLastSetsForExercise(finalName);
       } catch (histErr) {
-        console.error("[Fonte] Erreur récupération historique exercice (on continue sans pré-remplissage)", histErr);
+        console.error("[Skullcrusher] Erreur récupération historique exercice (on continue sans pré-remplissage)", histErr);
       }
       const sets = lastSets.length
         ? lastSets.map((s, i) => ({ id: null, set_index: i + 1, set_type: "normal", weight_kg: s.weight_kg ?? null, reps: s.reps ?? null, done: false }))
@@ -296,7 +296,7 @@ async function openAddExerciseModal() {
       renderExerciseList(document.getElementById("exercise-list"));
       if (lastSets.length) toast(`Séries pré-remplies depuis ta dernière séance de ${finalName}`);
     } catch (err) {
-      console.error("[Fonte] Erreur ajout exercice", err);
+      console.error("[Skullcrusher] Erreur ajout exercice", err);
       toast(err.message || "Impossible d'ajouter cet exercice");
       confirmBtn.disabled = false;
       confirmBtn.textContent = "Ajouter";
