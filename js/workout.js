@@ -365,11 +365,13 @@ async function finishWorkout() {
       .filter(ex => ex.sets.some(s => s.weight_kg != null || s.reps != null))
       .map(ex => ex.muscle_group || "Autre")
   )];
+  const shared = loggedSets > 0 && confirm("Partager cette séance sur le feed ?\n(Sinon elle reste privée — tu pourras la partager plus tard depuis l'Historique.)");
   await db.updateWorkout(currentWorkout.id, {
     end_time: new Date().toISOString(),
     muscle_summary: muscleSummary,
     total_sets: loggedSets,
-    total_tonnage: totalTonnage
+    total_tonnage: totalTonnage,
+    shared
   });
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);

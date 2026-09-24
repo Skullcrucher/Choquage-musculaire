@@ -39,9 +39,22 @@ service cloud.firestore {
 
 1. Ouvre l'app (une fois installée ou juste dans Safari), va dans **Réglages**.
 2. Sélectionne ton fichier CSV d'export Hevy.
-3. L'import tourne : chaque série est vérifiée individuellement avant écriture pour éviter les doublons, donc avec ~2,5 ans d'historique (~10 800 lignes) ça peut prendre plusieurs minutes — laisse l'app ouverte et l'écran allumé pendant l'import.
+3. L'import tourne : les séries déjà présentes sont détectées et le reste est écrit par lots de ~450, donc même ~2,5 ans d'historique (~10 800 lignes) passent en moins d'une minute — laisse quand même l'app ouverte pendant l'import.
 4. Un résumé s'affiche à la fin (séances créées, séries importées, doublons ignorés).
 5. Tu peux réimporter le même fichier ou un export plus récent à tout moment : tout ce qui existe déjà est automatiquement ignoré, rien n'est jamais dupliqué.
+6. Les séances importées sont **privées**. Pour en montrer une sur le feed : Historique → ouvre la séance → **Partager sur le feed**. À la fin d'une séance enregistrée dans l'app, on te propose directement de la partager.
+
+Formats d'export Hevy reconnus : app en français ou en anglais (« 24 sept. 2026 à 12:27 », « 9 sept. 2026, 12:15 », « 24 Sep 2026, 12:27 », « Sep 24, 2026, 12:27 PM »), poids en kg ou en lbs (converti en kg).
+
+## Ouverture à d'autres utilisateurs
+
+Tout compte créé depuis l'écran de connexion a accès à l'app. `firestore.rules` garantit que :
+- chacun ne lit, ne modifie et ne supprime que **ses** séances et séries ;
+- une séance n'est visible des autres que si son propriétaire l'a partagée sur le feed ;
+- les autres ne peuvent que poser/retirer leur réaction 🤘 sur une séance partagée ;
+- la bibliothèque d'exercices et les routines restent communes à tous.
+
+⚠️ Après avoir récupéré ces fichiers, **redéploie les règles et les index** (section 5) : le feed a besoin du nouvel index `shared + start_time`, et tant que les anciennes règles sont en place, seul l'email de la liste blanche peut écrire. Tes séances existantes deviennent privées : repartage celles que tu veux voir dans le feed.
 
 ## 5. Automatiser les index et règles Firestore (recommandé)
 
@@ -75,7 +88,7 @@ et redéployer, plutôt que de cliquer le lien.
 
 ## Limites connues (v1)
 
-- Pas d'authentification : toute personne avec le lien peut lire/écrire (voir note sur les règles ci-dessus).
+- La bibliothèque d'exercices et les routines sont modifiables par tous les utilisateurs connectés.
 - Pas de vidéos d'exercices, pas de calcul RPE avancé (RPE est stocké mais pas exploité dans les graphes).
 - Le minuteur de repos ne sonne pas en arrière-plan si l'app est totalement fermée (limite iOS pour les PWA) — garde l'app ouverte pendant la séance.
 - Si tu veux qu'on ajoute l'authentification, des routines partagées entre plusieurs séances types, ou l'export vers Apple Santé, dis-le et on itère.

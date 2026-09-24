@@ -23,6 +23,14 @@
         { "fieldPath": "owner_uid", "order": "ASCENDING" },
         { "fieldPath": "start_time", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "workouts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "shared", "order": "ASCENDING" },
+        { "fieldPath": "start_time", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

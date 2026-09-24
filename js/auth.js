@@ -3,18 +3,15 @@
 // ============================================================
 import { auth, onAuthChange, signInWithPassword, createAccountWithPassword, resetPassword, signOutUser } from "./db.js";
 
-// Miroir de la liste blanche de firestore.rules — uniquement pour afficher
-// un message clair côté app. La vraie protection reste dans les règles
-// Firestore : même sans ce garde-fou côté client, un compte non autorisé
-// ne pourrait rien lire ni écrire.
-const ALLOWED_EMAILS = ["bouvet.clement@gmail.com"];
-
 let resolveReady;
 export const authReady = new Promise((res) => { resolveReady = res; });
 
 let currentUser = null;
 export function getUser() { return currentUser; }
-export function isAuthorized(user) { return !!user && ALLOWED_EMAILS.includes(user.email); }
+// L'app est ouverte à tout compte connecté : la confidentialité des séances
+// est assurée par les règles Firestore (chacun ne lit que les siennes, plus
+// celles partagées sur le feed).
+export function isAuthorized(user) { return !!user; }
 
 export function initAuth(onChange) {
   let first = true;
@@ -69,7 +66,7 @@ export function renderLoginGate(container) {
       </div>
       <p class="muted" id="login-error" style="margin-top:12px; color:var(--red);"></p>
       <button class="props-btn-invisible" id="forgot-btn" style="background:none; border:none; color:var(--steel); font-size:13px; margin-top:6px; cursor:pointer;">Mot de passe oublié ?</button>
-      <p class="muted" style="margin-top:18px; font-size:12px;">Tes séances restent privées. La bibliothèque d'exercices et les routines sont partagées entre utilisateurs.</p>
+      <p class="muted" style="margin-top:18px; font-size:12px;">Tes séances restent privées, sauf celles que tu partages sur le feed. La bibliothèque d'exercices et les routines sont partagées entre utilisateurs.</p>
     </div>
   `;
 

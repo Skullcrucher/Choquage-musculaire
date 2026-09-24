@@ -220,6 +220,8 @@ export async function renderReglages(container) {
             ${stats.setsSkippedDuplicate} doublon(s) ignoré(s)
             ${stats.errors ? ` · ${stats.errors} erreur(s)` : ""}
           </p>
+          ${stats.errors ? `<p style="color:var(--red)">Une partie de l'import a échoué${stats.lastError ? ` (${stats.lastError})` : ""}. Relance l'import : ce qui est déjà enregistré sera ignoré.</p>` : ""}
+          <p class="muted">Tes séances importées sont privées. Ouvre une séance dans l'Historique pour la partager sur le feed.</p>
         `;
       }
       invalidateStatsCache();

@@ -2,66 +2,76 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Liste blanche : seuls ces comptes Google peuvent lire/écrire quoi que
-    // ce soit, même s'ils se connectent avec succès via Google Sign-In.
-    // Pour ajouter quelqu'un plus tard : ajoute son email ici, virgule, et
-    // redéploie (firebase deploy --only firestore:rules).
-    function isAllowed() {
-      return request.auth != null &&
-             request.auth.token.email in [
-               'bouvet.clement@gmail.com'
-             ];
+    // Ouvert à tout compte connecté (email/mot de passe). La confidentialité
+    // repose sur owner_uid : chacun ne lit que ses propres séances, plus
+    // celles que leur propriétaire a partagées sur le feed (shared == true).
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function workoutDoc(workoutId) {
+      return get(/databases/$(database)/documents/workouts/$(workoutId)).data;
     }
 
     // Profils (pseudo + photo) : chacun lit tout le monde (pour le feed),
     // mais ne modifie que le sien.
     match /profiles/{uid} {
-      allow read: if isAllowed();
-      allow write: if isAllowed() && request.auth.uid == uid;
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == uid;
     }
 
     // Bibliothèque d'exercices et routines : partagées entre tous les
-    // utilisateurs autorisés (comme une salle de sport commune).
+    // utilisateurs (comme une salle de sport commune).
     match /exercises/{exerciseId} {
-      allow read, write: if isAllowed();
+      allow read, write: if isSignedIn();
     }
     match /routines/{routineId} {
-      allow read, write: if isAllowed();
+      allow read, write: if isSignedIn();
     }
 
-    // Séances : lecture ouverte à tout utilisateur autorisé (pour le feed),
-    // création/modification/suppression réservées au propriétaire — sauf
-    // le champ `props` (réactions 🤘) que n'importe quel utilisateur
-    // autorisé peut modifier sur la séance de n'importe qui.
+    // Séances : privées par défaut. Lecture par le propriétaire, ou par
+    // n'importe quel utilisateur connecté si la séance est partagée sur le
+    // feed. Seul le propriétaire modifie/supprime — sauf les réactions 🤘
+    // (`props`), que chacun peut poser ou retirer pour lui-même sur une
+    // séance partagée.
     match /workouts/{workoutId} {
-      allow read: if isAllowed();
-      allow create: if isAllowed()
+      allow read: if isSignedIn() && (
+                    resource.data.owner_uid == request.auth.uid ||
+                    resource.data.get('shared', false) == true
+                  );
+      allow create: if isSignedIn()
                     && request.resource.data.owner_uid == request.auth.uid;
-      allow update: if isAllowed() && (
-                      resource.data.owner_uid == request.auth.uid ||
-                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['props'])
+      allow update: if isSignedIn() && (
+                      (resource.data.owner_uid == request.auth.uid &&
+                       request.resource.data.owner_uid == request.auth.uid) ||
+                      (resource.data.get('shared', false) == true &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['props']) &&
+                       request.resource.data.get('props', {}).diff(resource.data.get('props', {})).affectedKeys().hasOnly([request.auth.uid]))
                     );
-      allow delete: if isAllowed()
+      allow delete: if isSignedIn()
                     && resource.data.owner_uid == request.auth.uid;
 
       match /sets/{setId} {
-        allow read: if isAllowed();
-        allow create: if isAllowed()
+        allow read: if isSignedIn() && (
+                      resource.data.owner_uid == request.auth.uid ||
+                      workoutDoc(workoutId).owner_uid == request.auth.uid ||
+                      workoutDoc(workoutId).get('shared', false) == true
+                    );
+        allow create: if isSignedIn()
                       && request.resource.data.owner_uid == request.auth.uid;
-        allow update, delete: if isAllowed()
+        allow update: if isSignedIn()
+                      && resource.data.owner_uid == request.auth.uid
+                      && request.resource.data.owner_uid == request.auth.uid;
+        allow delete: if isSignedIn()
                       && resource.data.owner_uid == request.auth.uid;
       }
     }
 
-    // Règle supplémentaire, syntaxe canonique pour les requêtes en GROUPE DE
-    // COLLECTIONS (celles utilisées par l'app pour lire "toutes mes séries,
-    // toutes séances confondues" — Stats, fiches d'exercice). La règle
-    // imbriquée ci-dessus suffit en théorie, mais certaines requêtes en
-    // groupe de collections l'évaluent mal ; celle-ci, avec {path=**}, est
-    // la forme que la documentation Firestore recommande explicitement pour
-    // ce cas précis.
+    // Requêtes en GROUPE DE COLLECTIONS sur les séries (Stats, fiches
+    // d'exercice) : uniquement ses propres séries. Les requêtes de l'app
+    // filtrent toutes sur owner_uid == uid, ce qui rend la règle prouvable.
     match /{path=**}/sets/{setId} {
-      allow read: if isAllowed();
+      allow read: if isSignedIn() && resource.data.owner_uid == request.auth.uid;
     }
   }
 }
