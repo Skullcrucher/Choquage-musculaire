@@ -9,7 +9,7 @@ import {
   writeBatch, deleteField
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithRedirect, signInWithPopup, getRedirectResult,
+  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
   onAuthStateChanged, signOut, setPersistence, indexedDBLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -30,26 +30,17 @@ export const dbase = initializeFirestore(app, {
 console.log("[Fonte] Firestore initialisé, projet :", firebaseConfig.projectId);
 
 // ==================== AUTHENTIFICATION ====================
-// Popup en onglet Safari normal (garde tout dans le même contexte, insensible
-// à l'ITP de Safari qui casse la redirection quand authDomain est un domaine
-// différent du site) ; redirection uniquement en repli pour l'app installée
-// en PWA sur l'écran d'accueil, où les popups ne fonctionnent pas.
+// Email/mot de passe plutôt que Google Sign-In : Google bloque par
+// politique anti-phishing les connexions OAuth lancées depuis une
+// WebView embarquée (ce que devient une PWA installée en mode
+// standalone sur iOS) — indépendamment de tout ce qu'on peut coder ici.
+// Email/mot de passe n'a pas ce problème, ça marche identiquement
+// partout (Safari, app installée, n'importe quel navigateur).
 export const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
 
-// La persistance par défaut de Firebase Auth peut ne pas survivre à la
-// navigation de signInWithRedirect en mode standalone iOS (l'app installée
-// sur l'écran d'accueil a un contexte de stockage particulier). IndexedDB
-// est le mécanisme le plus robuste dans ce contexte précis — on le force
-// explicitement plutôt que de laisser le SDK choisir.
-const authReadyPersistence = setPersistence(auth, indexedDBLocalPersistence)
-  .then(() => console.log("[Fonte] Persistance Auth : IndexedDB forcée avec succès"))
-  .catch((e) => console.error("[Fonte] Échec réglage persistance Auth :", e));
-
-function isStandalonePwa() {
-  return window.navigator.standalone === true ||
-    window.matchMedia("(display-mode: standalone)").matches;
-}
+setPersistence(auth, indexedDBLocalPersistence).catch((e) =>
+  console.error("[Fonte] Échec réglage persistance Auth :", e)
+);
 
 export function getCurrentUser() {
   return auth.currentUser;
@@ -61,28 +52,12 @@ export function requireUid() {
   return u.uid;
 }
 
-export async function signInWithGoogle() {
-  await authReadyPersistence; // s'assure que la persistance est réglée AVANT de partir en redirection
-  if (isStandalonePwa()) {
-    await signInWithRedirect(auth, googleProvider);
-  } else {
-    await signInWithPopup(auth, googleProvider);
-  }
+export async function signInWithPassword(email, password) {
+  await signInWithEmailAndPassword(auth, email, password);
 }
 
-export async function consumeRedirectResult() {
-  try {
-    const result = await getRedirectResult(auth);
-    if (result) {
-      console.log("[Fonte] Retour de redirection Google → connecté :", result.user.email);
-    } else {
-      console.log("[Fonte] Retour de redirection Google → aucun résultat (pas de redirection en attente, ou perdue)");
-    }
-    return result;
-  } catch (e) {
-    console.error("[Fonte] Erreur de connexion (retour de redirection) :", e);
-    return null;
-  }
+export async function createAccountWithPassword(email, password) {
+  await createUserWithEmailAndPassword(auth, email, password);
 }
 
 export function onAuthChange(cb) {

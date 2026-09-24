@@ -1,7 +1,7 @@
 // ============================================================
-// AUTHENTIFICATION — écran de connexion Google, avant tout accès à l'app
+// AUTHENTIFICATION — écran de connexion email/mot de passe, avant tout accès
 // ============================================================
-import { auth, onAuthChange, signInWithGoogle, consumeRedirectResult, signOutUser } from "./db.js";
+import { auth, onAuthChange, signInWithPassword, createAccountWithPassword, signOutUser } from "./db.js";
 
 // Miroir de la liste blanche de firestore.rules — uniquement pour afficher
 // un message clair côté app. La vraie protection reste dans les règles
@@ -17,15 +17,26 @@ export function getUser() { return currentUser; }
 export function isAuthorized(user) { return !!user && ALLOWED_EMAILS.includes(user.email); }
 
 export function initAuth(onChange) {
-  // Récupère le résultat d'une redirection de connexion en cours (retour de Google)
-  consumeRedirectResult();
-
   let first = true;
   onAuthChange((user) => {
     currentUser = user;
     if (first) { first = false; resolveReady(); }
     onChange(user);
   });
+}
+
+const AUTH_ERROR_FR = {
+  "auth/invalid-email": "Adresse email invalide.",
+  "auth/user-not-found": "Aucun compte avec cet email — utilise \"Créer un compte\" la première fois.",
+  "auth/wrong-password": "Mot de passe incorrect.",
+  "auth/invalid-credential": "Email ou mot de passe incorrect.",
+  "auth/email-already-in-use": "Un compte existe déjà avec cet email — utilise \"Se connecter\" à la place.",
+  "auth/weak-password": "Le mot de passe doit faire au moins 6 caractères.",
+  "auth/too-many-requests": "Trop de tentatives — réessaie dans quelques minutes."
+};
+
+function friendlyAuthError(err) {
+  return AUTH_ERROR_FR[err.code] || err.message || "Erreur de connexion.";
 }
 
 export function renderLoginGate(container) {
@@ -49,26 +60,46 @@ export function renderLoginGate(container) {
         </g>
       </svg>
       <h1 class="login-title">Fonte</h1>
-      <p class="muted" style="margin-bottom:28px;">Connecte-toi pour accéder à tes séances.</p>
-      <button class="btn btn-primary" id="google-signin">
-        <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right:6px;"><path fill="#fff" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 01-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#fff" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.95v2.33A9 9 0 009 18z"/><path fill="#fff" d="M3.95 10.7A5.4 5.4 0 013.68 9c0-.59.1-1.17.27-1.7V4.97H.95A9 9 0 000 9c0 1.45.35 2.83.95 4.03l3-2.33z"/><path fill="#fff" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 00.95 4.97l3 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
-        Continuer avec Google
-      </button>
+      <p class="muted" style="margin-bottom:24px;">Connecte-toi pour accéder à tes séances.</p>
+      <input id="login-email" type="email" autocomplete="email" placeholder="Email" style="margin-bottom:10px;">
+      <input id="login-password" type="password" autocomplete="current-password" placeholder="Mot de passe" style="margin-bottom:14px;">
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="signup-btn">Créer un compte</button>
+        <button class="btn btn-primary" id="signin-btn">Se connecter</button>
+      </div>
+      <p class="muted" id="login-error" style="margin-top:12px; color:var(--red);"></p>
       <p class="muted" style="margin-top:18px; font-size:12px;">Tes séances restent privées. La bibliothèque d'exercices et les routines sont partagées entre utilisateurs.</p>
     </div>
   `;
-  container.querySelector("#google-signin").onclick = async (e) => {
-    const btn = e.currentTarget;
-    btn.disabled = true;
-    btn.textContent = "Connexion…";
+
+  const emailEl = container.querySelector("#login-email");
+  const passEl = container.querySelector("#login-password");
+  const errorEl = container.querySelector("#login-error");
+  const signinBtn = container.querySelector("#signin-btn");
+  const signupBtn = container.querySelector("#signup-btn");
+
+  async function run(action, btn, busyLabel, idleLabel) {
+    const email = emailEl.value.trim();
+    const password = passEl.value;
+    errorEl.textContent = "";
+    if (!email || !password) { errorEl.textContent = "Renseigne un email et un mot de passe."; return; }
+    signinBtn.disabled = true;
+    signupBtn.disabled = true;
+    btn.textContent = busyLabel;
     try {
-      await signInWithGoogle();
+      await action(email, password);
     } catch (err) {
-      console.error("[Fonte] Erreur connexion", err);
-      btn.disabled = false;
-      btn.textContent = "Continuer avec Google";
+      console.error("[Fonte] Erreur auth", err);
+      errorEl.textContent = friendlyAuthError(err);
     }
-  };
+    signinBtn.disabled = false;
+    signupBtn.disabled = false;
+    btn.textContent = idleLabel;
+  }
+
+  signinBtn.onclick = () => run(signInWithPassword, signinBtn, "Connexion…", "Se connecter");
+  signupBtn.onclick = () => run(createAccountWithPassword, signupBtn, "Création…", "Créer un compte");
+  passEl.addEventListener("keydown", (e) => { if (e.key === "Enter") signinBtn.click(); });
 }
 
 export function renderUnauthorizedGate(container, user) {
