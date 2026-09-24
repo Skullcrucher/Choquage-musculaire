@@ -3,6 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce, attachAutocomplete, fireRestEndNotification, esc } from "./utils.js";
+import { scheduleRestPush, cancelRestPush } from "./push.js";
 import { getExercises, getRoutines, getWorkouts, getAllSets, invalidate } from "./cache.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
@@ -209,7 +210,7 @@ function renderExerciseList(el) {
       }
       if (set.done && set.weight_kg != null && set.reps != null) {
         const ex = currentWorkout.exercises[exIdx];
-        startRestTimer(ex.rest_timer_seconds || 90);
+        startRestTimer(ex.rest_timer_seconds || 90, `Prochaine série : ${ex.exercise_title}`);
       }
       saveLocalState();
       check.classList.toggle("checked", set.done);
@@ -304,10 +305,17 @@ async function openAddExerciseModal() {
   };
 }
 
-function startRestTimer(seconds) {
+let restPushBody = "";
+
+// Le compte à rebours affiché tourne dans l'app ; la notification de fin,
+// elle, est confiée au serveur push pour arriver même si on est passé sur
+// une autre app (voir push.js).
+function startRestTimer(seconds, pushBody = "") {
   clearInterval(restTimerInterval);
   restTimerEnd = Date.now() + seconds * 1000;
+  restPushBody = pushBody;
   localStorage.setItem(LS_REST_KEY, String(restTimerEnd));
+  scheduleRestPush(restTimerEnd, restPushBody);
   renderRestTimerBar();
   restTimerInterval = setInterval(renderRestTimerBar, 1000);
 }
@@ -346,11 +354,13 @@ function renderRestTimerBar() {
   bar.querySelector("#rt-add").onclick = () => {
     restTimerEnd += 15000;
     localStorage.setItem(LS_REST_KEY, String(restTimerEnd));
+    scheduleRestPush(restTimerEnd, restPushBody);
     renderRestTimerBar();
   };
   bar.querySelector("#rt-skip").onclick = () => {
     clearInterval(restTimerInterval);
     restTimerEnd = null;
+    cancelRestPush();
     localStorage.removeItem(LS_REST_KEY);
     renderRestTimerBar();
   };
@@ -378,6 +388,7 @@ async function finishWorkout() {
   localStorage.removeItem(LS_REST_KEY);
   invalidate("workouts");
   clearInterval(restTimerInterval);
+  if (restTimerEnd) cancelRestPush();
   restTimerEnd = null;
   document.querySelectorAll(".rest-timer").forEach(el => el.remove());
   const finished = currentWorkout;
@@ -395,6 +406,7 @@ async function cancelWorkout() {
   localStorage.removeItem(LS_REST_KEY);
   invalidate("workouts");
   clearInterval(restTimerInterval);
+  if (restTimerEnd) cancelRestPush();
   restTimerEnd = null;
   document.querySelectorAll(".rest-timer").forEach(el => el.remove());
   currentWorkout = null;

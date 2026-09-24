@@ -1,0 +1,24 @@
+# Serveur de notifications push du minuteur de repos (Cloudflare Workers,
+# offre gratuite). Déployé automatiquement par
+# .github/workflows/deploy-push-worker.yml — voir push-worker/README.md.
+name = "skullcrusher-push"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+workers_dev = true
+
+[vars]
+# Origines autorisées à appeler le serveur (le site GitHub Pages), séparées
+# par des virgules. L'ancienne adresse reste acceptée après le transfert du
+# dépôt vers Skullcrucher.
+ALLOWED_ORIGIN = "https://skullcrucher.github.io,https://bouvetclement-ctrl.github.io"
+# Contact exigé par le protocole Web Push (VAPID) : une URL https suffit.
+VAPID_SUBJECT = "https://skullcrucher.github.io/Choquage-musculaire/"
+
+[[durable_objects.bindings]]
+name = "TIMERS"
+class_name = "RestTimer"
+
+# Durable Objects "SQLite" : seuls disponibles sur l'offre gratuite.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RestTimer"]

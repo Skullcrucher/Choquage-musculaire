@@ -1,6 +1,12 @@
 // ============================================================
 // UTILITAIRES PARTAGÉS
 // ============================================================
+import { pushActive } from "./push.js";
+
+// Version affichée dans Réglages → À propos. À incrémenter avec
+// CACHE_NAME dans service-worker.js à chaque mise en ligne, pour voir d'un
+// coup d'œil si le téléphone utilise bien la dernière version.
+export const APP_VERSION = "38";
 
 const HORNS_SVG = `<svg class="toast-horns" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><g fill="currentColor"><rect x="30" y="50" width="38" height="38" rx="17"/><rect x="37" y="42" width="12" height="18" rx="6"/><rect x="50" y="42" width="12" height="18" rx="6"/><rect x="-6.5" y="-44" width="13" height="44" rx="6.5" transform="translate(36 52) rotate(-16)"/><rect x="-5.5" y="-40" width="11" height="40" rx="5.5" transform="translate(63 54) rotate(18)"/><rect x="-6.5" y="-32" width="13" height="32" rx="6.5" transform="translate(32 68) rotate(-82)"/></g></svg>`;
 
@@ -143,6 +149,9 @@ export async function setRestNotificationsEnabled(enabled) {
 export async function fireRestEndNotification() {
   if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
   if (!restNotificationsEnabled()) return;
+  // Avec le push, c'est le serveur qui envoie la notification (même app
+  // fermée) : on n'en affiche pas une deuxième ici.
+  if (pushActive()) return;
   if (!("Notification" in window) || Notification.permission !== "granted") return;
   try {
     if ("serviceWorker" in navigator) {

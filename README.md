@@ -95,5 +95,5 @@ et redéployer, plutôt que de cliquer le lien.
 
 - Le minuteur de repos par défaut d'un exercice n'est modifiable que par son créateur ; chacun peut régler le sien par exercice dans ses routines.
 - Pas de vidéos d'exercices, pas de calcul RPE avancé (RPE est stocké mais pas exploité dans les graphes).
-- Le minuteur de repos ne sonne pas en arrière-plan si l'app est totalement fermée (limite iOS pour les PWA) — garde l'app ouverte pendant la séance.
+- Le minuteur de repos a besoin du serveur de notifications (`push-worker/`, gratuit) pour prévenir à l'heure quand on est sur une autre app ou écran verrouillé : voir `push-worker/README.md`. Sans lui, la notification n'arrive qu'au retour dans l'app.
 - Si tu veux qu'on ajoute l'authentification, des routines partagées entre plusieurs séances types, ou l'export vers Apple Santé, dis-le et on itère.

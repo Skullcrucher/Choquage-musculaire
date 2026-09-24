@@ -3,13 +3,14 @@
 // ============================================================
 import * as db from "./db.js";
 import { importCsvFile } from "./import.js";
-import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl } from "./utils.js";
+import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl, APP_VERSION } from "./utils.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { invalidateStatsCache } from "./stats.js";
 import { getExercises, invalidate } from "./cache.js";
 import { EXERCISE_SEED } from "./exercises-seed.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { getUser, signOutUser } from "./auth.js";
+import { pushConfigured, pushActive, enablePush, disablePush, scheduleRestPush, isIos, isStandalone } from "./push.js";
 
 export async function renderReglages(container) {
   const user = getUser();
@@ -41,7 +42,7 @@ export async function renderReglages(container) {
 
     <div class="card">
       <div class="card-title">Minuteur de repos</div>
-      <p class="muted" style="margin-top:0;">Reçois une notification quand le repos se termine, même si tu as changé d'onglet ou que l'écran s'est éteint entre-temps. La durée par défaut se règle par exercice, dans la bibliothèque ci-dessous.</p>
+      <p class="muted" style="margin-top:0;">Reçois une notification à la fin du repos, même si tu es passé sur une autre app (Spotify...) ou que l'écran est verrouillé. Sur iPhone, il faut utiliser l'app ajoutée à l'écran d'accueil. La durée par défaut se règle par exercice, dans la bibliothèque ci-dessous.</p>
       <div class="list-row" style="cursor:default;">
         <div class="list-row-title">Notifications de fin de repos</div>
         <label class="switch">
@@ -50,6 +51,7 @@ export async function renderReglages(container) {
         </label>
       </div>
       <p class="muted" id="notify-status" style="margin-top:6px;"></p>
+      <button class="btn btn-secondary btn-sm" id="notify-test" style="display:none;">Tester : notification dans 10 s</button>
     </div>
 
     <div class="card">
@@ -90,7 +92,8 @@ export async function renderReglages(container) {
 
     <div class="card">
       <div class="card-title">À propos</div>
-      <p class="muted" style="margin-top:0;">Projet Firebase : ${firebaseConfig.projectId}</p>
+      <p class="muted" style="margin-top:0;">Version de l'app : <b>${APP_VERSION}</b> · Projet Firebase : ${esc(firebaseConfig.projectId)}</p>
+      <button class="btn btn-secondary btn-sm" id="force-update">Forcer la mise à jour</button>
       <p class="muted">Ajoute cette page à ton écran d'accueil (icône Partager → "Sur l'écran d'accueil") pour l'utiliser comme une app.</p>
     </div>
   `;
@@ -157,21 +160,68 @@ export async function renderReglages(container) {
 
   const notifyToggle = container.querySelector("#notify-toggle");
   const notifyStatus = container.querySelector("#notify-status");
+  const notifyTest = container.querySelector("#notify-test");
+  const iosNotInstalled = isIos() && !isStandalone();
+  function showNotifyState() {
+    notifyTest.style.display = notifyToggle.checked && pushActive() ? "" : "none";
+    if (!notifyToggle.checked) { notifyStatus.textContent = ""; return; }
+    if (pushActive()) notifyStatus.textContent = "✅ Activées — elles arrivent même si tu es sur une autre app ou écran verrouillé.";
+    else if (!pushConfigured()) notifyStatus.textContent = "Activées, mais seulement quand l'app est à l'écran : le serveur de notifications n'est pas encore configuré.";
+    else notifyStatus.textContent = "Activées seulement app ouverte — désactive puis réactive pour les recevoir aussi sur une autre app.";
+  }
   if (!("Notification" in window)) {
-    notifyToggle.disabled = true;
-    notifyStatus.textContent = "Les notifications ne sont pas prises en charge par ce navigateur.";
+    notifyToggle.disabled = !iosNotInstalled;
+    notifyStatus.textContent = iosNotInstalled
+      ? "Sur iPhone, ajoute l'app à ton écran d'accueil (Partager → Sur l'écran d'accueil), puis active les notifications depuis l'app installée."
+      : "Les notifications ne sont pas prises en charge par ce navigateur.";
   } else if (Notification.permission === "denied") {
     notifyToggle.checked = false;
-    notifyStatus.textContent = "Notifications bloquées pour ce site — active-les dans les réglages de Safari pour ce site, puis reviens ici.";
+    notifyStatus.textContent = "Notifications bloquées — autorise-les pour cette app dans les réglages de l'iPhone (Réglages → Notifications), puis reviens ici.";
+  } else {
+    showNotifyState();
   }
   notifyToggle.onchange = async () => {
-    const ok = await setRestNotificationsEnabled(notifyToggle.checked);
+    notifyToggle.disabled = true;
+    if (!notifyToggle.checked) {
+      await setRestNotificationsEnabled(false);
+      await disablePush();
+      showNotifyState();
+      notifyToggle.disabled = false;
+      return;
+    }
+    notifyStatus.textContent = "Activation…";
+    if (iosNotInstalled || !("Notification" in window)) {
+      notifyToggle.checked = false;
+      notifyStatus.textContent = "Sur iPhone, ajoute l'app à ton écran d'accueil (Partager → Sur l'écran d'accueil), puis active les notifications depuis l'app installée.";
+      notifyToggle.disabled = false;
+      return;
+    }
+    const ok = await setRestNotificationsEnabled(true);
     if (!ok) {
       notifyToggle.checked = false;
-      notifyStatus.textContent = "Autorisation refusée — active les notifications pour ce site dans les réglages de Safari.";
-    } else {
-      notifyStatus.textContent = notifyToggle.checked ? "Notifications activées." : "";
+      notifyStatus.textContent = "Autorisation refusée — autorise les notifications pour cette app dans les réglages de l'iPhone.";
+      notifyToggle.disabled = false;
+      return;
     }
+    if (pushConfigured()) {
+      try {
+        await enablePush();
+      } catch (err) {
+        console.error("[Skullcrusher] Activation push", err);
+        showNotifyState();
+        notifyStatus.textContent += ` (${err.message})`;
+        notifyToggle.disabled = false;
+        return;
+      }
+    }
+    showNotifyState();
+    notifyToggle.disabled = false;
+  };
+  notifyTest.onclick = async () => {
+    notifyTest.disabled = true;
+    const ok = await scheduleRestPush(Date.now() + 10000, "Test réussi : le minuteur te préviendra même depuis une autre app.");
+    toast(ok ? "Passe sur une autre app : la notification arrive dans 10 s" : "Échec de l'envoi au serveur de notifications", 3500);
+    setTimeout(() => { notifyTest.disabled = false; }, 10000);
   };
 
   const fileInput = container.querySelector("#csv-file");
@@ -242,6 +292,7 @@ export async function renderReglages(container) {
   };
 
   container.querySelector("#export-csv").onclick = exportCsv;
+  container.querySelector("#force-update").onclick = forceUpdate;
   container.querySelector("#load-seed").onclick = () => loadSeedLibrary(container);
 
   await renderExerciseLib(container);
@@ -329,6 +380,20 @@ function openExerciseEditModal(ex, container) {
       renderExerciseLib(container);
     };
   });
+}
+
+// Vide le cache hors ligne et recharge : utile si le téléphone garde une
+// ancienne version de l'app (surtout en mode "écran d'accueil" sur iOS).
+async function forceUpdate() {
+  try {
+    const regs = (await navigator.serviceWorker?.getRegistrations()) || [];
+    await Promise.all(regs.map(r => r.unregister()));
+    const keys = (await window.caches?.keys()) || [];
+    await Promise.all(keys.map(k => caches.delete(k)));
+  } catch (e) {
+    console.warn("[Skullcrusher] Mise à jour forcée incomplète :", e);
+  }
+  location.reload();
 }
 
 async function exportCsv() {
