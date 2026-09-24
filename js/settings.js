@@ -3,7 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { importCsvFile } from "./import.js";
-import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl } from "./utils.js";
+import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl, APP_VERSION } from "./utils.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { invalidateStatsCache } from "./stats.js";
 import { getExercises, invalidate } from "./cache.js";
@@ -90,7 +90,8 @@ export async function renderReglages(container) {
 
     <div class="card">
       <div class="card-title">À propos</div>
-      <p class="muted" style="margin-top:0;">Projet Firebase : ${firebaseConfig.projectId}</p>
+      <p class="muted" style="margin-top:0;">Version de l'app : <b>${APP_VERSION}</b> · Projet Firebase : ${esc(firebaseConfig.projectId)}</p>
+      <button class="btn btn-secondary btn-sm" id="force-update">Forcer la mise à jour</button>
       <p class="muted">Ajoute cette page à ton écran d'accueil (icône Partager → "Sur l'écran d'accueil") pour l'utiliser comme une app.</p>
     </div>
   `;
@@ -242,6 +243,7 @@ export async function renderReglages(container) {
   };
 
   container.querySelector("#export-csv").onclick = exportCsv;
+  container.querySelector("#force-update").onclick = forceUpdate;
   container.querySelector("#load-seed").onclick = () => loadSeedLibrary(container);
 
   await renderExerciseLib(container);
@@ -329,6 +331,20 @@ function openExerciseEditModal(ex, container) {
       renderExerciseLib(container);
     };
   });
+}
+
+// Vide le cache hors ligne et recharge : utile si le téléphone garde une
+// ancienne version de l'app (surtout en mode "écran d'accueil" sur iOS).
+async function forceUpdate() {
+  try {
+    const regs = (await navigator.serviceWorker?.getRegistrations()) || [];
+    await Promise.all(regs.map(r => r.unregister()));
+    const keys = (await window.caches?.keys()) || [];
+    await Promise.all(keys.map(k => caches.delete(k)));
+  } catch (e) {
+    console.warn("[Skullcrusher] Mise à jour forcée incomplète :", e);
+  }
+  location.reload();
 }
 
 async function exportCsv() {
