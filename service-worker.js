@@ -1,4 +1,4 @@
-const CACHE_NAME = "skullcrusher-cache-v34";
+const CACHE_NAME = "skullcrusher-cache-v35";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -16,6 +16,8 @@ const APP_SHELL = [
   "./js/firebase-config.js",
   "./js/import.js",
   "./js/routines.js",
+  "./js/routine-discover.js",
+  "./js/friends.js",
   "./js/history.js",
   "./js/feed.js",
   "./js/workout-detail.js",

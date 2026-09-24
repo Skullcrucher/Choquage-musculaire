@@ -645,3 +645,47 @@ canvas { max-width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---------- Routines partagées / Découvrir / Amis ---------- */
+.routine-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface-raised);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  margin-right: 6px;
+  margin-bottom: 6px;
+}
+.vote-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text-dim);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.1s;
+}
+.vote-btn:active { transform: scale(0.92); }
+.vote-btn.voted { border-color: var(--amber); color: var(--amber); background: rgba(255,176,32,0.12); }
+.vote-btn:disabled { opacity: 0.6; cursor: default; }
+.req-dot {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}

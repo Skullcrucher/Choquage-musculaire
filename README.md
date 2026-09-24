@@ -52,7 +52,9 @@ Tout compte créé depuis l'écran de connexion a accès à l'app. `firestore.ru
 - chacun ne lit, ne modifie et ne supprime que **ses** séances et séries ;
 - une séance n'est visible des autres que si son propriétaire l'a partagée sur le feed ;
 - les autres ne peuvent que poser/retirer leur réaction 🤘 sur une séance partagée ;
-- les routines sont personnelles ;
+- les routines sont personnelles, avec trois niveaux de partage : 🔒 privée, 👥 amis (choisis un par un) ou 🌍 publique ;
+- les routines partagées apparaissent dans Historique → Routines → **Découvrir** : recherche texte, filtres (source amis/communauté, muscles, exercice, niveau, objectif, durée), tri par popularité, votes 👍 (un par personne, pas pour ses propres routines) et bouton « Ajouter à ma bibliothèque » (copie privée) ;
+- les amis se gèrent dans Feed → **Amis** : recherche par pseudo, demande, acceptation. Un utilisateur sans pseudo (Réglages → Compte) ne peut pas être trouvé ;
 - la bibliothèque d'exercices est commune : tout le monde peut y ajouter un exercice, mais seul son créateur (ou l'administrateur, `bouvet.clement@gmail.com`) peut le modifier ou le supprimer. Les exercices créés avant ce verrouillage ne sont modifiables que par l'administrateur.
 
 L'email administrateur est écrit à deux endroits qui doivent rester identiques : `isAdmin()` dans `firestore.rules` et `ADMIN_EMAIL` dans `js/db.js`. Au premier chargement de l'app par l'administrateur, les routines créées avant qu'elles deviennent personnelles lui sont automatiquement rattachées.

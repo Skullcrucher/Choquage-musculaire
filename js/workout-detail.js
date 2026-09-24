@@ -2,7 +2,7 @@
 // DÉTAIL D'UNE SÉANCE — modale partagée entre Historique et Feed
 // ============================================================
 import * as db from "./db.js";
-import { openModal, closeModal, fmtDateTime, fmtDuration, estimate1RM, toast } from "./utils.js";
+import { openModal, closeModal, fmtDateTime, fmtDuration, estimate1RM, toast, esc } from "./utils.js";
 import { getUser } from "./auth.js";
 import { invalidate } from "./cache.js";
 
@@ -17,17 +17,17 @@ export async function openWorkoutDetail(workout, onDeleted) {
     byExercise[s.exercise_title].push(s);
   });
   openModal(`
-    <h3>${workout.title}</h3>
+    <h3>${esc(workout.title)}</h3>
     <p class="muted" style="margin-top:-8px;">
-      ${workout.owner_name && !isOwner ? `${workout.owner_name} · ` : ""}${fmtDateTime(workout.start_time)} · ${fmtDuration(workout.start_time, workout.end_time)}
+      ${workout.owner_name && !isOwner ? `${esc(workout.owner_name)} · ` : ""}${fmtDateTime(workout.start_time)} · ${fmtDuration(workout.start_time, workout.end_time)}
     </p>
     ${Object.entries(byExercise).map(([name, exSets]) => `
       <div style="margin-bottom:12px;">
-        <div style="font-family:'Barlow Condensed',sans-serif; font-size:17px; margin-bottom:4px;">${name}</div>
+        <div style="font-family:'Barlow Condensed',sans-serif; font-size:17px; margin-bottom:4px;">${esc(name)}</div>
         ${exSets.sort((a, b) => a.set_index - b.set_index).map(s => `
           <div class="muted" style="display:flex; justify-content:space-between; padding:3px 0;">
-            <span>Série ${s.set_index} ${s.set_type !== "normal" ? "· " + s.set_type : ""}</span>
-            <span>${s.weight_kg ?? "—"} kg × ${s.reps ?? "—"}${s.weight_kg && s.reps ? ` (1RM ${estimate1RM(s.weight_kg, s.reps)} kg)` : ""}</span>
+            <span>Série ${esc(s.set_index)} ${s.set_type !== "normal" ? "· " + esc(s.set_type) : ""}</span>
+            <span>${esc(s.weight_kg ?? "—")} kg × ${esc(s.reps ?? "—")}${s.weight_kg && s.reps ? ` (1RM ${estimate1RM(s.weight_kg, s.reps)} kg)` : ""}</span>
           </div>
         `).join("")}
       </div>

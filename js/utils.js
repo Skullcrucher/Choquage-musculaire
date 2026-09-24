@@ -13,6 +13,24 @@ export function toast(msg, duration = 2200, options = {}) {
   toast._t = setTimeout(() => el.classList.remove("show"), duration);
 }
 
+// Échappe un texte avant de l'insérer dans du HTML (contenu ou attribut).
+// Indispensable pour tout ce qui vient d'un autre utilisateur : pseudo,
+// titre de séance, nom de routine ou d'exercice...
+export function esc(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+// N'accepte comme image que les data URL d'image (photos de profil) ou les
+// URL https — jamais du texte qui pourrait sortir du `url('...')`.
+export function safeImageUrl(url) {
+  if (typeof url !== "string") return "";
+  if (/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(url)) return url;
+  if (/^https:\/\/[^\s'"()<>\\]+$/.test(url)) return url;
+  return "";
+}
+
 export function openModal(innerHtml, onMount) {
   const backdrop = document.createElement("div");
   backdrop.className = "modal-backdrop";
@@ -162,7 +180,7 @@ export function attachAutocomplete(inputEl, items, onSelect) {
     const rest = items.filter(i => !i.toLowerCase().startsWith(q) && i.toLowerCase().includes(q));
     const matches = [...starts, ...rest].slice(0, 8);
     if (!matches.length) { wrap.innerHTML = ""; wrap.classList.remove("show"); return; }
-    wrap.innerHTML = matches.map(m => `<div class="autocomplete-item">${m}</div>`).join("");
+    wrap.innerHTML = matches.map(m => `<div class="autocomplete-item">${esc(m)}</div>`).join("");
     wrap.classList.add("show");
     wrap.querySelectorAll(".autocomplete-item").forEach(el => {
       el.onmousedown = (e) => e.preventDefault(); // évite que le blur ferme avant le clic

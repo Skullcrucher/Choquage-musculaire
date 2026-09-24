@@ -1,7 +1,7 @@
 // ============================================================
 // FICHE D'EXERCICE — muscles, conseils, vidéo, historique
 // ============================================================
-import { openModal, closeModal, estimate1RM, isoWeek, fmtDateTime } from "./utils.js";
+import { openModal, closeModal, estimate1RM, isoWeek, fmtDateTime, esc } from "./utils.js";
 import { getAllSets } from "./cache.js";
 import { EXERCISE_GUIDES } from "./exercise-guides.js";
 
@@ -19,9 +19,9 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "")
   const videoUrl = `https://www.youtube.com/results?search_query=${videoQuery}`;
 
   const modal = openModal(`
-    <h3 style="margin-bottom:2px;">${exerciseName}</h3>
+    <h3 style="margin-bottom:2px;">${esc(exerciseName)}</h3>
     <div class="chip-row" style="margin-top:6px;">
-      ${guide ? `<div class="chip" style="pointer-events:none;">${guide.equipment}</div>` : (muscleGroupFallback ? `<div class="chip" style="pointer-events:none;">${muscleGroupFallback}</div>` : "")}
+      ${guide ? `<div class="chip" style="pointer-events:none;">${guide.equipment}</div>` : (muscleGroupFallback ? `<div class="chip" style="pointer-events:none;">${esc(muscleGroupFallback)}</div>` : "")}
       ${guide?.level ? `<div class="chip" style="pointer-events:none;">${guide.level}</div>` : ""}
       ${guide?.mechanic ? `<div class="chip" style="pointer-events:none;">${guide.mechanic}</div>` : ""}
     </div>
@@ -41,7 +41,7 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "")
         </div>
       ` : ""}
     ` : `
-      <p class="muted" style="margin-top:14px;">${muscleGroupFallback ? `Groupe musculaire : ${muscleGroupFallback}.` : ""} Pas de fiche détaillée disponible pour cet exercice.</p>
+      <p class="muted" style="margin-top:14px;">${muscleGroupFallback ? `Groupe musculaire : ${esc(muscleGroupFallback)}.` : ""} Pas de fiche détaillée disponible pour cet exercice.</p>
     `}
 
     <a href="${videoUrl}" target="_blank" rel="noopener" class="btn btn-secondary" style="margin-top:14px; text-decoration:none;">▶ Voir des vidéos explicatives</a>

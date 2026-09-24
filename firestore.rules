@@ -4,7 +4,8 @@ service cloud.firestore {
 
     // Ouvert à tout compte connecté (email/mot de passe). La confidentialité
     // repose sur owner_uid : chacun ne lit que ses propres séances et
-    // routines, plus les séances partagées sur le feed (shared == true).
+    // routines, plus les séances partagées sur le feed (shared == true) et
+    // les routines publiques ou partagées avec lui par un ami.
     function isSignedIn() {
       return request.auth != null;
     }
@@ -20,11 +21,19 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/workouts/$(workoutId)).data;
     }
 
-    // Profils (pseudo + photo) : chacun lit tout le monde (pour le feed),
-    // mais ne modifie que le sien.
+    // Texte affiché aux autres utilisateurs : pas de < ni > (anti-injection
+    // HTML, en plus de l'échappement fait par l'app).
+    function isSafeText(value, maxLen) {
+      return value is string && value.size() <= maxLen && !value.matches('.*[<>].*');
+    }
+
+    // Profils (pseudo + photo) : chacun lit tout le monde (feed, recherche
+    // d'amis), mais ne modifie que le sien.
     match /profiles/{uid} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.uid == uid;
+      allow write: if isSignedIn() && request.auth.uid == uid
+                   && isSafeText(request.resource.data.get('display_name', ''), 30)
+                   && isSafeText(request.resource.data.get('search_name', ''), 30);
     }
 
     // Bibliothèque d'exercices : commune. Tout le monde lit et peut ajouter
@@ -34,27 +43,106 @@ service cloud.firestore {
     match /exercises/{exerciseId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
-                    && request.resource.data.created_by == request.auth.uid;
+                    && request.resource.data.created_by == request.auth.uid
+                    && isSafeText(request.resource.data.name, 80);
       allow update: if (isAdmin() || (isSignedIn() && resource.data.get('created_by', '') == request.auth.uid))
-                    && request.resource.data.get('created_by', '') == resource.data.get('created_by', '');
+                    && request.resource.data.get('created_by', '') == resource.data.get('created_by', '')
+                    && isSafeText(request.resource.data.name, 80);
       allow delete: if isAdmin()
                     || (isSignedIn() && resource.data.get('created_by', '') == request.auth.uid);
     }
 
-    // Routines : personnelles. L'administrateur peut aussi les lire toutes
-    // et s'attribuer celles sans propriétaire (créées avant ce changement) :
-    // c'est ce que fait l'app automatiquement à son premier chargement.
+    // Amitiés : document friendships/{uidA_uidB} (uids triés). Celui qui
+    // demande le crée en "pending", seul le destinataire peut l'accepter,
+    // chacun des deux peut le supprimer (refus, annulation, retrait).
+    match /friendships/{friendshipId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.users;
+      allow create: if isSignedIn()
+                    && request.resource.data.from == request.auth.uid
+                    && request.resource.data.to != request.auth.uid
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.users.size() == 2
+                    && request.resource.data.users.hasAll([request.resource.data.from, request.resource.data.to])
+                    && friendshipId == (request.resource.data.from < request.resource.data.to
+                         ? request.resource.data.from + '_' + request.resource.data.to
+                         : request.resource.data.to + '_' + request.resource.data.from);
+      allow update: if isSignedIn()
+                    && resource.data.to == request.auth.uid
+                    && resource.data.status == 'pending'
+                    && request.resource.data.status == 'accepted'
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'accepted_at']);
+      allow delete: if isSignedIn() && request.auth.uid in resource.data.users;
+    }
+
+    // Routines : chacune appartient à son créateur, avec une visibilité
+    // "private" (lui seul), "friends" (les uids de shared_with) ou "public"
+    // (tout le monde). Seul le propriétaire modifie le contenu ; les autres
+    // ne peuvent toucher qu'à vote_count, de +1/-1, et uniquement en créant
+    // ou supprimant leur propre vote dans le même lot.
+    // L'administrateur peut aussi les lire toutes et s'attribuer celles sans
+    // propriétaire (créées avant qu'elles deviennent personnelles).
+    function routineReadable(data) {
+      return data.get('owner_uid', null) == request.auth.uid
+          || data.get('visibility', 'private') == 'public'
+          || request.auth.uid in data.get('shared_with', []);
+    }
+
+    function routineVotePath(routineId) {
+      return /databases/$(database)/documents/routines/$(routineId)/votes/$(request.auth.uid);
+    }
+
+    function validRoutine(data) {
+      return isSafeText(data.get('name', ''), 80)
+          && isSafeText(data.get('description', ''), 500)
+          && isSafeText(data.get('owner_name', ''), 30)
+          && data.get('visibility', 'private') in ['private', 'friends', 'public']
+          && data.get('shared_with', []) is list
+          && data.get('shared_with', []).size() <= 200;
+    }
+
     match /routines/{routineId} {
       allow read: if isAdmin()
-                  || (isSignedIn() && resource.data.owner_uid == request.auth.uid);
+                  || (isSignedIn() && routineReadable(resource.data));
       allow create: if isSignedIn()
-                    && request.resource.data.owner_uid == request.auth.uid;
-      allow update: if isSignedIn()
                     && request.resource.data.owner_uid == request.auth.uid
-                    && (resource.data.get('owner_uid', null) == request.auth.uid ||
-                        (isAdmin() && resource.data.get('owner_uid', null) == null));
+                    && request.resource.data.get('vote_count', 0) == 0
+                    && validRoutine(request.resource.data);
+      allow update: if isSignedIn() && (
+                      // le propriétaire : tout sauf le compteur de votes
+                      (resource.data.get('owner_uid', null) == request.auth.uid
+                        && request.resource.data.owner_uid == request.auth.uid
+                        && request.resource.data.get('vote_count', 0) == resource.data.get('vote_count', 0)
+                        && validRoutine(request.resource.data)) ||
+                      // un autre utilisateur qui vote / retire son vote
+                      (resource.data.get('owner_uid', null) != request.auth.uid
+                        && routineReadable(resource.data)
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vote_count'])
+                        && ((request.resource.data.vote_count == resource.data.get('vote_count', 0) + 1
+                              && !exists(routineVotePath(routineId)) && existsAfter(routineVotePath(routineId))) ||
+                            (request.resource.data.vote_count == resource.data.get('vote_count', 0) - 1
+                              && exists(routineVotePath(routineId)) && !existsAfter(routineVotePath(routineId))))) ||
+                      // l'administrateur récupère une ancienne routine sans propriétaire
+                      (isAdmin() && resource.data.get('owner_uid', null) == null
+                        && request.resource.data.owner_uid == request.auth.uid)
+                    );
       allow delete: if isSignedIn()
                     && resource.data.owner_uid == request.auth.uid;
+
+      match /votes/{voterId} {
+        allow read: if isSignedIn() && voterId == request.auth.uid;
+        allow create: if isSignedIn() && voterId == request.auth.uid
+                      && get(/databases/$(database)/documents/routines/$(routineId)).data.owner_uid != request.auth.uid
+                      && getAfter(/databases/$(database)/documents/routines/$(routineId)).data.vote_count
+                           == get(/databases/$(database)/documents/routines/$(routineId)).data.get('vote_count', 0) + 1;
+        allow delete: if isSignedIn() && voterId == request.auth.uid
+                      && getAfter(/databases/$(database)/documents/routines/$(routineId)).data.vote_count
+                           == get(/databases/$(database)/documents/routines/$(routineId)).data.get('vote_count', 0) - 1;
+      }
+    }
+
+    // Liste de ses propres votes (pour afficher les 👍 déjà donnés).
+    match /user_votes/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
     // Séances : privées par défaut. Lecture par le propriétaire, ou par
