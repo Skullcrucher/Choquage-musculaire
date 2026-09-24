@@ -2,7 +2,7 @@
 // ONGLET STATISTIQUES — filtres période / muscle / exercice,
 // évolution dans le temps
 // ============================================================
-import { isoWeek, estimate1RM } from "./utils.js";
+import { isoWeek, estimate1RM, esc } from "./utils.js";
 import { getExercises, getWorkouts, getAllSets, invalidate } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 
@@ -191,7 +191,7 @@ function drawMuscleView(content, sets, exercises, muscleGroups) {
       const exSets = sets.filter(s => s.exercise_title === ex.name && s.weight_kg && s.reps)
         .sort((a, b) => new Date(b.workout_start_time || 0) - new Date(a.workout_start_time || 0));
       const last = exSets[0];
-      return `<div class="list-row"><div class="list-row-title">${ex.name}</div><div class="list-row-meta">${last ? `${last.weight_kg} kg × ${last.reps}` : "—"}</div></div>`;
+      return `<div class="list-row"><div class="list-row-title">${esc(ex.name)}</div><div class="list-row-meta">${last ? `${last.weight_kg} kg × ${last.reps}` : "—"}</div></div>`;
     }).join("");
     content.querySelector("#muscle-exlist").innerHTML = rows
       ? `<div class="muted" style="margin-bottom:4px;">Exercices du groupe</div>${rows}`

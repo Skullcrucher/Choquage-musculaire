@@ -2,7 +2,7 @@
 // ONGLET SÉANCE — démarrage, log de séries, minuteur de repos
 // ============================================================
 import * as db from "./db.js";
-import { toast, openModal, closeModal, fmtDateTime, debounce, attachAutocomplete, fireRestEndNotification } from "./utils.js";
+import { toast, openModal, closeModal, fmtDateTime, debounce, attachAutocomplete, fireRestEndNotification, esc } from "./utils.js";
 import { getExercises, getRoutines, getWorkouts, getAllSets, invalidate } from "./cache.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
@@ -58,7 +58,7 @@ async function renderStartScreen(container) {
     ${routines.length ? `<h3 class="muted" style="margin-bottom:8px; text-transform:none; font-family:'Inter',sans-serif; font-weight:600; font-size:14px;">Depuis une routine</h3>` : ""}
     ${routines.map(r => `
       <div class="card" style="cursor:pointer" data-start-routine="${r.id}">
-        <div class="card-title">${r.name}</div>
+        <div class="card-title">${esc(r.name)}</div>
         <div class="muted">${(r.exercises || []).length} exercice${(r.exercises || []).length > 1 ? "s" : ""}</div>
       </div>
     `).join("")}
@@ -146,7 +146,7 @@ function renderActiveWorkout(container) {
 function renderExerciseList(el) {
   el.innerHTML = currentWorkout.exercises.map((ex, exIdx) => `
     <div class="exercise-block">
-      <h3 class="exercise-name">${ex.exercise_title}</h3>
+      <h3 class="exercise-name">${esc(ex.exercise_title)}</h3>
       <div class="set-header">
         <div>#</div><div>kg</div><div>reps</div><div>type</div><div></div>
       </div>

@@ -3,7 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { importCsvFile } from "./import.js";
-import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile } from "./utils.js";
+import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl } from "./utils.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { invalidateStatsCache } from "./stats.js";
 import { getExercises, invalidate } from "./cache.js";
@@ -15,7 +15,7 @@ export async function renderReglages(container) {
   const user = getUser();
   const profile = user ? await db.getProfile(user.uid) : null;
   const displayName = profile?.display_name || user?.displayName || "Utilisateur";
-  const photoSrc = profile?.photo_data_url || user?.photoURL || "";
+  const photoSrc = safeImageUrl(profile?.photo_data_url || user?.photoURL || "");
 
   container.innerHTML = `
     <h1 class="section-title">Réglages</h1>
@@ -24,13 +24,13 @@ export async function renderReglages(container) {
       <div class="card-title">Compte</div>
       <div style="display:flex; align-items:center; gap:14px; margin:10px 0 14px;">
         <div style="position:relative; flex-shrink:0;">
-          <div id="profile-photo-preview" style="width:64px; height:64px; border-radius:50%; background:var(--surface-raised) center/cover no-repeat; ${photoSrc ? `background-image:url('${photoSrc}');` : ""} display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; color:var(--amber);">${photoSrc ? "" : displayName[0].toUpperCase()}</div>
+          <div id="profile-photo-preview" style="width:64px; height:64px; border-radius:50%; background:var(--surface-raised) center/cover no-repeat; ${photoSrc ? `background-image:url('${photoSrc}');` : ""} display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; color:var(--amber);">${photoSrc ? "" : esc(displayName[0].toUpperCase())}</div>
           <label for="profile-photo-input" style="position:absolute; bottom:-2px; right:-2px; width:24px; height:24px; border-radius:50%; background:var(--amber); display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; border:2px solid var(--bg-elevated);">✎</label>
           <input type="file" id="profile-photo-input" accept="image/*" style="display:none;">
         </div>
         <div style="flex:1;">
           <label style="margin-top:0;">Pseudo</label>
-          <input id="profile-name-input" value="${displayName.replace(/"/g, "&quot;")}" maxlength="30">
+          <input id="profile-name-input" value="${esc(displayName)}" maxlength="30">
         </div>
       </div>
       <p class="muted" style="margin:0 0 10px;">${user?.email || ""}</p>
@@ -276,9 +276,9 @@ async function renderExerciseLib(container) {
   wrap.innerHTML = exercises.length === 0
     ? `<p class="muted">Aucun exercice pour l'instant.</p>`
     : exercises.map(ex => `
-      <div class="list-row" data-ex="${ex.id}" data-ex-name="${ex.name.replace(/"/g, "&quot;")}" data-ex-group="${ex.muscle_group}">
+      <div class="list-row" data-ex="${ex.id}" data-ex-name="${esc(ex.name)}" data-ex-group="${esc(ex.muscle_group)}">
         <div>
-          <div class="list-row-title">${ex.name}</div>
+          <div class="list-row-title">${esc(ex.name)}</div>
           <div class="list-row-sub">${ex.muscle_group}</div>
         </div>
         ${db.canEditExercise(ex) ? `<button class="btn btn-sm btn-secondary" data-edit-ex="${ex.id}">Modifier</button>` : ""}
@@ -297,7 +297,7 @@ async function renderExerciseLib(container) {
 
 function openExerciseEditModal(ex, container) {
   const modal = openModal(`
-    <h3>${ex.name}</h3>
+    <h3>${esc(ex.name)}</h3>
     <label>Groupe musculaire</label>
     <select id="edit-group">${db.EXO_GROUPS.map(g => `<option ${g === ex.muscle_group ? "selected" : ""}>${g}</option>`).join("")}</select>
     <label>Minuteur de repos par défaut (secondes)</label>

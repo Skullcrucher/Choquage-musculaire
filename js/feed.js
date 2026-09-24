@@ -2,9 +2,12 @@
 // ONGLET FEED — séances de tous les utilisateurs, en fun
 // ============================================================
 import * as db from "./db.js";
-import { fmtDateTime, fmtDuration } from "./utils.js";
+import { fmtDateTime, fmtDuration, esc, safeImageUrl } from "./utils.js";
 import { getUser } from "./auth.js";
 import { openWorkoutDetail } from "./workout-detail.js";
+import { renderFriends, countIncomingRequests } from "./friends.js";
+
+let feedMode = "workouts"; // "workouts" | "friends"
 
 const MUSCLE_EMOJI = {
   "Pectoraux": "💥", "Dos": "🦍", "Épaules": "🏔️", "Biceps": "💪", "Triceps": "🔱",
@@ -40,30 +43,57 @@ function tonnageFun(kg) {
 export async function renderFeedTab(container) {
   container.innerHTML = `
     <h1 class="section-title">Feed 🤘</h1>
-    <div id="feed-list"><div class="empty-state"><span class="num">···</span>Chargement</div></div>
+    <div class="chip-row" id="feed-mode-chips" style="margin-bottom:14px;">
+      <div class="chip ${feedMode === "workouts" ? "active" : ""}" data-fmode="workouts">Séances</div>
+      <div class="chip ${feedMode === "friends" ? "active" : ""}" data-fmode="friends">👥 Amis<span id="friend-req-count"></span></div>
+    </div>
+    <div id="feed-body"></div>
   `;
-  const wrap = container.querySelector("#feed-list");
+  container.querySelectorAll("[data-fmode]").forEach(chip => {
+    chip.onclick = () => {
+      feedMode = chip.dataset.fmode;
+      container.querySelectorAll("[data-fmode]").forEach(c => c.classList.toggle("active", c === chip));
+      drawFeedBody(container);
+    };
+  });
+  countIncomingRequests().then(n => {
+    const el = container.querySelector("#friend-req-count");
+    if (el && n) el.innerHTML = ` <span class="req-dot">${n}</span>`;
+  });
+  await drawFeedBody(container);
+}
+
+async function drawFeedBody(container) {
+  const body = container.querySelector("#feed-body");
+  if (!body) return;
+  if (feedMode === "friends") await renderFriends(body);
+  else await renderFeedWorkouts(body);
+}
+
+async function renderFeedWorkouts(body) {
+  body.innerHTML = `<div id="feed-list"><div class="empty-state"><span class="num">···</span>Chargement</div></div>`;
+  const wrap = body.querySelector("#feed-list");
   const workouts = await db.listFeedWorkouts(60);
   const myUid = getUser()?.uid;
   const profiles = await db.getProfiles(workouts.map(w => w.owner_uid));
 
   wrap.innerHTML = workouts.length === 0
-    ? `<div class="empty-state muted" style="padding:20px;">Aucune séance pour l'instant.</div>`
+    ? `<div class="empty-state muted" style="padding:20px;">Aucune séance partagée pour l'instant.</div>`
     : workouts.map(w => {
         const profile = profiles[w.owner_uid];
         const name = w.owner_uid === myUid ? "Toi" : (profile?.display_name || w.owner_name || "Utilisateur");
-        const photo = profile?.photo_data_url || w.owner_photo;
+        const photo = safeImageUrl(profile?.photo_data_url || w.owner_photo);
         const muscles = w.muscle_summary || [];
         const vibe = vibeTag(w.total_sets);
         const fun = tonnageFun(w.total_tonnage);
         const propsCount = w.props ? Object.keys(w.props).length : 0;
         const iReacted = !!(w.props && myUid && w.props[myUid]);
         return `
-      <div class="card feed-card" data-w="${w.id}">
+      <div class="card feed-card" data-w="${esc(w.id)}">
         <div style="display:flex; align-items:center; gap:10px;">
-          ${photo ? `<div style="width:38px; height:38px; border-radius:50%; background:center/cover no-repeat; background-image:url('${photo}'); flex-shrink:0;"></div>` : `<div style="width:38px; height:38px; border-radius:50%; background:var(--surface-raised); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:var(--amber); flex-shrink:0;">${name[0].toUpperCase()}</div>`}
+          ${photo ? `<div style="width:38px; height:38px; border-radius:50%; background:center/cover no-repeat; background-image:url('${photo}'); flex-shrink:0;"></div>` : `<div style="width:38px; height:38px; border-radius:50%; background:var(--surface-raised); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:var(--amber); flex-shrink:0;">${esc(name[0].toUpperCase())}</div>`}
           <div style="flex:1; min-width:0;">
-            <div class="list-row-title">${name} <span class="muted" style="font-weight:400;">· ${w.title}</span></div>
+            <div class="list-row-title">${esc(name)} <span class="muted" style="font-weight:400;">· ${esc(w.title)}</span></div>
             <div class="list-row-sub">${fmtDateTime(w.start_time)}${vibe ? ` · ${vibe.emoji} ${vibe.label}` : ""}</div>
           </div>
           <div class="list-row-meta" style="text-align:right; flex-shrink:0;">
@@ -71,10 +101,10 @@ export async function renderFeedTab(container) {
             ${w.total_sets ? `<div style="font-size:11px;">${w.total_sets} série${w.total_sets > 1 ? "s" : ""}</div>` : ""}
           </div>
         </div>
-        ${muscles.length ? `<div class="chip-row" style="margin-top:10px; margin-bottom:0;">${muscles.map(m => `<span class="feed-muscle-badge">${MUSCLE_EMOJI[m] || "⚡"} ${m}</span>`).join("")}</div>` : ""}
+        ${muscles.length ? `<div class="chip-row" style="margin-top:10px; margin-bottom:0;">${muscles.map(m => `<span class="feed-muscle-badge">${MUSCLE_EMOJI[m] || "⚡"} ${esc(m)}</span>`).join("")}</div>` : ""}
         ${fun ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">🏋️ ${w.total_tonnage} kg soulevés — ça pèse ${fun} !</p>` : ""}
         <div style="display:flex; justify-content:flex-end; margin-top:8px;">
-          <button class="props-btn ${iReacted ? "reacted" : ""}" data-props="${w.id}">
+          <button class="props-btn ${iReacted ? "reacted" : ""}" data-props="${esc(w.id)}">
             <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><g fill="currentColor"><rect x="30" y="50" width="38" height="38" rx="17"/><rect x="37" y="42" width="12" height="18" rx="6"/><rect x="50" y="42" width="12" height="18" rx="6"/><rect x="-6.5" y="-44" width="13" height="44" rx="6.5" transform="translate(36 52) rotate(-16)"/><rect x="-5.5" y="-40" width="11" height="40" rx="5.5" transform="translate(63 54) rotate(18)"/><rect x="-6.5" y="-32" width="13" height="32" rx="6.5" transform="translate(32 68) rotate(-82)"/></g></svg>
             <span>${propsCount > 0 ? propsCount : ""}</span>
           </button>
@@ -86,7 +116,7 @@ export async function renderFeedTab(container) {
   wrap.querySelectorAll(".feed-card[data-w]").forEach(el => {
     el.onclick = () => openWorkoutDetail(
       workouts.find(w => w.id === el.dataset.w),
-      () => renderFeedTab(container)
+      () => renderFeedWorkouts(body)
     );
   });
   wrap.querySelectorAll(".props-btn").forEach(btn => {

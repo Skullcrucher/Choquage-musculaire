@@ -1,7 +1,7 @@
 // ============================================================
 // ONGLET HISTORIQUE — calendrier + liste des séances passées + routines
 // ============================================================
-import { fmtDateTime, fmtDuration } from "./utils.js";
+import { fmtDateTime, fmtDuration, esc } from "./utils.js";
 import { getWorkouts } from "./cache.js";
 import { openWorkoutDetail } from "./workout-detail.js";
 import { renderRoutines } from "./routines.js";
@@ -115,7 +115,7 @@ function renderList(container) {
     : list.map(w => `
       <div class="list-row" data-w="${w.id}">
         <div>
-          <div class="list-row-title">${w.title}</div>
+          <div class="list-row-title">${esc(w.title)}</div>
           <div class="list-row-sub">${fmtDateTime(w.start_time)}</div>
         </div>
         <div class="list-row-meta">${fmtDuration(w.start_time, w.end_time)}</div>

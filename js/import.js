@@ -67,7 +67,7 @@ function parseHevyDate(str) {
 
 // Noms d'exercices en français (saisis à la main) ou en anglais (catalogue
 // Hevy, selon la langue de l'app au moment de l'export).
-function guessMuscleGroup(exerciseTitle) {
+export function guessMuscleGroup(exerciseTitle) {
   const e = exerciseTitle.toLowerCase();
   if (/(développé couché|chest press|écarté|écart|dips|dip machine|hexagonal|bench press|chest fly|cable fly|pec deck|hex press|push up|push-up|butterfly|cable crossover|incline press)/.test(e) && !/(épaule|shoulder)/.test(e)) return "Pectoraux";
   if (/(rowing|tirage|rack pull|traction|row\b|pulldown|pull up|pull-up|chin up|chin-up|deadlift|pullover|back extension|shrug)/.test(e)) return "Dos";

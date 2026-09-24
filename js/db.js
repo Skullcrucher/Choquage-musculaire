@@ -6,7 +6,7 @@ import {
   initializeFirestore,
   collection, doc, setDoc, getDoc, getDocs, deleteDoc,
   updateDoc, addDoc, query, orderBy, where, collectionGroup, limit,
-  writeBatch, deleteField
+  writeBatch, deleteField, increment
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
@@ -89,9 +89,38 @@ export async function getProfiles(uids) {
 export async function updateMyProfile({ display_name, photo_data_url }) {
   const uid = requireUid();
   const patch = { updated_at: new Date().toISOString() };
-  if (display_name !== undefined) patch.display_name = display_name;
+  if (display_name !== undefined) {
+    patch.display_name = display_name;
+    patch.search_name = display_name.trim().toLowerCase();
+  }
   if (photo_data_url !== undefined) patch.photo_data_url = photo_data_url;
   await setDoc(doc(dbase, "profiles", uid), patch, { merge: true });
+}
+
+// Recherche d'utilisateurs par début de pseudo (insensible à la casse).
+// Seuls les profils enregistrés depuis l'ajout de search_name sont
+// trouvables : ensureSearchableProfile() rattrape les anciens.
+export async function searchProfiles(text, max = 15) {
+  const q = text.trim().toLowerCase();
+  if (q.length < 2) return [];
+  const snap = await getDocs(query(collection(dbase, "profiles"),
+    where("search_name", ">=", q), where("search_name", "<=", q + "\uf8ff"), limit(max)));
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+}
+
+export async function ensureSearchableProfile() {
+  const uid = requireUid();
+  const profile = await getProfile(uid);
+  if (profile?.display_name && profile.search_name !== profile.display_name.trim().toLowerCase()) {
+    await updateMyProfile({ display_name: profile.display_name });
+  }
+  return profile;
+}
+
+// Nom public d'un utilisateur : son pseudo, jamais son email.
+async function myPublicName() {
+  const profile = await getProfile(requireUid()).catch(() => null);
+  return profile?.display_name || auth.currentUser?.displayName || "Anonyme";
 }
 
 // ---------- Utilitaire : clé déterministe pour la déduplication ----------
@@ -160,7 +189,16 @@ export async function deleteExercise(id) {
 }
 
 // ==================== ROUTINES ====================
-// Personnelles : chacun ne voit et ne modifie que les siennes (owner_uid).
+// Chaque routine appartient à un utilisateur (owner_uid) et a une visibilité :
+//   "private" : lui seul ;  "friends" : les amis listés dans shared_with ;
+//   "public"  : tout le monde, dans l'onglet Découvrir.
+// Des champs dérivés (muscles, noms d'exercices, nombre d'exercices) sont
+// stockés avec la routine pour que la recherche filtre sans relire chaque
+// exercice. vote_count n'est modifié que par les votes (voir toggleRoutineVote).
+export const ROUTINE_LEVELS = { debutant: "Débutant", intermediaire: "Intermédiaire", avance: "Avancé" };
+export const ROUTINE_GOALS = { force: "Force", hypertrophie: "Hypertrophie", endurance: "Endurance", seche: "Sèche / perte de poids", remise: "Remise en forme" };
+export const ROUTINE_VISIBILITY = { private: "🔒 Privée", friends: "👥 Amis", public: "🌍 Publique" };
+
 const LS_ROUTINES_MIGRATED = "skullcrusher_routines_migrated";
 
 // Les routines créées avant qu'elles deviennent personnelles n'ont pas
@@ -183,28 +221,172 @@ async function claimLegacyRoutines(uid) {
   }
 }
 
+function routineDerived(exercises) {
+  const list = (exercises || []).filter(e => (e.exercise_name || "").trim());
+  return {
+    exercise_count: list.length,
+    muscle_groups: [...new Set(list.map(e => e.muscle_group || "Autre"))],
+    exercise_names_lower: [...new Set(list.map(e => e.exercise_name.trim().toLowerCase()))]
+  };
+}
+
+function byName(a, b) {
+  return (a.name || "").localeCompare(b.name || "", "fr");
+}
+
 export async function listRoutines() {
   const uid = requireUid();
   if (isAdmin()) await claimLegacyRoutines(uid);
   // Tri côté client : un orderBy("name") en plus du where exigerait un index composite.
   const snap = await getDocs(query(collection(dbase, "routines"), where("owner_uid", "==", uid)));
-  return snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr"));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byName);
 }
 
+// Création ou modification du contenu d'une routine (nom, exercices...).
+// Ne touche ni à la visibilité ni aux votes, gérés à part.
 export async function saveRoutine(routine, id = null) {
-  const data = { ...routine, owner_uid: requireUid() };
+  const now = new Date().toISOString();
+  const data = {
+    name: routine.name,
+    description: routine.description || "",
+    level: routine.level || "",
+    goal: routine.goal || "",
+    exercises: routine.exercises || [],
+    ...routineDerived(routine.exercises),
+    owner_uid: requireUid(),
+    owner_name: await myPublicName(),
+    updated_at: now
+  };
   if (id) {
-    await setDoc(doc(dbase, "routines", id), data);
+    await setDoc(doc(dbase, "routines", id), data, { merge: true });
     return id;
   }
-  const ref = await addDoc(collection(dbase, "routines"), data);
+  const ref = await addDoc(collection(dbase, "routines"), {
+    ...data, visibility: "private", shared_with: [], vote_count: 0, created_at: now, source: null
+  });
   return ref.id;
+}
+
+export async function setRoutineSharing(id, visibility, sharedWith = []) {
+  await updateDoc(doc(dbase, "routines", id), {
+    visibility,
+    shared_with: visibility === "friends" ? [...new Set(sharedWith)] : [],
+    owner_name: await myPublicName(),
+    updated_at: new Date().toISOString()
+  });
 }
 
 export async function deleteRoutine(id) {
   await deleteDoc(doc(dbase, "routines", id));
+}
+
+// Routines visibles par l'utilisateur hors des siennes : toutes les
+// publiques + celles que des amis ont partagées avec lui. Filtrage et tri
+// se font côté client (Firestore n'a pas de recherche plein texte).
+export async function listDiscoverRoutines() {
+  const uid = requireUid();
+  const [pub, shared] = await Promise.all([
+    getDocs(query(collection(dbase, "routines"), where("visibility", "==", "public"), limit(500))),
+    getDocs(query(collection(dbase, "routines"), where("shared_with", "array-contains", uid), limit(300)))
+  ]);
+  const byId = new Map();
+  for (const d of [...pub.docs, ...shared.docs]) byId.set(d.id, { id: d.id, ...d.data() });
+  return [...byId.values()];
+}
+
+// Ajoute une copie privée de la routine d'un autre dans sa bibliothèque.
+export async function copyRoutine(routine) {
+  const now = new Date().toISOString();
+  const exercises = JSON.parse(JSON.stringify(routine.exercises || []));
+  const ref = await addDoc(collection(dbase, "routines"), {
+    name: routine.name,
+    description: routine.description || "",
+    level: routine.level || "",
+    goal: routine.goal || "",
+    exercises,
+    ...routineDerived(exercises),
+    owner_uid: requireUid(),
+    owner_name: await myPublicName(),
+    visibility: "private", shared_with: [], vote_count: 0,
+    created_at: now, updated_at: now,
+    source: { routine_id: routine.id, owner_uid: routine.owner_uid || null, owner_name: routine.owner_name || "" }
+  });
+  return ref.id;
+}
+
+// ---------- Votes ----------
+// Un vote = routines/{id}/votes/{uid} + vote_count incrémenté dans le même
+// lot (les règles vérifient que les deux vont ensemble, donc un vote par
+// personne). user_votes/{uid} garde la liste de ses votes pour l'affichage.
+export async function getMyVotes() {
+  const snap = await getDoc(doc(dbase, "user_votes", requireUid()));
+  return snap.exists() ? (snap.data().votes || {}) : {};
+}
+
+export async function toggleRoutineVote(routineId, currentlyVoted) {
+  const uid = requireUid();
+  const batch = writeBatch(dbase);
+  const voteRef = doc(dbase, "routines", routineId, "votes", uid);
+  if (currentlyVoted) {
+    batch.delete(voteRef);
+    batch.update(doc(dbase, "routines", routineId), { vote_count: increment(-1) });
+    batch.set(doc(dbase, "user_votes", uid), { votes: { [routineId]: deleteField() } }, { merge: true });
+  } else {
+    batch.set(voteRef, { voter_uid: uid, created_at: new Date().toISOString() });
+    batch.update(doc(dbase, "routines", routineId), { vote_count: increment(1) });
+    batch.set(doc(dbase, "user_votes", uid), { votes: { [routineId]: true } }, { merge: true });
+  }
+  await batch.commit();
+  return !currentlyVoted;
+}
+
+// ==================== AMIS ====================
+// Une amitié = un document friendships/{uidA_uidB} (uids triés), créé en
+// "pending" par celui qui demande, passé en "accepted" par l'autre.
+// Refuser, annuler ou retirer un ami = supprimer le document.
+export function friendshipId(a, b) {
+  return [a, b].sort().join("_");
+}
+
+export async function listFriendships() {
+  const uid = requireUid();
+  const snap = await getDocs(query(collection(dbase, "friendships"), where("users", "array-contains", uid)));
+  return snap.docs.map(d => {
+    const f = { id: d.id, ...d.data() };
+    f.other_uid = f.users.find(u => u !== uid) || uid;
+    f.incoming = f.to === uid;
+    return f;
+  });
+}
+
+export async function listFriendUids() {
+  return (await listFriendships()).filter(f => f.status === "accepted").map(f => f.other_uid);
+}
+
+export async function sendFriendRequest(toUid) {
+  const uid = requireUid();
+  if (toUid === uid) throw new Error("Tu ne peux pas t'ajouter toi-même.");
+  await setDoc(doc(dbase, "friendships", friendshipId(uid, toUid)), {
+    users: [uid, toUid].sort(), from: uid, to: toUid, status: "pending",
+    created_at: new Date().toISOString()
+  });
+}
+
+export async function acceptFriendRequest(id) {
+  await updateDoc(doc(dbase, "friendships", id), { status: "accepted", accepted_at: new Date().toISOString() });
+}
+
+// Supprime l'amitié (ou la demande) et retire l'ex-ami des routines qu'on
+// lui avait partagées.
+export async function removeFriendship(friendship) {
+  const uid = requireUid();
+  await deleteDoc(doc(dbase, "friendships", friendship.id));
+  const mine = await getDocs(query(collection(dbase, "routines"), where("owner_uid", "==", uid)));
+  const touched = mine.docs.filter(d => (d.data().shared_with || []).includes(friendship.other_uid));
+  if (!touched.length) return;
+  const batch = writeBatch(dbase);
+  touched.forEach(d => batch.update(d.ref, { shared_with: d.data().shared_with.filter(u => u !== friendship.other_uid) }));
+  await batch.commit();
 }
 
 // ==================== SÉANCES (workouts) ====================
@@ -213,7 +395,7 @@ export async function createWorkout({ title, start_time, end_time = null, notes 
   if (!u) throw new Error("Non connecté");
   const ref = await addDoc(collection(dbase, "workouts"), {
     title, start_time, end_time, notes, created_manually: true, shared: false,
-    owner_uid: u.uid, owner_name: u.displayName || u.email || "Utilisateur", owner_photo: u.photoURL || null
+    owner_uid: u.uid, owner_name: u.displayName || "Utilisateur", owner_photo: u.photoURL || null
   });
   return ref.id;
 }
@@ -328,7 +510,7 @@ export async function importRows(rows, onProgress = () => {}) {
   const u = auth.currentUser;
   if (!u) throw new Error("Non connecté");
   const uid = u.uid;
-  const ownerName = u.displayName || u.email || "Utilisateur";
+  const ownerName = await myPublicName();
   const ownerPhoto = u.photoURL || null;
 
   // ---- 1) regroupement par séance ----
