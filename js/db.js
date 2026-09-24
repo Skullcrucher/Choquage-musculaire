@@ -10,7 +10,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
   getAuth, GoogleAuthProvider, signInWithRedirect, signInWithPopup, getRedirectResult,
-  onAuthStateChanged, signOut
+  onAuthStateChanged, signOut, setPersistence, indexedDBLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -37,6 +37,15 @@ console.log("[Fonte] Firestore initialisé, projet :", firebaseConfig.projectId)
 export const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
+// La persistance par défaut de Firebase Auth peut ne pas survivre à la
+// navigation de signInWithRedirect en mode standalone iOS (l'app installée
+// sur l'écran d'accueil a un contexte de stockage particulier). IndexedDB
+// est le mécanisme le plus robuste dans ce contexte précis — on le force
+// explicitement plutôt que de laisser le SDK choisir.
+const authReadyPersistence = setPersistence(auth, indexedDBLocalPersistence)
+  .then(() => console.log("[Fonte] Persistance Auth : IndexedDB forcée avec succès"))
+  .catch((e) => console.error("[Fonte] Échec réglage persistance Auth :", e));
+
 function isStandalonePwa() {
   return window.navigator.standalone === true ||
     window.matchMedia("(display-mode: standalone)").matches;
@@ -53,6 +62,7 @@ export function requireUid() {
 }
 
 export async function signInWithGoogle() {
+  await authReadyPersistence; // s'assure que la persistance est réglée AVANT de partir en redirection
   if (isStandalonePwa()) {
     await signInWithRedirect(auth, googleProvider);
   } else {
@@ -62,9 +72,15 @@ export async function signInWithGoogle() {
 
 export async function consumeRedirectResult() {
   try {
-    return await getRedirectResult(auth);
+    const result = await getRedirectResult(auth);
+    if (result) {
+      console.log("[Fonte] Retour de redirection Google → connecté :", result.user.email);
+    } else {
+      console.log("[Fonte] Retour de redirection Google → aucun résultat (pas de redirection en attente, ou perdue)");
+    }
+    return result;
   } catch (e) {
-    console.error("[Fonte] Erreur de connexion :", e);
+    console.error("[Fonte] Erreur de connexion (retour de redirection) :", e);
     return null;
   }
 }
