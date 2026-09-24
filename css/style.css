@@ -110,7 +110,7 @@ button { font-family: inherit; }
   letter-spacing: 0.02em;
 }
 .topbar-brand { display: flex; align-items: center; gap: 9px; }
-.topbar-logo { width: 27px; height: 27px; color: var(--amber); flex-shrink: 0; }
+.topbar-logo { height: 34px; width: auto; flex-shrink: 0; }
 .topbar-status {
   font-size: 12px;
   color: var(--text-dim);
@@ -605,7 +605,7 @@ canvas { max-width: 100%; }
   text-align: center;
   padding: 24px;
 }
-.login-logo { width: 84px; height: 84px; color: var(--amber); margin-bottom: 18px; }
+.login-logo { height: 150px; width: auto; margin-bottom: 18px; }
 .login-title {
   font-family: 'Anton', sans-serif;
   font-size: 40px;

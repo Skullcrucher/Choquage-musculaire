@@ -1,5 +1,5 @@
 // À incrémenter avec APP_VERSION (js/utils.js) à chaque mise en ligne.
-const CACHE_NAME = "skullcrusher-cache-v37";
+const CACHE_NAME = "skullcrusher-cache-v38";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -34,7 +34,9 @@ const APP_SHELL = [
   "./js/exercise-guides.js",
   "./js/exercise-detail.js",
   "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icons/icon-512.png",
+  "./icons/logo.png",
+  "./icons/apple-touch-icon.png"
 ];
 
 self.addEventListener("install", (event) => {
