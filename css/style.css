@@ -302,6 +302,29 @@ label {
   box-shadow: 0 0 6px var(--amber);
 }
 
+/* ---------- Onglet Feed, mis en valeur en permanence ---------- */
+.tab-btn.featured { color: var(--amber); }
+.tab-btn.featured .tab-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255,176,32,0.28), rgba(255,176,32,0.12));
+  border: 1.5px solid rgba(255,176,32,0.45);
+  margin-top: -6px;
+  margin-bottom: 1px;
+  box-shadow: 0 2px 10px rgba(255,176,32,0.25);
+}
+.tab-btn.featured .tab-icon { width: 18px; height: 18px; }
+.tab-btn.featured.active .tab-icon-badge {
+  background: linear-gradient(135deg, var(--amber-bright, var(--amber)), var(--amber));
+  border-color: var(--amber);
+  box-shadow: 0 3px 14px rgba(255,176,32,0.5);
+}
+.tab-btn.featured.active .tab-icon { color: #17110A; }
+.tab-btn.featured.active::before { display: none; }
+
 /* ---------- Set row (workout logging) ---------- */
 .exercise-block { margin-bottom: 14px; }
 .exercise-name {

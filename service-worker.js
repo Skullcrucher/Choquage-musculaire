@@ -1,4 +1,4 @@
-const CACHE_NAME = "fonte-cache-v24";
+const CACHE_NAME = "fonte-cache-v27";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -17,6 +17,8 @@ const APP_SHELL = [
   "./js/import.js",
   "./js/routines.js",
   "./js/history.js",
+  "./js/feed.js",
+  "./js/workout-detail.js",
   "./js/stats.js",
   "./js/settings.js",
   "./js/workout.js",

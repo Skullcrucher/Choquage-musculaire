@@ -2,16 +2,16 @@
 // POINT D'ENTRÉE — authentification puis routage entre onglets
 // ============================================================
 import { renderSeance } from "./workout.js";
-import { renderRoutines } from "./routines.js";
 import { renderHistorique } from "./history.js";
+import { renderFeedTab } from "./feed.js";
 import { renderStats } from "./stats.js";
 import { renderReglages } from "./settings.js";
 import { initAuth, renderLoginGate, renderUnauthorizedGate, isAuthorized } from "./auth.js";
 
 const TABS = {
   seance: { label: "Fonte", render: renderSeance },
-  routines: { label: "Routines", render: renderRoutines },
   historique: { label: "Historique", render: renderHistorique },
+  feed: { label: "Feed", render: renderFeedTab },
   stats: { label: "Statistiques", render: renderStats },
   reglages: { label: "Réglages", render: renderReglages }
 };
@@ -20,6 +20,7 @@ const view = document.getElementById("view");
 const topbarTitle = document.getElementById("topbar-title");
 const tabbar = document.getElementById("tabbar");
 let activeTab = localStorage.getItem("fonte_last_tab") || "seance";
+if (!TABS[activeTab]) activeTab = "seance";
 let renderToken = 0;
 
 async function switchTab(tab) {
@@ -66,6 +67,14 @@ if ("serviceWorker" in navigator) {
 let appStarted = false;
 
 initAuth((user) => {
+  if (user) {
+    // Diagnostic temporaire : compare l'email du token réel à la liste
+    // blanche des règles Firestore, pour repérer un éventuel décalage
+    // (email non vérifié, compte différent, jeton périmé...).
+    user.getIdTokenResult().then((token) => {
+      console.log("[Fonte] Diagnostic connexion → email:", JSON.stringify(user.email), "| email_verified:", token.claims.email_verified, "| uid:", user.uid, "| token émis:", token.issuedAtTime, "| token expire:", token.expirationTime);
+    }).catch((e) => console.error("[Fonte] Diagnostic connexion → erreur lecture token:", e));
+  }
   if (user && isAuthorized(user)) {
     tabbar.style.display = "flex";
     if (!appStarted) {
