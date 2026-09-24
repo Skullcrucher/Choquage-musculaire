@@ -1,4 +1,4 @@
-const CACHE_NAME = "skullcrusher-cache-v33";
+const CACHE_NAME = "skullcrusher-cache-v34";
 const APP_SHELL = [
   "./",
   "./index.html",

@@ -77,6 +77,7 @@ export async function renderReglages(container) {
       <div class="card-title">Bibliothèque d'exercices</div>
       <p class="muted" style="margin-top:0;">Complète ta bibliothèque avec ${EXERCISE_SEED.length} exercices standards (barre, haltère, machine, poulie, poids du corps) — les exercices déjà présents ne sont pas dupliqués.</p>
       <button class="btn btn-secondary" id="load-seed">Charger la bibliothèque standard</button>
+      <p class="muted" style="margin:10px 0 0; font-size:13px;">Bibliothèque commune à tous les utilisateurs : tu peux modifier les exercices que tu as ajoutés, pas ceux des autres.</p>
       <div style="height:12px"></div>
       <div id="exercise-lib"></div>
     </div>
@@ -280,7 +281,7 @@ async function renderExerciseLib(container) {
           <div class="list-row-title">${ex.name}</div>
           <div class="list-row-sub">${ex.muscle_group}</div>
         </div>
-        <button class="btn btn-sm btn-secondary" data-edit-ex="${ex.id}">Modifier</button>
+        ${db.canEditExercise(ex) ? `<button class="btn btn-sm btn-secondary" data-edit-ex="${ex.id}">Modifier</button>` : ""}
       </div>
     `).join("");
   wrap.querySelectorAll("[data-edit-ex]").forEach(btn => {

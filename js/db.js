@@ -110,7 +110,19 @@ function slugify(str) {
     .slice(0, 60);
 }
 
+// ==================== ADMINISTRATEUR ====================
+// Miroir de isAdmin() dans firestore.rules, uniquement pour adapter
+// l'interface : la vraie protection reste dans les règles.
+export const ADMIN_EMAIL = "bouvet.clement@gmail.com";
+export function isAdmin() {
+  return auth.currentUser?.email === ADMIN_EMAIL;
+}
+
 // ==================== EXERCICES ====================
+// Bibliothèque commune : tout le monde la lit et peut y ajouter un
+// exercice, mais seul son créateur (created_by) ou l'administrateur peut
+// le modifier ou le supprimer. Les exercices d'avant ce verrouillage
+// n'ont pas de created_by : seul l'administrateur peut les modifier.
 const EXO_GROUPS = [
   "Pectoraux", "Dos", "Épaules", "Biceps", "Triceps",
   "Jambes", "Fessiers", "Abdominaux", "Avant-bras", "Cardio", "Autre"
@@ -124,7 +136,7 @@ export async function upsertExercise(name, muscleGroup, equipment = "", isCustom
   if (!existing.exists()) {
     await setDoc(ref, {
       name, muscle_group: muscleGroup || "Autre", equipment: equipment || "",
-      is_custom: isCustom, rest_timer_seconds: 90
+      is_custom: isCustom, rest_timer_seconds: 90, created_by: requireUid()
     });
   }
   return id;
@@ -133,6 +145,10 @@ export async function upsertExercise(name, muscleGroup, equipment = "", isCustom
 export async function listExercises() {
   const snap = await getDocs(query(collection(dbase, "exercises"), orderBy("name")));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export function canEditExercise(ex) {
+  return isAdmin() || (!!ex?.created_by && ex.created_by === auth.currentUser?.uid);
 }
 
 export async function updateExercise(id, patch) {
@@ -144,17 +160,46 @@ export async function deleteExercise(id) {
 }
 
 // ==================== ROUTINES ====================
+// Personnelles : chacun ne voit et ne modifie que les siennes (owner_uid).
+const LS_ROUTINES_MIGRATED = "skullcrusher_routines_migrated";
+
+// Les routines créées avant qu'elles deviennent personnelles n'ont pas
+// d'owner_uid : l'administrateur (seul utilisateur à l'époque) se les
+// attribue une fois, au premier chargement.
+async function claimLegacyRoutines(uid) {
+  try { if (localStorage.getItem(LS_ROUTINES_MIGRATED) === uid) return; } catch (_) {}
+  try {
+    const snap = await getDocs(collection(dbase, "routines"));
+    const legacy = snap.docs.filter(d => !d.data().owner_uid);
+    for (let i = 0; i < legacy.length; i += 450) {
+      const batch = writeBatch(dbase);
+      legacy.slice(i, i + 450).forEach(d => batch.update(d.ref, { owner_uid: uid }));
+      await batch.commit();
+    }
+    if (legacy.length) console.log(`[Skullcrusher] ${legacy.length} routine(s) existante(s) rattachée(s) à ton compte.`);
+    try { localStorage.setItem(LS_ROUTINES_MIGRATED, uid); } catch (_) {}
+  } catch (e) {
+    console.error("[Skullcrusher] Migration des routines existantes impossible :", e);
+  }
+}
+
 export async function listRoutines() {
-  const snap = await getDocs(query(collection(dbase, "routines"), orderBy("name")));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const uid = requireUid();
+  if (isAdmin()) await claimLegacyRoutines(uid);
+  // Tri côté client : un orderBy("name") en plus du where exigerait un index composite.
+  const snap = await getDocs(query(collection(dbase, "routines"), where("owner_uid", "==", uid)));
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr"));
 }
 
 export async function saveRoutine(routine, id = null) {
+  const data = { ...routine, owner_uid: requireUid() };
   if (id) {
-    await setDoc(doc(dbase, "routines", id), routine);
+    await setDoc(doc(dbase, "routines", id), data);
     return id;
   }
-  const ref = await addDoc(collection(dbase, "routines"), routine);
+  const ref = await addDoc(collection(dbase, "routines"), data);
   return ref.id;
 }
 
@@ -309,14 +354,27 @@ export async function importRows(rows, onProgress = () => {}) {
   }
 
   // ---- 3) préparation des écritures ----
-  const ops = []; // { ref, data, kind, merge }
+  const exerciseOps = [];
   for (const [id, r] of newExercises) {
-    ops.push({ ref: doc(dbase, "exercises", id), kind: "exercise", data: {
+    exerciseOps.push({ ref: doc(dbase, "exercises", id), data: {
       name: r.exercise_title, muscle_group: r.muscle_group_guess || "Autre", equipment: "",
-      is_custom: false, rest_timer_seconds: 90
+      is_custom: false, rest_timer_seconds: 90, created_by: uid
     } });
   }
+  // Lots séparés des séances : un exercice créé entre-temps par quelqu'un
+  // d'autre ferait refuser le lot (on ne peut pas écraser l'exercice d'un
+  // autre), sans que ça bloque l'import des séries.
+  for (let i = 0; i < exerciseOps.length; i += IMPORT_BATCH_SIZE) {
+    const batch = writeBatch(dbase);
+    exerciseOps.slice(i, i + IMPORT_BATCH_SIZE).forEach(op => batch.set(op.ref, op.data));
+    try {
+      await batch.commit();
+    } catch (e) {
+      console.error("[Skullcrusher] Erreur création des exercices importés", e);
+    }
+  }
 
+  const ops = []; // { ref, data, kind, merge }
   let wDone = 0;
   for (const [key, groupRows] of byWorkout) {
     const r = groupRows[0];

@@ -52,7 +52,10 @@ Tout compte créé depuis l'écran de connexion a accès à l'app. `firestore.ru
 - chacun ne lit, ne modifie et ne supprime que **ses** séances et séries ;
 - une séance n'est visible des autres que si son propriétaire l'a partagée sur le feed ;
 - les autres ne peuvent que poser/retirer leur réaction 🤘 sur une séance partagée ;
-- la bibliothèque d'exercices et les routines restent communes à tous.
+- les routines sont personnelles ;
+- la bibliothèque d'exercices est commune : tout le monde peut y ajouter un exercice, mais seul son créateur (ou l'administrateur, `bouvet.clement@gmail.com`) peut le modifier ou le supprimer. Les exercices créés avant ce verrouillage ne sont modifiables que par l'administrateur.
+
+L'email administrateur est écrit à deux endroits qui doivent rester identiques : `isAdmin()` dans `firestore.rules` et `ADMIN_EMAIL` dans `js/db.js`. Au premier chargement de l'app par l'administrateur, les routines créées avant qu'elles deviennent personnelles lui sont automatiquement rattachées.
 
 ⚠️ Après avoir récupéré ces fichiers, **redéploie les règles et les index** (section 5) : le feed a besoin du nouvel index `shared + start_time`, et tant que les anciennes règles sont en place, seul l'email de la liste blanche peut écrire. Tes séances existantes deviennent privées : repartage celles que tu veux voir dans le feed.
 
@@ -88,7 +91,7 @@ et redéployer, plutôt que de cliquer le lien.
 
 ## Limites connues (v1)
 
-- La bibliothèque d'exercices et les routines sont modifiables par tous les utilisateurs connectés.
+- Le minuteur de repos par défaut d'un exercice n'est modifiable que par son créateur ; chacun peut régler le sien par exercice dans ses routines.
 - Pas de vidéos d'exercices, pas de calcul RPE avancé (RPE est stocké mais pas exploité dans les graphes).
 - Le minuteur de repos ne sonne pas en arrière-plan si l'app est totalement fermée (limite iOS pour les PWA) — garde l'app ouverte pendant la séance.
 - Si tu veux qu'on ajoute l'authentification, des routines partagées entre plusieurs séances types, ou l'export vers Apple Santé, dis-le et on itère.

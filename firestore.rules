@@ -3,10 +3,17 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Ouvert à tout compte connecté (email/mot de passe). La confidentialité
-    // repose sur owner_uid : chacun ne lit que ses propres séances, plus
-    // celles que leur propriétaire a partagées sur le feed (shared == true).
+    // repose sur owner_uid : chacun ne lit que ses propres séances et
+    // routines, plus les séances partagées sur le feed (shared == true).
     function isSignedIn() {
       return request.auth != null;
+    }
+
+    // Administrateur de l'app : peut modifier toute la bibliothèque
+    // d'exercices et récupère les routines créées avant qu'elles
+    // deviennent personnelles. Même email que ADMIN_EMAIL dans js/db.js.
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'bouvet.clement@gmail.com';
     }
 
     function workoutDoc(workoutId) {
@@ -20,13 +27,34 @@ service cloud.firestore {
       allow write: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // Bibliothèque d'exercices et routines : partagées entre tous les
-    // utilisateurs (comme une salle de sport commune).
+    // Bibliothèque d'exercices : commune. Tout le monde lit et peut ajouter
+    // un exercice (en son nom). Seul le créateur ou l'administrateur peut
+    // le modifier ou le supprimer ; les anciens exercices sans created_by
+    // ne sont modifiables que par l'administrateur.
     match /exercises/{exerciseId} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+                    && request.resource.data.created_by == request.auth.uid;
+      allow update: if (isAdmin() || (isSignedIn() && resource.data.get('created_by', '') == request.auth.uid))
+                    && request.resource.data.get('created_by', '') == resource.data.get('created_by', '');
+      allow delete: if isAdmin()
+                    || (isSignedIn() && resource.data.get('created_by', '') == request.auth.uid);
     }
+
+    // Routines : personnelles. L'administrateur peut aussi les lire toutes
+    // et s'attribuer celles sans propriétaire (créées avant ce changement) :
+    // c'est ce que fait l'app automatiquement à son premier chargement.
     match /routines/{routineId} {
-      allow read, write: if isSignedIn();
+      allow read: if isAdmin()
+                  || (isSignedIn() && resource.data.owner_uid == request.auth.uid);
+      allow create: if isSignedIn()
+                    && request.resource.data.owner_uid == request.auth.uid;
+      allow update: if isSignedIn()
+                    && request.resource.data.owner_uid == request.auth.uid
+                    && (resource.data.get('owner_uid', null) == request.auth.uid ||
+                        (isAdmin() && resource.data.get('owner_uid', null) == null));
+      allow delete: if isSignedIn()
+                    && resource.data.owner_uid == request.auth.uid;
     }
 
     // Séances : privées par défaut. Lecture par le propriétaire, ou par
