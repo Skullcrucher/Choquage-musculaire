@@ -1,0 +1,23 @@
+# Déploie le serveur de notifications du minuteur (push-worker/) sur
+# Cloudflare Workers (offre gratuite) à chaque modification poussée sur main,
+# ou à la demande depuis l'onglet Actions ("Run workflow").
+# Secrets requis (Settings → Secrets and variables → Actions) :
+#   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID — voir push-worker/README.md
+name: Déployer le serveur push
+
+on:
+  push:
+    branches: [main]
+    paths: ["push-worker/**", ".github/workflows/deploy-push-worker.yml"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: push-worker

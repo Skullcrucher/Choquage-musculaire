@@ -1,5 +1,5 @@
 // À incrémenter avec APP_VERSION (js/utils.js) à chaque mise en ligne.
-const CACHE_NAME = "skullcrusher-cache-v36";
+const CACHE_NAME = "skullcrusher-cache-v37";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -26,6 +26,8 @@ const APP_SHELL = [
   "./js/settings.js",
   "./js/workout.js",
   "./js/utils.js",
+  "./js/push.js",
+  "./js/push-config.js",
   "./js/vendor/chart.umd.js",
   "./js/vendor/papaparse.min.js",
   "./js/exercises-seed.js",
@@ -69,6 +71,21 @@ self.addEventListener("fetch", (event) => {
       return resp;
     }).catch(() => caches.match(event.request, { ignoreSearch: true }))
   );
+});
+
+// Notification push envoyée par le serveur du minuteur (push-worker/) à la
+// fin du repos. iOS exige qu'un push affiche toujours une notification.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (_) {}
+  event.waitUntil(self.registration.showNotification(data.title || "Repos terminé 🤘", {
+    body: data.body || "C'est reparti pour la série suivante.",
+    icon: "icons/icon-192.png",
+    badge: "icons/icon-192.png",
+    tag: "skullcrusher-rest-timer",
+    renotify: true,
+    vibrate: [200, 100, 200]
+  }));
 });
 
 // Ramène l'app au premier plan (ou l'ouvre) quand on tape la notification
