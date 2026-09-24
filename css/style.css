@@ -615,6 +615,8 @@ canvas { max-width: 100%; }
   margin: 0 0 6px;
 }
 .login-gate .btn { max-width: 320px; }
+.login-gate input { max-width: 320px; }
+.login-gate .btn-row { max-width: 320px; }
 
 /* ---------- Switch (toggle) ---------- */
 .switch { position: relative; display: inline-block; width: 46px; height: 27px; flex-shrink: 0; }
