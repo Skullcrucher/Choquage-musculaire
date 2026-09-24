@@ -1,7 +1,7 @@
 // ============================================================
 // AUTHENTIFICATION — écran de connexion email/mot de passe, avant tout accès
 // ============================================================
-import { auth, onAuthChange, signInWithPassword, createAccountWithPassword, signOutUser } from "./db.js";
+import { auth, onAuthChange, signInWithPassword, createAccountWithPassword, resetPassword, signOutUser } from "./db.js";
 
 // Miroir de la liste blanche de firestore.rules — uniquement pour afficher
 // un message clair côté app. La vraie protection reste dans les règles
@@ -68,6 +68,7 @@ export function renderLoginGate(container) {
         <button class="btn btn-primary" id="signin-btn">Se connecter</button>
       </div>
       <p class="muted" id="login-error" style="margin-top:12px; color:var(--red);"></p>
+      <button class="props-btn-invisible" id="forgot-btn" style="background:none; border:none; color:var(--steel); font-size:13px; margin-top:6px; cursor:pointer;">Mot de passe oublié ?</button>
       <p class="muted" style="margin-top:18px; font-size:12px;">Tes séances restent privées. La bibliothèque d'exercices et les routines sont partagées entre utilisateurs.</p>
     </div>
   `;
@@ -77,10 +78,28 @@ export function renderLoginGate(container) {
   const errorEl = container.querySelector("#login-error");
   const signinBtn = container.querySelector("#signin-btn");
   const signupBtn = container.querySelector("#signup-btn");
+  const forgotBtn = container.querySelector("#forgot-btn");
+
+  forgotBtn.onclick = async () => {
+    const email = emailEl.value.trim();
+    if (!email) { errorEl.style.color = "var(--red)"; errorEl.textContent = "Tape ton email dans le champ ci-dessus d'abord."; return; }
+    forgotBtn.disabled = true;
+    try {
+      await resetPassword(email);
+      errorEl.style.color = "var(--green)";
+      errorEl.textContent = "Email de réinitialisation envoyé — vérifie ta boîte mail.";
+    } catch (err) {
+      console.error("[Fonte] Erreur reset password", err);
+      errorEl.style.color = "var(--red)";
+      errorEl.textContent = friendlyAuthError(err);
+    }
+    forgotBtn.disabled = false;
+  };
 
   async function run(action, btn, busyLabel, idleLabel) {
     const email = emailEl.value.trim();
     const password = passEl.value;
+    errorEl.style.color = "var(--red)";
     errorEl.textContent = "";
     if (!email || !password) { errorEl.textContent = "Renseigne un email et un mot de passe."; return; }
     signinBtn.disabled = true;

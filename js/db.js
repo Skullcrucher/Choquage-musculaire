@@ -10,7 +10,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  onAuthStateChanged, signOut, setPersistence, indexedDBLocalPersistence
+  sendPasswordResetEmail, onAuthStateChanged, signOut, setPersistence, indexedDBLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -58,6 +58,10 @@ export async function signInWithPassword(email, password) {
 
 export async function createAccountWithPassword(email, password) {
   await createUserWithEmailAndPassword(auth, email, password);
+}
+
+export async function resetPassword(email) {
+  await sendPasswordResetEmail(auth, email);
 }
 
 export function onAuthChange(cb) {
