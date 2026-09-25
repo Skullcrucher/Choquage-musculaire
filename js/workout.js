@@ -3,7 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce, attachAutocomplete, fireRestEndNotification, esc } from "./utils.js";
-import { getExercises, getRoutines, getWorkouts, getAllSets, invalidate } from "./cache.js";
+import { getExercises, getRoutines, getWorkouts, getAllSets, invalidate, peek } from "./cache.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
 let restTimerInterval = null;
@@ -32,6 +32,7 @@ function loadLocalState() {
 }
 
 export async function renderSeance(container) {
+  db.loadRestPrefs().catch(() => null); // temps de repos mémorisés, en arrière-plan
   const activeId = localStorage.getItem(LS_KEY);
   if (activeId) {
     if (!currentWorkout || currentWorkout.id !== activeId) {
@@ -89,6 +90,7 @@ async function startWorkout(routineId, routine = null, triggerEl = null) {
     const id = await withTimeout(db.createWorkout({ title, start_time: now.toISOString() }), 15000, "Création de la séance");
 
     const routineExercises = routine?.exercises || [];
+    await db.loadRestPrefs().catch(() => null);
     const lastSetsByExercise = await Promise.all(routineExercises.map(ex => getLastSetsForExercise(ex.exercise_name)));
 
     currentWorkout = {
@@ -109,7 +111,7 @@ async function startWorkout(routineId, routine = null, triggerEl = null) {
         return {
           exercise_title: ex.exercise_name,
           muscle_group: ex.muscle_group || "Autre",
-          rest_timer_seconds: ex.rest_seconds || 90,
+          rest_timer_seconds: restSecondsFor(ex.exercise_name, ex.rest_seconds),
           sets
         };
       })
@@ -127,7 +129,7 @@ async function startWorkout(routineId, routine = null, triggerEl = null) {
 function renderActiveWorkout(container) {
   container.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
-      <h1 class="section-title" style="margin-bottom:0;">${currentWorkout.title}</h1>
+      <h1 class="section-title" style="margin-bottom:0;">${esc(currentWorkout.title)}</h1>
     </div>
     <p class="muted" style="margin-top:0;">Débutée à ${fmtDateTime(currentWorkout.start_time)}</p>
     <div id="exercise-list"></div>
@@ -146,7 +148,10 @@ function renderActiveWorkout(container) {
 function renderExerciseList(el) {
   el.innerHTML = currentWorkout.exercises.map((ex, exIdx) => `
     <div class="exercise-block">
-      <h3 class="exercise-name">${esc(ex.exercise_title)}</h3>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <h3 class="exercise-name">${esc(ex.exercise_title)}</h3>
+        <button class="rest-chip" data-rest="${exIdx}" title="Temps de repos">⏱ ${fmtRest(ex.rest_timer_seconds || 90)}</button>
+      </div>
       <div class="set-header">
         <div>#</div><div>kg</div><div>reps</div><div>type</div><div></div>
       </div>
@@ -154,6 +159,10 @@ function renderExerciseList(el) {
       <button class="add-set-btn" data-add-set="${exIdx}">＋ Ajouter une série</button>
     </div>
   `).join("") || `<div class="empty-state"><span class="num">＋</span>Ajoute un premier exercice pour commencer.</div>`;
+
+  el.querySelectorAll("[data-rest]").forEach(btn => {
+    btn.onclick = () => openRestPicker(parseInt(btn.dataset.rest, 10));
+  });
 
   el.querySelectorAll("[data-add-set]").forEach(btn => {
     btn.onclick = () => {
@@ -232,14 +241,79 @@ function setRowHtml(s, exIdx, sIdx) {
 
 // Dernières séries loggées pour un exercice (la séance la plus récente où
 // il a été fait), pour pré-remplir poids/reps plutôt que partir de zéro.
+// Utilise l'historique complet s'il est déjà en mémoire (onglet Stats
+// ouvert), sinon ne télécharge que les séries de cet exercice : charger
+// tout l'historique (~10 000 séries) prenait une quinzaine de secondes.
 async function getLastSetsForExercise(exerciseName) {
-  const allSets = await getAllSets();
-  const relevant = allSets.filter(s => s.exercise_title === exerciseName && s.workout_start_time);
+  let relevant;
+  const allCached = peek("sets");
+  if (allCached) {
+    relevant = allCached.filter(s => s.exercise_title === exerciseName);
+  } else {
+    try {
+      relevant = await db.listSetsForExercise(exerciseName);
+    } catch (e) {
+      console.warn("[Skullcrusher] Requête par exercice impossible, repli sur l'historique complet :", e);
+      relevant = (await getAllSets()).filter(s => s.exercise_title === exerciseName);
+    }
+  }
+  relevant = relevant.filter(s => s.workout_start_time);
   if (!relevant.length) return [];
   const latestTime = relevant.reduce((max, s) => (s.workout_start_time > max ? s.workout_start_time : max), relevant[0].workout_start_time);
   return relevant
     .filter(s => s.workout_start_time === latestTime)
     .sort((a, b) => a.set_index - b.set_index);
+}
+
+// Temps de repos d'un exercice : celui que l'utilisateur a choisi la
+// dernière fois (mémorisé), sinon celui de la routine ou de la bibliothèque.
+function restSecondsFor(exerciseName, fallback) {
+  return db.restPrefFor(exerciseName) || fallback || 90;
+}
+
+function fmtRest(seconds) {
+  const m = Math.floor(seconds / 60), s = seconds % 60;
+  return m ? `${m}:${String(s).padStart(2, "0")}` : `${s} s`;
+}
+
+function openRestPicker(exIdx) {
+  const ex = currentWorkout.exercises[exIdx];
+  let value = ex.rest_timer_seconds || 90;
+  const presets = [30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
+  openModal(`
+    <h3 style="margin-bottom:4px;">Repos · ${esc(ex.exercise_title)}</h3>
+    <p class="muted" style="margin-top:0;">Mémorisé pour les prochaines séances.</p>
+    <div style="display:flex; align-items:center; justify-content:center; gap:14px; margin:14px 0;">
+      <button class="btn btn-secondary btn-sm" id="rp-minus" style="width:auto;">−15 s</button>
+      <div id="rp-value" style="font-family:'Anton',sans-serif; font-size:40px; color:var(--amber); min-width:110px; text-align:center;"></div>
+      <button class="btn btn-secondary btn-sm" id="rp-plus" style="width:auto;">+15 s</button>
+    </div>
+    <div class="chip-row" style="justify-content:center;">
+      ${presets.map(p => `<div class="chip" data-rp="${p}">${fmtRest(p)}</div>`).join("")}
+    </div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn btn-secondary" id="rp-cancel">Annuler</button>
+      <button class="btn btn-primary" id="rp-save">Enregistrer</button>
+    </div>
+  `, (modalEl) => {
+    const draw = () => {
+      modalEl.querySelector("#rp-value").textContent = fmtRest(value);
+      modalEl.querySelectorAll("[data-rp]").forEach(c => c.classList.toggle("active", parseInt(c.dataset.rp, 10) === value));
+    };
+    modalEl.querySelector("#rp-minus").onclick = () => { value = Math.max(15, value - 15); draw(); };
+    modalEl.querySelector("#rp-plus").onclick = () => { value = Math.min(900, value + 15); draw(); };
+    modalEl.querySelectorAll("[data-rp]").forEach(c => c.onclick = () => { value = parseInt(c.dataset.rp, 10); draw(); });
+    modalEl.querySelector("#rp-cancel").onclick = closeModal;
+    modalEl.querySelector("#rp-save").onclick = () => {
+      ex.rest_timer_seconds = value;
+      saveLocalState();
+      closeModal();
+      renderExerciseList(document.getElementById("exercise-list"));
+      db.saveRestPref(ex.exercise_title, value).catch(e => console.warn("[Skullcrusher] Mémorisation du repos impossible :", e));
+      toast(`Repos ${fmtRest(value)} pour ${ex.exercise_title}`);
+    };
+    draw();
+  });
 }
 
 async function openAddExerciseModal() {
@@ -264,43 +338,34 @@ async function openAddExerciseModal() {
     const group = modal.querySelector("#ex-group").value;
     const existing = exercises.find(e => e.name.toLowerCase() === name.toLowerCase());
     const finalName = existing ? existing.name : name;
-    const confirmBtn = modal.querySelector("#confirm-add-ex");
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = "Ajout…";
-    try {
-      if (!existing) {
-        await db.upsertExercise(name, group);
-        invalidate("exercises");
-      }
-      let lastSets = [];
-      try {
-        lastSets = await getLastSetsForExercise(finalName);
-      } catch (histErr) {
-        console.error("[Skullcrusher] Erreur récupération historique exercice (on continue sans pré-remplissage)", histErr);
-      }
-      const sets = lastSets.length
-        ? lastSets.map((s, i) => ({ id: null, set_index: i + 1, set_type: "normal", weight_kg: s.weight_kg ?? null, reps: s.reps ?? null, done: false }))
-        : [
-            { id: null, set_index: 1, set_type: "normal", weight_kg: null, reps: null, done: false },
-            { id: null, set_index: 2, set_type: "normal", weight_kg: null, reps: null, done: false },
-            { id: null, set_index: 3, set_type: "normal", weight_kg: null, reps: null, done: false }
-          ];
-      currentWorkout.exercises.push({
-        exercise_title: finalName,
-        muscle_group: existing ? existing.muscle_group : group,
-        rest_timer_seconds: existing?.rest_timer_seconds || 90,
-        sets
-      });
-      saveLocalState();
-      closeModal();
-      renderExerciseList(document.getElementById("exercise-list"));
-      if (lastSets.length) toast(`Séries pré-remplies depuis ta dernière séance de ${finalName}`);
-    } catch (err) {
-      console.error("[Skullcrusher] Erreur ajout exercice", err);
-      toast(err.message || "Impossible d'ajouter cet exercice");
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = "Ajouter";
+    // Ajout immédiat avec 3 séries vides ; l'historique (pré-remplissage) et
+    // la création d'un nouvel exercice dans la bibliothèque se font en
+    // arrière-plan, sans faire attendre.
+    const ex = {
+      exercise_title: finalName,
+      muscle_group: existing ? existing.muscle_group : group,
+      rest_timer_seconds: restSecondsFor(finalName, existing?.rest_timer_seconds),
+      sets: [1, 2, 3].map(i => ({ id: null, set_index: i, set_type: "normal", weight_kg: null, reps: null, done: false }))
+    };
+    currentWorkout.exercises.push(ex);
+    saveLocalState();
+    closeModal();
+    renderExerciseList(document.getElementById("exercise-list"));
+
+    if (!existing) {
+      db.upsertExercise(name, group)
+        .then(() => invalidate("exercises"))
+        .catch(err => console.error("[Skullcrusher] Erreur création exercice dans la bibliothèque", err));
     }
+    getLastSetsForExercise(finalName).then(lastSets => {
+      const untouched = ex.sets.every(s => !s.id && !s.done && s.weight_kg == null && s.reps == null);
+      if (!lastSets.length || !untouched || !currentWorkout || !currentWorkout.exercises.includes(ex)) return;
+      ex.sets = lastSets.map((s, i) => ({ id: null, set_index: i + 1, set_type: "normal", weight_kg: s.weight_kg ?? null, reps: s.reps ?? null, done: false }));
+      saveLocalState();
+      const list = document.getElementById("exercise-list");
+      if (list) renderExerciseList(list);
+      toast(`Séries pré-remplies depuis ta dernière séance de ${finalName}`);
+    }).catch(histErr => console.error("[Skullcrusher] Erreur récupération historique exercice (pas de pré-remplissage)", histErr));
   };
 }
 

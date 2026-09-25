@@ -689,3 +689,17 @@ canvas { max-width: 100%; }
   line-height: 18px;
   text-align: center;
 }
+
+/* Temps de repos d'un exercice, réglable pendant la séance */
+.rest-chip {
+  flex-shrink: 0;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--amber);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.rest-chip:active { transform: scale(0.94); }

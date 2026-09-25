@@ -26,6 +26,11 @@ export const getRoutines = () => cached("routines", () => db.listRoutines());
 export const getWorkouts = (max = 500) => cached("workouts", () => db.listWorkouts(max));
 export const getAllSets = (max = 8000) => cached("sets", () => db.listAllSets(max));
 
+// Donnée déjà en mémoire, sans déclencher de chargement (null sinon).
+export function peek(key) {
+  return store[key];
+}
+
 export function invalidate(...keys) {
   keys.forEach(k => { store[k] = null; });
 }
