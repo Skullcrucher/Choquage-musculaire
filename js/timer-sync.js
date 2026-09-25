@@ -1,10 +1,12 @@
 // ============================================================
 // NOTIFICATIONS PUSH DU MINUTEUR DE REPOS
+// (fichier volontairement nommé sans "push" : les bloqueurs de contenu
+// bloquent les scripts "push.js", ce qui empêchait toute l'app de démarrer)
 // iOS gèle l'app dès qu'on passe à une autre (Spotify...) : c'est le
 // serveur push (push-worker/) qui envoie la notification de fin de repos,
 // à l'heure, même app fermée ou écran verrouillé.
 // ============================================================
-import { PUSH_SERVER_URL } from "./push-config.js";
+import { PUSH_SERVER_URL } from "./timer-sync-config.js";
 
 const LS_PUSH_KEY = "skullcrusher_push_enabled";
 const SERVER = PUSH_SERVER_URL.replace(/\/+$/, "");
@@ -41,7 +43,7 @@ async function getSubscription() {
 
 // À appeler depuis un geste de l'utilisateur (demande d'autorisation).
 export async function enablePush() {
-  if (!pushConfigured()) throw new Error("Serveur de notifications non configuré (js/push-config.js).");
+  if (!pushConfigured()) throw new Error("Serveur de notifications non configuré (js/timer-sync-config.js).");
   if (!pushSupported()) {
     throw new Error(isIos() && !isStandalone()
       ? "Sur iPhone, ajoute d'abord l'app à ton écran d'accueil (Partager → Sur l'écran d'accueil), puis active les notifications depuis l'app installée."
