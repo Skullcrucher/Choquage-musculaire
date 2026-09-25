@@ -166,7 +166,7 @@ function drawMuscleView(content, sets, exercises, muscleGroups) {
     const values = labels.map(l => Math.round((perGroup[l] / weeksSpan) * 10) / 10);
     chartMuscle = new Chart(canvasEl, {
       type: "bar",
-      data: { labels, datasets: [{ label: "Séries / semaine", data: values, backgroundColor: "#FFB020", borderRadius: 4 }] },
+      data: { labels, datasets: [{ label: "Séries / semaine", data: values, backgroundColor: "#E02424", borderRadius: 4 }] },
       options: chartOptions(false)
     });
     content.querySelector("#muscle-exlist").innerHTML = "";
@@ -181,7 +181,7 @@ function drawMuscleView(content, sets, exercises, muscleGroups) {
     const weeks = Object.keys(perWeek).sort();
     chartMuscle = new Chart(canvasEl, {
       type: "line",
-      data: { labels: weeks, datasets: [{ label: `Séries — ${state.muscle}`, data: weeks.map(w => perWeek[w]), borderColor: "#FFB020", backgroundColor: "transparent", tension: 0.25 }] },
+      data: { labels: weeks, datasets: [{ label: `Séries — ${state.muscle}`, data: weeks.map(w => perWeek[w]), borderColor: "#E02424", backgroundColor: "transparent", tension: 0.25 }] },
       options: chartOptions(true)
     });
 
@@ -250,8 +250,8 @@ function renderExerciseChart(content, allSets, exerciseName) {
     data: {
       labels: weeks,
       datasets: [
-        { label: "1RM estimée (kg)", data: weeks.map(w => perWeek[w].oneRM), borderColor: "#FFB020", backgroundColor: "transparent", tension: 0.25 },
-        { label: "Charge max (kg)", data: weeks.map(w => perWeek[w].maxWeight), borderColor: "#4C8DFF", backgroundColor: "transparent", tension: 0.25 }
+        { label: "1RM estimée (kg)", data: weeks.map(w => perWeek[w].oneRM), borderColor: "#E02424", backgroundColor: "transparent", tension: 0.25 },
+        { label: "Charge max (kg)", data: weeks.map(w => perWeek[w].maxWeight), borderColor: "#B8B8BE", backgroundColor: "transparent", tension: 0.25 }
       ]
     },
     options: chartOptions(true, true)
@@ -396,8 +396,8 @@ function renderCustomChart(content, allSets, exercises) {
       datasets: [{
         label: yMetric.label,
         data: values,
-        borderColor: "#FFB020",
-        backgroundColor: chartType === "bar" ? "#FFB020" : "transparent",
+        borderColor: "#E02424",
+        backgroundColor: chartType === "bar" ? "#E02424" : "transparent",
         borderRadius: chartType === "bar" ? 4 : 0,
         tension: 0.25
       }]
