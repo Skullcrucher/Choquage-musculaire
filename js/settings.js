@@ -11,6 +11,8 @@ import { EXERCISE_SEED } from "./exercises-seed.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { getUser, signOutUser } from "./auth.js";
 import { openProfile, openProfileEditor } from "./profile.js";
+import { t, tn, getLang } from "./i18n.js";
+import { langPickerHtml, bindLangPicker } from "./auth.js";
 
 // Module des notifications en arrière-plan, chargé à la demande : si un
 // bloqueur de contenu le refuse, les Réglages s'affichent quand même.
@@ -18,7 +20,7 @@ const TIMER_SYNC_FALLBACK = {
   unavailable: true,
   pushConfigured: () => false,
   pushActive: () => false,
-  enablePush: async () => { throw new Error("module de notifications bloqué (bloqueur de contenu ?)"); },
+  enablePush: async () => { throw new Error(t("module de notifications bloqué (bloqueur de contenu ?)")); },
   disablePush: async () => {},
   scheduleRestPush: async () => false,
   isIos: () => /iPad|iPhone|iPod/.test(navigator.userAgent),
@@ -36,14 +38,20 @@ export async function renderReglages(container) {
   const { pushConfigured, pushActive, enablePush, disablePush, scheduleRestPush, isIos, isStandalone } = timerSync;
   const user = getUser();
   const profile = user ? await db.getProfile(user.uid) : null;
-  const displayName = profile?.display_name || user?.displayName || "Utilisateur";
+  const displayName = profile?.display_name || user?.displayName || t("Utilisateur");
   const photoSrc = safeImageUrl(profile?.photo_data_url || user?.photoURL || "");
 
   container.innerHTML = `
-    <h1 class="section-title">Réglages</h1>
+    <h1 class="section-title">${t("Réglages")}</h1>
 
     <div class="card">
-      <div class="card-title">Compte</div>
+      <div class="card-title">🌐 ${t("Langue")}</div>
+      ${langPickerHtml("settings-lang")}
+      ${getLang() === "mfe" ? `<p class="muted" style="font-size:12px; margin:6px 0 0;">${t("Traduction en cours de relecture : signale-nous les erreurs !")}</p>` : ""}
+    </div>
+
+    <div class="card">
+      <div class="card-title">${t("Compte")}</div>
       <div style="display:flex; align-items:center; gap:14px; margin:10px 0 14px;">
         <div style="position:relative; flex-shrink:0;">
           <div id="profile-photo-preview" style="width:64px; height:64px; border-radius:50%; background:var(--surface-raised) center/cover no-repeat; ${photoSrc ? `background-image:url('${photoSrc}');` : ""} display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; color:var(--amber);">${photoSrc ? "" : esc(displayName[0].toUpperCase())}</div>
@@ -51,37 +59,37 @@ export async function renderReglages(container) {
           <input type="file" id="profile-photo-input" accept="image/*" style="display:none;">
         </div>
         <div style="flex:1;">
-          <label style="margin-top:0;">Pseudo</label>
+          <label style="margin-top:0;">${t("Pseudo")}</label>
           <input id="profile-name-input" value="${esc(displayName)}" maxlength="30">
         </div>
       </div>
-      <p class="muted" style="margin:0 0 10px;">${user?.email || ""}</p>
-      <button class="btn btn-primary btn-sm" id="save-profile-btn">Enregistrer le profil</button>
+      <p class="muted" style="margin:0 0 10px;">${esc(user?.email || "")}</p>
+      <button class="btn btn-primary btn-sm" id="save-profile-btn">${t("Enregistrer le profil")}</button>
       <p class="muted" id="profile-save-status" style="margin-top:6px;"></p>
       <div class="btn-row" style="margin-top:6px;">
-        <button class="btn btn-secondary btn-sm" id="view-public-profile">Voir mon profil</button>
-        <button class="btn btn-secondary btn-sm" id="edit-public-profile">🏆 Exercices phares & 🎧 musique</button>
+        <button class="btn btn-secondary btn-sm" id="view-public-profile">${t("Voir mon profil")}</button>
+        <button class="btn btn-secondary btn-sm" id="edit-public-profile">${t("🏆 Exercices phares & 🎧 musique")}</button>
       </div>
-      <button class="btn btn-secondary" id="signout-btn" style="margin-top:10px;">Se déconnecter</button>
+      <button class="btn btn-secondary" id="signout-btn" style="margin-top:10px;">${t("Se déconnecter")}</button>
     </div>
 
     <div class="card" id="spotify-card">
       <div class="card-title">🎧 Spotify</div>
-      <p class="muted" style="margin-top:0;">Connecte ton compte pour proposer automatiquement le morceau en cours comme « son du record » et joindre la bande-son de tes séances (morceaux écoutés pendant l'entraînement). <a href="privacy.html" style="color:var(--text);">Données utilisées</a></p>
+      <p class="muted" style="margin-top:0;">${t("Connecte ton compte pour proposer automatiquement le morceau en cours comme « son du record » et joindre la bande-son de tes séances (morceaux écoutés pendant l'entraînement).")} <a href="privacy.html" style="color:var(--text);">${t("Données utilisées")}</a></p>
       <p class="muted" id="spotify-status" style="font-size:13px;"></p>
       <button class="btn btn-secondary btn-sm" id="spotify-btn"></button>
       <details id="spotify-own" style="margin-top:12px;">
-        <summary style="cursor:pointer; font-weight:600;">Utiliser ma propre app Spotify</summary>
-        <p class="muted" style="font-size:13px;">L'app Spotify partagée est limitée par Spotify à quelques comptes. Avec ta propre app (gratuite, 5 minutes, <b>compte Spotify Premium requis</b>), tu te connectes sans attendre personne :</p>
+        <summary style="cursor:pointer; font-weight:600;">${t("Utiliser ma propre app Spotify")}</summary>
+        <p class="muted" style="font-size:13px;">${t("L'app Spotify partagée est limitée par Spotify à quelques comptes. Avec ta propre app (gratuite, 5 minutes, <b>compte Spotify Premium requis</b>), tu te connectes sans attendre personne :")}</p>
         <ol class="muted" style="font-size:13px; padding-left:20px; line-height:1.5;">
-          <li>Ouvre <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener" style="color:var(--text);">developer.spotify.com/dashboard</a>, connecte-toi, puis <b>Create app</b>.</li>
-          <li>Nom et description au choix. Dans <b>Redirect URIs</b>, colle exactement :
-            <div style="display:flex; gap:6px; margin:6px 0;"><input id="spotify-redirect" readonly style="font-size:12px;"><button class="btn btn-secondary btn-sm" id="spotify-copy" style="width:auto;">Copier</button></div></li>
-          <li>Coche <b>Web API</b>, accepte les conditions, <b>Save</b>.</li>
-          <li>Dans <b>Settings</b>, copie le <b>Client ID</b> et colle-le ici :</li>
+          <li>${t("Ouvre {link}, connecte-toi, puis <b>Create app</b>.", { link: `<a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener" style="color:var(--text);">developer.spotify.com/dashboard</a>` })}</li>
+          <li>${t("Nom et description au choix. Dans <b>Redirect URIs</b>, colle exactement :")}
+            <div style="display:flex; gap:6px; margin:6px 0;"><input id="spotify-redirect" readonly style="font-size:12px;"><button class="btn btn-secondary btn-sm" id="spotify-copy" style="width:auto;">${t("Copier")}</button></div></li>
+          <li>${t("Coche <b>Web API</b>, accepte les conditions, <b>Save</b>.")}</li>
+          <li>${t("Dans <b>Settings</b>, copie le <b>Client ID</b> et colle-le ici :")}</li>
         </ol>
         <div style="display:flex; gap:6px;">
-          <input id="spotify-client-id" placeholder="Client ID (32 caractères)" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <input id="spotify-client-id" placeholder="${t("Client ID (32 caractères)")}" autocomplete="off" autocapitalize="off" spellcheck="false">
           <button class="btn btn-primary btn-sm" id="spotify-client-save" style="width:auto;">OK</button>
         </div>
         <p class="muted" id="spotify-client-info" style="font-size:12px; margin:6px 0 0;"></p>
@@ -89,33 +97,33 @@ export async function renderReglages(container) {
     </div>
 
     <div class="card">
-      <div class="card-title">Minuteur de repos</div>
-      <p class="muted" style="margin-top:0;">Reçois une notification à la fin du repos, même si tu es passé sur une autre app (Spotify...) ou que l'écran est verrouillé. Sur iPhone, il faut utiliser l'app ajoutée à l'écran d'accueil. La durée par défaut se règle par exercice, dans la bibliothèque ci-dessous.</p>
+      <div class="card-title">${t("Minuteur de repos")}</div>
+      <p class="muted" style="margin-top:0;">${t("Reçois une notification à la fin du repos, même si tu es passé sur une autre app (Spotify...) ou que l'écran est verrouillé. Sur iPhone, il faut utiliser l'app ajoutée à l'écran d'accueil. La durée par défaut se règle par exercice, dans la bibliothèque ci-dessous.")}</p>
       <div class="list-row" style="cursor:default;">
-        <div class="list-row-title">Notifications de fin de repos</div>
+        <div class="list-row-title">${t("Notifications de fin de repos")}</div>
         <label class="switch">
           <input type="checkbox" id="notify-toggle" ${restNotificationsEnabled() ? "checked" : ""}>
           <span class="switch-track"></span>
         </label>
       </div>
       <p class="muted" id="notify-status" style="margin-top:6px;"></p>
-      <button class="btn btn-secondary btn-sm" id="notify-test" style="display:none;">Tester : notification dans 10 s</button>
+      <button class="btn btn-secondary btn-sm" id="notify-test" style="display:none;">${t("Tester : notification dans 10 s")}</button>
     </div>
 
     <div class="card">
-      <div class="card-title">Réinitialiser</div>
-      <p class="muted" style="margin-top:0;">Supprime toutes tes séances et leurs séries (les exercices et routines partagés ne sont pas touchés) — utile pour repartir propre avant un réimport.</p>
-      <button class="btn btn-danger" id="wipe-btn">Supprimer toutes mes séances</button>
+      <div class="card-title">${t("Réinitialiser")}</div>
+      <p class="muted" style="margin-top:0;">${t("Supprime toutes tes séances et leurs séries (les exercices et routines partagés ne sont pas touchés) — utile pour repartir propre avant un réimport.")}</p>
+      <button class="btn btn-danger" id="wipe-btn">${t("Supprimer toutes mes séances")}</button>
       <div id="wipe-result"></div>
     </div>
 
     <div class="card">
-      <div class="card-title">Importer un CSV</div>
-      <p class="muted" style="margin-top:0;">Export Hevy (Profil → Réglages → Exporter les données). Les séries déjà importées sont détectées et ignorées automatiquement — aucun doublon possible, même en réimportant plusieurs fois le même fichier.</p>
+      <div class="card-title">${t("Importer un CSV")}</div>
+      <p class="muted" style="margin-top:0;">${t("Export Hevy (Profil → Réglages → Exporter les données). Les séries déjà importées sont détectées et ignorées automatiquement — aucun doublon possible, même en réimportant plusieurs fois le même fichier.")}</p>
       <input type="file" id="csv-file" accept=".csv,text/csv">
       <p class="muted" id="csv-filename" style="margin:8px 0 0;"></p>
       <div style="height:10px"></div>
-      <button class="btn btn-primary" id="start-import" disabled>Importer</button>
+      <button class="btn btn-primary" id="start-import" disabled>${t("Importer")}</button>
       <div id="import-progress" style="display:none;">
         <div class="progress-bar"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
         <p class="muted" id="progress-text"></p>
@@ -124,35 +132,36 @@ export async function renderReglages(container) {
     </div>
 
     <div class="card">
-      <div class="card-title">Export</div>
-      <p class="muted" style="margin-top:0;">Télécharge toutes tes séries au format CSV.</p>
-      <button class="btn btn-secondary" id="export-csv">Exporter en CSV</button>
+      <div class="card-title">${t("Export")}</div>
+      <p class="muted" style="margin-top:0;">${t("Télécharge toutes tes séries au format CSV.")}</p>
+      <button class="btn btn-secondary" id="export-csv">${t("Exporter en CSV")}</button>
     </div>
 
     <div class="card">
-      <div class="card-title">À propos</div>
-      <p class="muted" style="margin-top:0;">Version de l'app : <b>${APP_VERSION}</b> · Projet Firebase : ${esc(firebaseConfig.projectId)}</p>
-      <button class="btn btn-secondary btn-sm" id="force-update">Forcer la mise à jour</button>
-      <p style="margin:10px 0 0;"><a href="privacy.html" style="color:var(--text); text-decoration-color:var(--amber);">Politique de confidentialité</a></p>
-      <p class="muted">Ajoute cette page à ton écran d'accueil (icône Partager → "Sur l'écran d'accueil") pour l'utiliser comme une app.</p>
+      <div class="card-title">${t("À propos")}</div>
+      <p class="muted" style="margin-top:0;">${t("Version de l'app : {version} · Projet Firebase : {project}", { version: `<b>${APP_VERSION}</b>`, project: esc(firebaseConfig.projectId) })}</p>
+      <button class="btn btn-secondary btn-sm" id="force-update">${t("Forcer la mise à jour")}</button>
+      <p style="margin:10px 0 0;"><a href="privacy.html" style="color:var(--text); text-decoration-color:var(--amber);">${t("Politique de confidentialité")}</a></p>
+      <p class="muted">${t("Ajoute cette page à ton écran d'accueil (icône Partager → \"Sur l'écran d'accueil\") pour l'utiliser comme une app.")}</p>
     </div>
 
     <div class="card">
-      <div class="card-title">Bibliothèque d'exercices</div>
-      <p class="muted" style="margin-top:0;">Complète ta bibliothèque avec ${EXERCISE_SEED.length} exercices standards (barre, haltère, machine, poulie, poids du corps) — les exercices déjà présents ne sont pas dupliqués.</p>
-      <button class="btn btn-secondary" id="load-seed">Charger la bibliothèque standard</button>
-      <p class="muted" style="margin:10px 0 0; font-size:13px;">Bibliothèque commune à tous les utilisateurs : tu peux modifier les exercices que tu as ajoutés, pas ceux des autres.</p>
+      <div class="card-title">${t("Bibliothèque d'exercices")}</div>
+      <p class="muted" style="margin-top:0;">${t("Complète ta bibliothèque avec {n} exercices standards (barre, haltère, machine, poulie, poids du corps) — les exercices déjà présents ne sont pas dupliqués.", { n: EXERCISE_SEED.length })}</p>
+      <button class="btn btn-secondary" id="load-seed">${t("Charger la bibliothèque standard")}</button>
+      <p class="muted" style="margin:10px 0 0; font-size:13px;">${t("Bibliothèque commune à tous les utilisateurs : tu peux modifier les exercices que tu as ajoutés, pas ceux des autres.")}</p>
       <div style="height:12px"></div>
       <div id="exercise-lib"></div>
     </div>
   `;
+  bindLangPicker(container, "settings-lang");
 
   setupSpotifyCard(container);
   container.querySelector("#view-public-profile").onclick = () => openProfile(getUser()?.uid);
   container.querySelector("#edit-public-profile").onclick = () => openProfileEditor(() => openProfile(getUser()?.uid));
 
   container.querySelector("#signout-btn").onclick = async () => {
-    if (!confirm("Se déconnecter de Skullcrusher ?")) return;
+    if (!confirm(t("Se déconnecter de Skullcrusher ?"))) return;
     await signOutUser();
   };
 
@@ -167,7 +176,7 @@ export async function renderReglages(container) {
       photoPreview.style.backgroundImage = `url('${pendingPhotoDataUrl}')`;
       photoPreview.textContent = "";
     } catch (e) {
-      toast("Impossible de lire cette image");
+      toast(t("Impossible de lire cette image"));
     }
   };
 
@@ -176,27 +185,27 @@ export async function renderReglages(container) {
     const statusEl = container.querySelector("#profile-save-status");
     const name = container.querySelector("#profile-name-input").value.trim();
     btn.disabled = true;
-    btn.textContent = "Enregistrement…";
+    btn.textContent = t("Enregistrement…");
     try {
       const patch = {};
       if (name) patch.display_name = name;
       if (pendingPhotoDataUrl !== undefined) patch.photo_data_url = pendingPhotoDataUrl;
       await db.updateMyProfile(patch);
-      if (statusEl.isConnected) statusEl.textContent = "Profil enregistré.";
-      toast("Profil mis à jour");
+      if (statusEl.isConnected) statusEl.textContent = t("Profil enregistré.");
+      toast(t("Profil mis à jour"));
     } catch (e) {
       if (statusEl.isConnected) statusEl.textContent = e.message;
     }
-    if (btn.isConnected) { btn.disabled = false; btn.textContent = "Enregistrer le profil"; }
+    if (btn.isConnected) { btn.disabled = false; btn.textContent = t("Enregistrer le profil"); }
   };
 
   container.querySelector("#wipe-btn").onclick = async () => {
-    if (!confirm("Supprimer TOUTES tes séances et leurs séries ? Cette action est irréversible.")) return;
-    if (!confirm("Vraiment sûr ? Il n'y a pas d'annulation possible.")) return;
+    if (!confirm(t("Supprimer TOUTES tes séances et leurs séries ? Cette action est irréversible."))) return;
+    if (!confirm(t("Vraiment sûr ? Il n'y a pas d'annulation possible."))) return;
     const btn = container.querySelector("#wipe-btn");
     const resultEl = container.querySelector("#wipe-result");
     btn.disabled = true;
-    btn.textContent = "Suppression…";
+    btn.textContent = t("Suppression…");
     try {
       const count = await db.deleteAllMyWorkouts((done, total) => {
         if (resultEl.isConnected) resultEl.innerHTML = `<p class="muted">${done} / ${total} séance(s) supprimée(s)…</p>`;
@@ -208,7 +217,7 @@ export async function renderReglages(container) {
     } catch (err) {
       if (resultEl.isConnected) resultEl.innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
     }
-    if (btn.isConnected) { btn.disabled = false; btn.textContent = "Supprimer toutes mes séances"; }
+    if (btn.isConnected) { btn.disabled = false; btn.textContent = t("Supprimer toutes mes séances"); }
   };
 
   const notifyToggle = container.querySelector("#notify-toggle");
@@ -218,19 +227,19 @@ export async function renderReglages(container) {
   function showNotifyState() {
     notifyTest.style.display = notifyToggle.checked && pushActive() ? "" : "none";
     if (!notifyToggle.checked) { notifyStatus.textContent = ""; return; }
-    if (pushActive()) notifyStatus.textContent = "✅ Activées — elles arrivent même si tu es sur une autre app ou écran verrouillé.";
-    else if (timerSync.unavailable) notifyStatus.textContent = "Activées seulement app ouverte : un bloqueur de contenu empêche le module de notifications de se charger.";
-    else if (!pushConfigured()) notifyStatus.textContent = "Activées, mais seulement quand l'app est à l'écran : le serveur de notifications n'est pas encore configuré.";
-    else notifyStatus.textContent = "Activées seulement app ouverte — désactive puis réactive pour les recevoir aussi sur une autre app.";
+    if (pushActive()) notifyStatus.textContent = t("✅ Activées — elles arrivent même si tu es sur une autre app ou écran verrouillé.");
+    else if (timerSync.unavailable) notifyStatus.textContent = t("Activées seulement app ouverte : un bloqueur de contenu empêche le module de notifications de se charger.");
+    else if (!pushConfigured()) notifyStatus.textContent = t("Activées, mais seulement quand l'app est à l'écran : le serveur de notifications n'est pas encore configuré.");
+    else notifyStatus.textContent = t("Activées seulement app ouverte — désactive puis réactive pour les recevoir aussi sur une autre app.");
   }
   if (!("Notification" in window)) {
     notifyToggle.disabled = !iosNotInstalled;
     notifyStatus.textContent = iosNotInstalled
-      ? "Sur iPhone, ajoute l'app à ton écran d'accueil (Partager → Sur l'écran d'accueil), puis active les notifications depuis l'app installée."
-      : "Les notifications ne sont pas prises en charge par ce navigateur.";
+      ? t("Sur iPhone, ajoute l'app à ton écran d'accueil (Partager → Sur l'écran d'accueil), puis active les notifications depuis l'app installée.")
+      : t("Les notifications ne sont pas prises en charge par ce navigateur.");
   } else if (Notification.permission === "denied") {
     notifyToggle.checked = false;
-    notifyStatus.textContent = "Notifications bloquées — autorise-les pour cette app dans les réglages de l'iPhone (Réglages → Notifications), puis reviens ici.";
+    notifyStatus.textContent = t("Notifications bloquées — autorise-les pour cette app dans les réglages de l'iPhone (Réglages → Notifications), puis reviens ici.");
   } else {
     showNotifyState();
   }
@@ -243,17 +252,17 @@ export async function renderReglages(container) {
       notifyToggle.disabled = false;
       return;
     }
-    notifyStatus.textContent = "Activation…";
+    notifyStatus.textContent = t("Activation…");
     if (iosNotInstalled || !("Notification" in window)) {
       notifyToggle.checked = false;
-      notifyStatus.textContent = "Sur iPhone, ajoute l'app à ton écran d'accueil (Partager → Sur l'écran d'accueil), puis active les notifications depuis l'app installée.";
+      notifyStatus.textContent = t("Sur iPhone, ajoute l'app à ton écran d'accueil (Partager → Sur l'écran d'accueil), puis active les notifications depuis l'app installée.");
       notifyToggle.disabled = false;
       return;
     }
     const ok = await setRestNotificationsEnabled(true);
     if (!ok) {
       notifyToggle.checked = false;
-      notifyStatus.textContent = "Autorisation refusée — autorise les notifications pour cette app dans les réglages de l'iPhone.";
+      notifyStatus.textContent = t("Autorisation refusée — autorise les notifications pour cette app dans les réglages de l'iPhone.");
       notifyToggle.disabled = false;
       return;
     }
@@ -273,8 +282,8 @@ export async function renderReglages(container) {
   };
   notifyTest.onclick = async () => {
     notifyTest.disabled = true;
-    const ok = await scheduleRestPush(Date.now() + 10000, "Test réussi : le minuteur te préviendra même depuis une autre app.");
-    toast(ok ? "Passe sur une autre app : la notification arrive dans 10 s" : "Échec de l'envoi au serveur de notifications", 3500);
+    const ok = await scheduleRestPush(Date.now() + 10000, t("Test réussi : le minuteur te préviendra même depuis une autre app."));
+    toast(ok ? t("Passe sur une autre app : la notification arrive dans 10 s") : t("Échec de l'envoi au serveur de notifications"), 3500);
     setTimeout(() => { notifyTest.disabled = false; }, 10000);
   };
 
@@ -285,7 +294,7 @@ export async function renderReglages(container) {
   fileInput.onchange = () => {
     const file = fileInput.files[0];
     if (file) {
-      filenameEl.textContent = `Fichier sélectionné : ${file.name}`;
+      filenameEl.textContent = t("Fichier sélectionné : {name}", { name: file.name });
       importBtn.disabled = false;
     } else {
       filenameEl.textContent = "";
@@ -301,7 +310,7 @@ export async function renderReglages(container) {
     const text = container.querySelector("#progress-text");
     const resultEl = container.querySelector("#import-result");
     importBtn.disabled = true;
-    importBtn.textContent = "Import en cours…";
+    importBtn.textContent = t("Import en cours…");
     progressWrap.style.display = "block";
     resultEl.innerHTML = "";
     try {
@@ -312,26 +321,26 @@ export async function renderReglages(container) {
         } else {
           const pct = Math.round((done / total) * 100);
           fill.style.width = pct + "%";
-          text.textContent = `${done} / ${total} séries traitées…`;
+          text.textContent = t("{done} / {total} séries traitées…", { done, total });
         }
       });
       if (resultEl.isConnected) {
         progressWrap.style.display = "none";
         resultEl.innerHTML = `
-          <p style="color:var(--green)">Import terminé.</p>
+          <p style="color:var(--green)">${t("Import terminé.")}</p>
           <p class="muted">
-            ${stats.workoutsCreated} séance(s) créée(s) ·
-            ${stats.setsImported} série(s) importée(s) ·
-            ${stats.setsSkippedDuplicate} doublon(s) ignoré(s)
-            ${stats.errors ? ` · ${stats.errors} erreur(s)` : ""}
+            ${t("{n} séance(s) créée(s)", { n: stats.workoutsCreated })} ·
+            ${t("{n} série(s) importée(s)", { n: stats.setsImported })} ·
+            ${t("{n} doublon(s) ignoré(s)", { n: stats.setsSkippedDuplicate })}
+            ${stats.errors ? ` · ${t("{n} erreur(s)", { n: stats.errors })}` : ""}
           </p>
-          ${stats.errors ? `<p style="color:var(--red)">Une partie de l'import a échoué${stats.lastError ? ` (${stats.lastError})` : ""}. Relance l'import : ce qui est déjà enregistré sera ignoré.</p>` : ""}
-          <p class="muted">Tes séances importées sont privées. Ouvre une séance dans l'Historique pour la partager sur le feed.</p>
+          ${stats.errors ? `<p style="color:var(--red)">${t("Une partie de l'import a échoué{detail}. Relance l'import : ce qui est déjà enregistré sera ignoré.", { detail: stats.lastError ? ` (${esc(stats.lastError)})` : "" })}</p>` : ""}
+          <p class="muted">${t("Tes séances importées sont privées. Ouvre une séance dans l'Historique pour la partager sur le feed.")}</p>
         `;
       }
       invalidateStatsCache();
       invalidate("exercises", "workouts");
-      toast("Import terminé");
+      toast(t("Import terminé"));
       renderExerciseLib(container); // no-op silencieux si l'onglet a changé (voir garde ci-dessous)
     } catch (err) {
       if (progressWrap.isConnected) progressWrap.style.display = "none";
@@ -339,7 +348,7 @@ export async function renderReglages(container) {
     }
     if (importBtn.isConnected) {
       importBtn.disabled = false;
-      importBtn.textContent = "Importer";
+      importBtn.textContent = t("Importer");
     }
     fileInput.value = "";
     filenameEl.textContent = "";
@@ -355,7 +364,7 @@ export async function renderReglages(container) {
 async function loadSeedLibrary(container) {
   const btn = container.querySelector("#load-seed");
   btn.disabled = true;
-  btn.textContent = "Chargement…";
+  btn.textContent = t("Chargement…");
   let added = 0;
   const existing = await getExercises();
   const existingNames = new Set(existing.map(e => e.name.toLowerCase()));
@@ -368,9 +377,9 @@ async function loadSeedLibrary(container) {
   invalidate("exercises");
   if (btn.isConnected) {
     btn.disabled = false;
-    btn.textContent = "Charger la bibliothèque standard";
+    btn.textContent = t("Charger la bibliothèque standard");
   }
-  toast(added > 0 ? `${added} exercice(s) ajouté(s)` : "Bibliothèque déjà à jour");
+  toast(added > 0 ? t("{n} exercice(s) ajouté(s)", { n: added }) : t("Bibliothèque déjà à jour"));
   if (container.querySelector("#exercise-lib")) renderExerciseLib(container);
 }
 
@@ -379,14 +388,14 @@ async function renderExerciseLib(container) {
   const wrap = container.querySelector("#exercise-lib");
   if (!wrap) return; // l'utilisateur a changé d'onglet pendant le chargement
   wrap.innerHTML = exercises.length === 0
-    ? `<p class="muted">Aucun exercice pour l'instant.</p>`
+    ? `<p class="muted">${t("Aucun exercice pour l'instant.")}</p>`
     : exercises.map(ex => `
       <div class="list-row" data-ex="${ex.id}" data-ex-name="${esc(ex.name)}" data-ex-group="${esc(ex.muscle_group)}">
         <div>
           <div class="list-row-title">${esc(ex.name)}</div>
-          <div class="list-row-sub">${ex.muscle_group}</div>
+          <div class="list-row-sub">${esc(t(ex.muscle_group))}</div>
         </div>
-        ${db.canEditExercise(ex) ? `<button class="btn btn-sm btn-secondary" data-edit-ex="${ex.id}">Modifier</button>` : ""}
+        ${db.canEditExercise(ex) ? `<button class="btn btn-sm btn-secondary" data-edit-ex="${ex.id}">${t("Modifier")}</button>` : ""}
       </div>
     `).join("");
   wrap.querySelectorAll("[data-edit-ex]").forEach(btn => {
@@ -403,16 +412,16 @@ async function renderExerciseLib(container) {
 function openExerciseEditModal(ex, container) {
   const modal = openModal(`
     <h3>${esc(ex.name)}</h3>
-    <label>Groupe musculaire</label>
-    <select id="edit-group">${db.EXO_GROUPS.map(g => `<option ${g === ex.muscle_group ? "selected" : ""}>${g}</option>`).join("")}</select>
-    <label>Minuteur de repos par défaut (secondes)</label>
+    <label>${t("Groupe musculaire")}</label>
+    <select id="edit-group">${db.EXO_GROUPS.map(g => `<option value="${esc(g)}" ${g === ex.muscle_group ? "selected" : ""}>${esc(t(g))}</option>`).join("")}</select>
+    <label>${t("Minuteur de repos par défaut (secondes)")}</label>
     <input id="edit-rest" type="number" value="${ex.rest_timer_seconds || 90}">
     <div style="height:14px"></div>
     <div class="btn-row">
-      <button class="btn btn-secondary" id="edit-cancel">Annuler</button>
-      <button class="btn btn-primary" id="edit-save">Enregistrer</button>
+      <button class="btn btn-secondary" id="edit-cancel">${t("Annuler")}</button>
+      <button class="btn btn-primary" id="edit-save">${t("Enregistrer")}</button>
     </div>
-    ${ex.is_custom ? `<button class="btn btn-danger" id="edit-delete" style="margin-top:10px;">Supprimer cet exercice</button>` : ""}
+    ${ex.is_custom ? `<button class="btn btn-danger" id="edit-delete" style="margin-top:10px;">${t("Supprimer cet exercice")}</button>` : ""}
   `, (modalEl) => {
     modalEl.querySelector("#edit-cancel").onclick = closeModal;
     modalEl.querySelector("#edit-save").onclick = async () => {
@@ -422,12 +431,12 @@ function openExerciseEditModal(ex, container) {
       });
       invalidate("exercises");
       closeModal();
-      toast("Exercice mis à jour");
+      toast(t("Exercice mis à jour"));
       renderExerciseLib(container);
     };
     const delBtn = modalEl.querySelector("#edit-delete");
     if (delBtn) delBtn.onclick = async () => {
-      if (!confirm("Supprimer cet exercice de la bibliothèque ? (les séries déjà loggées sont conservées)")) return;
+      if (!confirm(t("Supprimer cet exercice de la bibliothèque ? (les séries déjà loggées sont conservées)"))) return;
       await db.deleteExercise(ex.id);
       invalidate("exercises");
       closeModal();
@@ -440,18 +449,17 @@ function openExerciseEditModal(ex, container) {
 // pourquoi, et comment les supprimer.
 function openSpotifyConsent(onAccept) {
   openModal(`
-    <h3>Connecter Spotify</h3>
-    <p class="muted" style="margin-top:0;">Skullcrusher demandera à Spotify l'accès à :</p>
+    <h3>${t("Connecter Spotify")}</h3>
+    <p class="muted" style="margin-top:0;">${t("Skullcrusher demandera à Spotify l'accès à :")}</p>
     <ul style="padding-left:20px; line-height:1.5;">
-      <li><b>Morceau en cours d'écoute</b> — pour te proposer le « son du record » en fin de séance.</li>
-      <li><b>Morceaux écoutés récemment</b> — pour te proposer de joindre la bande-son à ta séance.</li>
+      <li><b>${t("Morceau en cours d'écoute")}</b> — ${t("pour te proposer le « son du record » en fin de séance.")}</li>
+      <li><b>${t("Morceaux écoutés récemment")}</b> — ${t("pour te proposer de joindre la bande-son à ta séance.")}</li>
     </ul>
-    <p class="muted">Rien n'est enregistré sans ton accord, seuls les liens des morceaux sont conservés, et tes écoutes ne sont jamais analysées ni transmises à des tiers.
-    La déconnexion efface le jeton et toutes les données venues de Spotify.</p>
-    <p><a href="privacy.html" style="color:var(--text); text-decoration-color:var(--amber);">Politique de confidentialité</a></p>
+    <p class="muted">${t("Rien n'est enregistré sans ton accord, seuls les liens des morceaux sont conservés, et tes écoutes ne sont jamais analysées ni transmises à des tiers. La déconnexion efface le jeton et toutes les données venues de Spotify.")}</p>
+    <p><a href="privacy.html" style="color:var(--text); text-decoration-color:var(--amber);">${t("Politique de confidentialité")}</a></p>
     <div class="btn-row">
-      <button class="btn btn-secondary" id="sc-cancel">Annuler</button>
-      <button class="btn btn-primary" id="sc-ok">Continuer vers Spotify</button>
+      <button class="btn btn-secondary" id="sc-cancel">${t("Annuler")}</button>
+      <button class="btn btn-primary" id="sc-ok">${t("Continuer vers Spotify")}</button>
     </div>
   `, (m) => {
     m.querySelector("#sc-cancel").onclick = closeModal;
@@ -472,7 +480,7 @@ async function setupSpotifyCard(container) {
   const idInfo = container.querySelector("#spotify-client-info");
   container.querySelector("#spotify-redirect").value = sp.redirectUri();
   container.querySelector("#spotify-copy").onclick = async () => {
-    try { await navigator.clipboard.writeText(sp.redirectUri()); toast("Adresse copiée"); }
+    try { await navigator.clipboard.writeText(sp.redirectUri()); toast(t("Adresse copiée")); }
     catch (_) { container.querySelector("#spotify-redirect").select(); }
   };
 
@@ -480,27 +488,27 @@ async function setupSpotifyCard(container) {
   if (!btn.isConnected) return;
   idInput.value = settings.own;
   idInfo.textContent = settings.own
-    ? "✅ Ta propre app Spotify est utilisée. Vide le champ puis OK pour revenir à l'app partagée."
-    : settings.clientId ? "Pour l'instant, l'app Spotify partagée est utilisée." : "";
+    ? t("✅ Ta propre app Spotify est utilisée. Vide le champ puis OK pour revenir à l'app partagée.")
+    : settings.clientId ? t("Pour l'instant, l'app Spotify partagée est utilisée.") : "";
   if (!settings.clientId) own.open = true;
 
   status.textContent = connected
-    ? `✅ Compte Spotify connecté (${settings.own ? "ta propre app" : "app partagée"}).`
+    ? "✅ " + (settings.own ? t("Compte Spotify connecté (ta propre app).") : t("Compte Spotify connecté (app partagée)."))
     : !settings.clientId
-      ? "Pour connecter Spotify, crée ta propre app Spotify ci-dessous."
-      : "Non connecté. Sur iPhone, lance la connexion depuis Safari (pas depuis l'icône) : elle marchera ensuite aussi dans l'app installée.";
-  btn.textContent = connected ? "Déconnecter Spotify" : "Connecter Spotify";
+      ? t("Pour connecter Spotify, crée ta propre app Spotify ci-dessous.")
+      : t("Non connecté. Sur iPhone, lance la connexion depuis Safari (pas depuis l'icône) : elle marchera ensuite aussi dans l'app installée.");
+  btn.textContent = connected ? t("Déconnecter Spotify") : t("Connecter Spotify");
   btn.disabled = !connected && !settings.clientId;
   btn.onclick = async () => {
     if (connected) {
-      if (!confirm("Déconnecter Spotify ? Les bandes-son et les sons de record venus de Spotify seront effacés de tes séances.")) return;
+      if (!confirm(t("Déconnecter Spotify ? Les bandes-son et les sons de record venus de Spotify seront effacés de tes séances."))) return;
       btn.disabled = true;
       try {
         const n = await sp.disconnectSpotify();
-        toast(`Spotify déconnecté${n ? ` — données effacées de ${n} séance(s)` : ""}`, 3500);
+        toast(n ? t("Spotify déconnecté — données effacées de {n} séance(s)", { n }) : t("Spotify déconnecté"), 3500);
       } catch (e) {
         console.error("[Skullcrusher] Déconnexion Spotify", e);
-        toast("Déconnexion impossible, réessaie");
+        toast(t("Déconnexion impossible, réessaie"));
       }
       setupSpotifyCard(container);
     } else {
@@ -514,7 +522,7 @@ async function setupSpotifyCard(container) {
       await sp.setOwnClientId(value);
       // Le jeton actuel appartient à l'ancienne app : il faut se reconnecter.
       if (connected && value !== settings.own) await sp.forgetToken();
-      toast(value ? "Client ID enregistré — tu peux connecter Spotify" : "Retour à l'app Spotify partagée", 3500);
+      toast(value ? t("Client ID enregistré — tu peux connecter Spotify") : t("Retour à l'app Spotify partagée"), 3500);
       setupSpotifyCard(container);
     } catch (e) {
       idInfo.textContent = e.message;

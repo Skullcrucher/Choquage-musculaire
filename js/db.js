@@ -13,6 +13,7 @@ import {
   sendPasswordResetEmail, onAuthStateChanged, signOut, setPersistence, indexedDBLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
+import { t } from "./i18n.js";
 
 const app = initializeApp(firebaseConfig);
 
@@ -48,7 +49,7 @@ export function getCurrentUser() {
 
 export function requireUid() {
   const u = auth.currentUser;
-  if (!u) throw new Error("Non connecté");
+  if (!u) throw new Error(t("Non connecté"));
   return u.uid;
 }
 
@@ -168,7 +169,7 @@ export async function ensureSearchableProfile() {
 // Nom public d'un utilisateur : son pseudo, jamais son email.
 async function myPublicName() {
   const profile = await getProfile(requireUid()).catch(() => null);
-  return profile?.display_name || auth.currentUser?.displayName || "Anonyme";
+  return profile?.display_name || auth.currentUser?.displayName || "";
 }
 
 // ---------- Temps de repos mémorisés par exercice ----------
@@ -237,6 +238,8 @@ export function isAdmin() {
 // exercice, mais seul son créateur (created_by) ou l'administrateur peut
 // le modifier ou le supprimer. Les exercices d'avant ce verrouillage
 // n'ont pas de created_by : seul l'administrateur peut les modifier.
+// Groupes musculaires : valeurs stockées en français, traduites à l'affichage avec t().
+// i18n-keys: "Pectoraux", "Dos", "Épaules", "Biceps", "Triceps", "Jambes", "Fessiers", "Abdominaux", "Avant-bras", "Cardio", "Autre"
 const EXO_GROUPS = [
   "Pectoraux", "Dos", "Épaules", "Biceps", "Triceps",
   "Jambes", "Fessiers", "Abdominaux", "Avant-bras", "Cardio", "Autre"
@@ -280,9 +283,12 @@ export async function deleteExercise(id) {
 // Des champs dérivés (muscles, noms d'exercices, nombre d'exercices) sont
 // stockés avec la routine pour que la recherche filtre sans relire chaque
 // exercice. vote_count n'est modifié que par les votes (voir toggleRoutineVote).
-export const ROUTINE_LEVELS = { debutant: "Débutant", intermediaire: "Intermédiaire", avance: "Avancé" };
-export const ROUTINE_GOALS = { force: "Force", hypertrophie: "Hypertrophie", endurance: "Endurance", seche: "Sèche / perte de poids", remise: "Remise en forme" };
-export const ROUTINE_VISIBILITY = { private: "🔒 Privée", friends: "👥 Amis", public: "🌍 Publique" };
+// Libellés affichés, traduits une fois au chargement (changer de langue recharge l'app).
+// i18n-keys: "Débutant", "Intermédiaire", "Avancé", "Force", "Hypertrophie", "Endurance", "Sèche / perte de poids", "Remise en forme", "🔒 Privée", "👥 Amis", "🌍 Publique"
+const translated = (obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, t(v)]));
+export const ROUTINE_LEVELS = translated({ debutant: "Débutant", intermediaire: "Intermédiaire", avance: "Avancé" });
+export const ROUTINE_GOALS = translated({ force: "Force", hypertrophie: "Hypertrophie", endurance: "Endurance", seche: "Sèche / perte de poids", remise: "Remise en forme" });
+export const ROUTINE_VISIBILITY = translated({ private: "🔒 Privée", friends: "👥 Amis", public: "🌍 Publique" });
 
 const LS_ROUTINES_MIGRATED = "skullcrusher_routines_migrated";
 
@@ -452,7 +458,7 @@ export async function listFriendUids() {
 
 export async function sendFriendRequest(toUid) {
   const uid = requireUid();
-  if (toUid === uid) throw new Error("Tu ne peux pas t'ajouter toi-même.");
+  if (toUid === uid) throw new Error(t("Tu ne peux pas t'ajouter toi-même."));
   await setDoc(doc(dbase, "friendships", friendshipId(uid, toUid)), {
     users: [uid, toUid].sort(), from: uid, to: toUid, status: "pending",
     created_at: new Date().toISOString()
@@ -479,10 +485,10 @@ export async function removeFriendship(friendship) {
 // ==================== SÉANCES (workouts) ====================
 export async function createWorkout({ title, start_time, end_time = null, notes = "" }) {
   const u = auth.currentUser;
-  if (!u) throw new Error("Non connecté");
+  if (!u) throw new Error(t("Non connecté"));
   const ref = await addDoc(collection(dbase, "workouts"), {
     title, start_time, end_time, notes, created_manually: true, shared: false,
-    owner_uid: u.uid, owner_name: u.displayName || "Utilisateur", owner_photo: u.photoURL || null
+    owner_uid: u.uid, owner_name: u.displayName || "", owner_photo: u.photoURL || null
   });
   return ref.id;
 }
@@ -622,7 +628,7 @@ function importSetKey(row) {
 export async function importRows(rows, onProgress = () => {}) {
   const stats = { workoutsCreated: 0, setsImported: 0, setsSkippedDuplicate: 0, errors: 0 };
   const u = auth.currentUser;
-  if (!u) throw new Error("Non connecté");
+  if (!u) throw new Error(t("Non connecté"));
   const uid = u.uid;
   const ownerName = await myPublicName();
   const ownerPhoto = u.photoURL || null;

@@ -11,6 +11,7 @@ import * as db from "./db.js";
 import { openModal, closeModal, toast, esc, safeImageUrl, attachAutocomplete, estimate1RM } from "./utils.js";
 import { getExercises, getWorkouts, getSetsForExercise } from "./cache.js";
 import { parseSpotify, spotifyEmbed } from "./music.js";
+import { t } from "./i18n.js";
 
 const MAX_HIGHLIGHTS = 3;
 const WEEK_MS = 7 * 24 * 3600 * 1000;
@@ -132,16 +133,16 @@ function sparkline(monthly) {
 
 function highlightCard(h) {
   const progress = h.progress_pct == null ? "" :
-    `<span class="profile-progress ${h.progress_pct >= 0 ? "up" : "down"}">${h.progress_pct >= 0 ? "▲ +" : "▼ "}${h.progress_pct} % en ${h.progress_months} mois</span>`;
+    `<span class="profile-progress ${h.progress_pct >= 0 ? "up" : "down"}">${h.progress_pct >= 0 ? "▲ +" : "▼ "}${t("{pct} % en {n} mois", { pct: h.progress_pct, n: h.progress_months })}</span>`;
   return `
     <div class="profile-highlight">
       <div class="list-row-title" style="margin-bottom:6px;">${esc(h.exercise)}</div>
-      ${h.best_1rm == null ? `<p class="muted" style="margin:0;">Pas encore de série enregistrée.</p>` : `
+      ${h.best_1rm == null ? `<p class="muted" style="margin:0;">${t("Pas encore de série enregistrée.")}</p>` : `
         <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
           <span class="num" style="font-size:30px; color:var(--amber);">${esc(h.best_1rm)} kg</span>
-          <span class="muted" style="font-size:12px;">1RM estimée</span>
+          <span class="muted" style="font-size:12px;">${t("1RM estimée")}</span>
         </div>
-        <div class="muted" style="font-size:13px; margin:2px 0 8px;">Meilleure série : ${esc(h.best_set.kg)} kg × ${esc(h.best_set.reps)}${progress ? " · " + progress : ""}</div>
+        <div class="muted" style="font-size:13px; margin:2px 0 8px;">${t("Meilleure série : {kg} kg × {reps}", { kg: esc(h.best_set.kg), reps: esc(h.best_set.reps) })}${progress ? " · " + progress : ""}</div>
         ${sparkline(h.monthly || [])}
       `}
     </div>`;
@@ -154,7 +155,7 @@ export async function openProfile(uid) {
     profile = await db.getProfile(uid);
   } catch (err) {
     console.error("[Skullcrusher] Profil introuvable", err);
-    toast("Impossible d'ouvrir ce profil");
+    toast(t("Impossible d'ouvrir ce profil"));
     return;
   }
   profile = profile || {};
@@ -163,7 +164,7 @@ export async function openProfile(uid) {
     profile.level && db.ROUTINE_LEVELS[profile.level],
     profile.goal && db.ROUTINE_GOALS[profile.goal],
     profile.gym && `📍 ${profile.gym}`,
-    profile.since_year && `Muscu depuis ${profile.since_year}`
+    profile.since_year && t("Muscu depuis {year}", { year: profile.since_year })
   ].filter(Boolean);
   const st = profile.show_stats ? profile.public_stats : null;
   const music = profile.music || {};
@@ -177,34 +178,34 @@ export async function openProfile(uid) {
     <div style="display:flex; align-items:center; gap:14px;">
       ${avatarHtml(profile, 64)}
       <div style="min-width:0;">
-        <h3 style="margin:0;">${esc(profile.display_name || "Utilisateur")}${isMe ? ` <span class="muted" style="font-size:14px; font-family:Inter,sans-serif; text-transform:none;">(toi)</span>` : ""}</h3>
+        <h3 style="margin:0;">${esc(profile.display_name || t("Utilisateur"))}${isMe ? ` <span class="muted" style="font-size:14px; font-family:Inter,sans-serif; text-transform:none;">(${t("toi")})</span>` : ""}</h3>
         ${profile.bio ? `<p class="muted" style="margin:4px 0 0;">${esc(profile.bio)}</p>` : ""}
       </div>
     </div>
     ${chips.length ? `<div class="chip-row" style="margin-top:12px;">${chips.map(c => `<span class="routine-badge">${esc(c)}</span>`).join("")}</div>` : ""}
 
     ${st ? `<div class="stat-grid" style="margin-top:14px;">
-      <div class="stat-box"><span class="num">${esc(st.workouts)}</span><span class="lbl">séances</span></div>
-      <div class="stat-box"><span class="num">${esc(st.tonnes)}</span><span class="lbl">tonnes</span></div>
-      <div class="stat-box"><span class="num">${esc(st.per_week)}</span><span class="lbl">séances / sem.</span></div>
+      <div class="stat-box"><span class="num">${esc(st.workouts)}</span><span class="lbl">${t("séances")}</span></div>
+      <div class="stat-box"><span class="num">${esc(st.tonnes)}</span><span class="lbl">${t("tonnes")}</span></div>
+      <div class="stat-box"><span class="num">${esc(st.per_week)}</span><span class="lbl">${t("séances / sem.")}</span></div>
     </div>` : ""}
 
-    ${highlights.length ? `<div class="profile-section-title">🏆 Exercices phares</div>${highlights.map(highlightCard).join("")}` : ""}
+    ${highlights.length ? `<div class="profile-section-title">🏆 ${t("Exercices phares")}</div>${highlights.map(highlightCard).join("")}` : ""}
 
-    ${hasMusic ? `<div class="profile-section-title">🎧 Musique de salle</div>
+    ${hasMusic ? `<div class="profile-section-title">🎧 ${t("Musique de salle")}</div>
       ${music.artist_name || artist ? `<div class="list-row" style="cursor:default;">
-        <div><div class="list-row-sub">Artiste pour se chauffer</div><div class="list-row-title">${esc(music.artist_name || "Voir l'artiste")}</div></div>
-        ${artist ? `<a class="btn btn-sm btn-secondary" style="width:auto;" href="${artist.url}" target="_blank" rel="noopener">Écouter</a>` : ""}
+        <div><div class="list-row-sub">${t("Artiste pour se chauffer")}</div><div class="list-row-title">${esc(music.artist_name || t("Voir l'artiste"))}</div></div>
+        ${artist ? `<a class="btn btn-sm btn-secondary" style="width:auto;" href="${artist.url}" target="_blank" rel="noopener">${t("Écouter")}</a>` : ""}
       </div>` : ""}
       ${playlist ? spotifyEmbed(playlist) : ""}
-      ${spotifyProfile ? `<a class="btn btn-secondary btn-sm" style="margin-top:10px;" href="${spotifyProfile.url}" target="_blank" rel="noopener">Profil Spotify</a>` : ""}` : ""}
+      ${spotifyProfile ? `<a class="btn btn-secondary btn-sm" style="margin-top:10px;" href="${spotifyProfile.url}" target="_blank" rel="noopener">${t("Profil Spotify")}</a>` : ""}` : ""}
 
     ${!highlights.length && !hasMusic && !st && !profile.bio && !chips.length
-      ? `<p class="muted" style="margin-top:14px;">${isMe ? "Ton profil est encore vide : ajoute tes exercices phares et ta musique de salle." : "Ce profil n'a encore rien mis en avant."}</p>` : ""}
+      ? `<p class="muted" style="margin-top:14px;">${isMe ? t("Ton profil est encore vide : ajoute tes exercices phares et ta musique de salle.") : t("Ce profil n'a encore rien mis en avant.")}</p>` : ""}
 
     <div class="btn-row" style="margin-top:16px;">
-      <button class="btn btn-secondary" id="pf-close">Fermer</button>
-      ${isMe ? `<button class="btn btn-primary" id="pf-edit">Modifier</button>` : ""}
+      <button class="btn btn-secondary" id="pf-close">${t("Fermer")}</button>
+      ${isMe ? `<button class="btn btn-primary" id="pf-edit">${t("Modifier")}</button>` : ""}
     </div>
   `, (modalEl) => {
     modalEl.querySelector("#pf-close").onclick = closeModal;
@@ -225,42 +226,42 @@ export async function openProfileEditor(onSaved = () => {}) {
   const year = new Date().getFullYear();
 
   openModal(`
-    <h3>Mon profil public</h3>
-    <p class="muted" style="margin-top:-6px;">Visible par les utilisateurs de l'app. Tes séances restent privées.</p>
+    <h3>${t("Mon profil public")}</h3>
+    <p class="muted" style="margin-top:-6px;">${t("Visible par les utilisateurs de l'app. Tes séances restent privées.")}</p>
 
-    <label>Bio</label>
-    <textarea id="pf-bio" rows="2" maxlength="160" placeholder="ex : Powerlifter du dimanche, fan de squat">${esc(p.bio || "")}</textarea>
+    <label>${t("Bio")}</label>
+    <textarea id="pf-bio" rows="2" maxlength="160" placeholder="${t("ex : Powerlifter du dimanche, fan de squat")}">${esc(p.bio || "")}</textarea>
     <div class="field-row">
-      <div><label>Niveau</label><select id="pf-level">${opt(db.ROUTINE_LEVELS, p.level)}</select></div>
-      <div><label>Objectif</label><select id="pf-goal">${opt(db.ROUTINE_GOALS, p.goal)}</select></div>
+      <div><label>${t("Niveau")}</label><select id="pf-level">${opt(db.ROUTINE_LEVELS, p.level)}</select></div>
+      <div><label>${t("Objectif")}</label><select id="pf-goal">${opt(db.ROUTINE_GOALS, p.goal)}</select></div>
     </div>
     <div class="field-row">
-      <div><label>Salle</label><input id="pf-gym" maxlength="60" value="${esc(p.gym || "")}" placeholder="ex : Basic-Fit Lyon 7"></div>
-      <div><label>Muscu depuis</label><input id="pf-since" type="number" min="1950" max="${year}" value="${esc(p.since_year || "")}" placeholder="${year - 3}"></div>
+      <div><label>${t("Salle")}</label><input id="pf-gym" maxlength="60" value="${esc(p.gym || "")}" placeholder="${t("ex : Basic-Fit Lyon 7")}"></div>
+      <div><label>${t("Muscu depuis")}</label><input id="pf-since" type="number" min="1950" max="${year}" value="${esc(p.since_year || "")}" placeholder="${year - 3}"></div>
     </div>
     <label class="list-row" style="cursor:pointer; margin-top:10px;">
-      <span>Afficher mes chiffres (séances, tonnes, rythme)</span>
+      <span>${t("Afficher mes chiffres (séances, tonnes, rythme)")}</span>
       <input type="checkbox" id="pf-stats" ${p.show_stats ? "checked" : ""} style="width:auto;">
     </label>
 
-    <div class="profile-section-title">🏆 Exercices phares (${MAX_HIGHLIGHTS} max)</div>
-    <p class="muted" style="margin-top:0; font-size:13px;">Pour chacun : ta meilleure 1RM estimée, ta meilleure série et ta progression sur 12 mois, mises à jour après chaque séance.</p>
-    ${Array.from({ length: MAX_HIGHLIGHTS }, (_, i) => `<div style="position:relative; margin-bottom:8px;"><input class="pf-hl" data-i="${i}" value="${esc(hl[i] || "")}" placeholder="Exercice ${i + 1}"></div>`).join("")}
+    <div class="profile-section-title">🏆 ${t("Exercices phares ({n} max)", { n: MAX_HIGHLIGHTS })}</div>
+    <p class="muted" style="margin-top:0; font-size:13px;">${t("Pour chacun : ta meilleure 1RM estimée, ta meilleure série et ta progression sur 12 mois, mises à jour après chaque séance.")}</p>
+    ${Array.from({ length: MAX_HIGHLIGHTS }, (_, i) => `<div style="position:relative; margin-bottom:8px;"><input class="pf-hl" data-i="${i}" value="${esc(hl[i] || "")}" placeholder="${t("Exercice {n}", { n: i + 1 })}"></div>`).join("")}
 
-    <div class="profile-section-title">🎧 Musique de salle</div>
-    <p class="muted" style="margin-top:0; font-size:13px;">Colle des liens Spotify (Partager → Copier le lien).</p>
-    <label>Playlist de salle</label>
+    <div class="profile-section-title">🎧 ${t("Musique de salle")}</div>
+    <p class="muted" style="margin-top:0; font-size:13px;">${t("Colle des liens Spotify (Partager → Copier le lien).")}</p>
+    <label>${t("Playlist de salle")}</label>
     <input id="pf-playlist" value="${esc(music.playlist_url || "")}" placeholder="https://open.spotify.com/playlist/…" inputmode="url">
-    <label>Artiste pour se chauffer</label>
-    <input id="pf-artist-name" maxlength="60" value="${esc(music.artist_name || "")}" placeholder="ex : Metallica">
-    <input id="pf-artist-url" value="${esc(music.artist_url || "")}" placeholder="Lien Spotify de l'artiste (facultatif)" inputmode="url" style="margin-top:6px;">
-    <label>Ton profil Spotify (facultatif)</label>
+    <label>${t("Artiste pour se chauffer")}</label>
+    <input id="pf-artist-name" maxlength="60" value="${esc(music.artist_name || "")}" placeholder="${t("ex : Metallica")}">
+    <input id="pf-artist-url" value="${esc(music.artist_url || "")}" placeholder="${t("Lien Spotify de l'artiste (facultatif)")}" inputmode="url" style="margin-top:6px;">
+    <label>${t("Ton profil Spotify (facultatif)")}</label>
     <input id="pf-spotify" value="${esc(music.spotify_profile_url || "")}" placeholder="https://open.spotify.com/user/…" inputmode="url">
     <p id="pf-error" style="color:var(--red); min-height:1em;"></p>
 
     <div class="btn-row">
-      <button class="btn btn-secondary" id="pf-cancel">Annuler</button>
-      <button class="btn btn-primary" id="pf-save">Enregistrer</button>
+      <button class="btn btn-secondary" id="pf-cancel">${t("Annuler")}</button>
+      <button class="btn btn-primary" id="pf-save">${t("Enregistrer")}</button>
     </div>
   `, (modalEl) => {
     modalEl.querySelectorAll(".pf-hl").forEach(inp => attachAutocomplete(inp, names, () => {}));
@@ -274,22 +275,22 @@ export async function openProfileEditor(onSaved = () => {}) {
         if (!v) continue;
         const parsed = parseSpotify(v);
         if (!parsed || !expected[k].includes(parsed.type)) {
-          err.textContent = k === "playlist_url" ? "Lien de playlist Spotify invalide (open.spotify.com/playlist/…)."
-            : k === "artist_url" ? "Lien d'artiste Spotify invalide (open.spotify.com/artist/…)."
-            : "Lien de profil Spotify invalide (open.spotify.com/user/…).";
-          if (/spotify\.link/i.test(v)) err.textContent += " Les liens courts spotify.link ne marchent pas : ouvre-le, puis copie l'adresse open.spotify.com.";
+          err.textContent = k === "playlist_url" ? t("Lien de playlist Spotify invalide (open.spotify.com/playlist/…).")
+            : k === "artist_url" ? t("Lien d'artiste Spotify invalide (open.spotify.com/artist/…).")
+            : t("Lien de profil Spotify invalide (open.spotify.com/user/…).");
+          if (/spotify\.link/i.test(v)) err.textContent += " " + t("Les liens courts spotify.link ne marchent pas : ouvre-le, puis copie l'adresse open.spotify.com.");
           return;
         }
         links[k] = parsed.url;
       }
       const texts = [val("#pf-bio"), val("#pf-gym"), val("#pf-artist-name")];
-      if (texts.some(t => /[<>]/.test(t))) { err.textContent = "Les caractères < et > ne sont pas autorisés."; return; }
+      if (texts.some(x => /[<>]/.test(x))) { err.textContent = t("Les caractères < et > ne sont pas autorisés."); return; }
       const since = parseInt(val("#pf-since"), 10);
       const highlightNames = [...new Set([...modalEl.querySelectorAll(".pf-hl")].map(i => i.value.trim()).filter(Boolean))].slice(0, MAX_HIGHLIGHTS);
 
       const btn = modalEl.querySelector("#pf-save");
       btn.disabled = true;
-      btn.textContent = "Calcul des stats…";
+      btn.textContent = t("Calcul des stats…");
       err.textContent = "";
       try {
         const showStats = modalEl.querySelector("#pf-stats").checked;
@@ -310,13 +311,13 @@ export async function openProfileEditor(onSaved = () => {}) {
           has_music: !!(links.playlist_url || links.artist_url || links.spotify_profile_url || val("#pf-artist-name"))
         });
         closeModal();
-        toast("Profil mis à jour");
+        toast(t("Profil mis à jour"));
         onSaved();
       } catch (e) {
         console.error("[Skullcrusher] Enregistrement du profil public", e);
-        err.textContent = "Enregistrement impossible, réessaie.";
+        err.textContent = t("Enregistrement impossible, réessaie.");
         btn.disabled = false;
-        btn.textContent = "Enregistrer";
+        btn.textContent = t("Enregistrer");
       }
     };
   });

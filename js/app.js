@@ -7,13 +7,15 @@ import { renderFeedTab } from "./feed.js";
 import { renderStats } from "./stats.js";
 import { renderReglages } from "./settings.js";
 import { initAuth, renderLoginGate, renderUnauthorizedGate, isAuthorized } from "./auth.js";
+import { t, translateStatic } from "./i18n.js";
+import { esc } from "./utils.js";
 
 const TABS = {
-  seance: { label: "Skullcrusher", render: renderSeance },
-  historique: { label: "Historique", render: renderHistorique },
-  feed: { label: "Feed", render: renderFeedTab },
-  stats: { label: "Statistiques", render: renderStats },
-  reglages: { label: "Réglages", render: renderReglages }
+  seance: { label: () => "Skullcrusher", render: renderSeance },
+  historique: { label: () => t("Historique"), render: renderHistorique },
+  feed: { label: () => t("Feed"), render: renderFeedTab },
+  stats: { label: () => t("Statistiques"), render: renderStats },
+  reglages: { label: () => t("Réglages"), render: renderReglages }
 };
 
 const view = document.getElementById("view");
@@ -28,22 +30,24 @@ async function switchTab(tab) {
   const myToken = ++renderToken;
   localStorage.setItem("skullcrusher_last_tab", tab);
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
-  topbarTitle.textContent = TABS[tab].label;
-  view.innerHTML = `<div class="empty-state"><span class="num">···</span>Chargement</div>`;
+  topbarTitle.textContent = TABS[tab].label();
+  view.innerHTML = `<div class="empty-state"><span class="num">···</span>${t("Chargement")}</div>`;
   try {
     await Promise.race([
       TABS[tab].render(view),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Ça prend trop de temps à charger. Vérifie ta connexion, ou qu'aucun bloqueur de contenu ne bride ce site.")), 20000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error(t("Ça prend trop de temps à charger. Vérifie ta connexion, ou qu'aucun bloqueur de contenu ne bride ce site."))), 20000))
     ]);
   } catch (e) {
     console.error(e);
     if (myToken === renderToken) {
-      view.innerHTML = `<div class="empty-state">Erreur de chargement.<br><span class="muted">${e.message}</span><br><br><button class="btn btn-secondary" id="retry-tab" style="width:auto; display:inline-flex;">Réessayer</button></div>`;
+      view.innerHTML = `<div class="empty-state">${t("Erreur de chargement.")}<br><span class="muted">${esc(e.message)}</span><br><br><button class="btn btn-secondary" id="retry-tab" style="width:auto; display:inline-flex;">${t("Réessayer")}</button></div>`;
       const retryBtn = document.getElementById("retry-tab");
       if (retryBtn) retryBtn.onclick = () => switchTab(tab);
     }
   }
 }
+
+translateStatic();
 
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => switchTab(btn.dataset.tab));

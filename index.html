@@ -32,7 +32,7 @@
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M4 12H2M22 12h-2M6 8v8M18 8v8M6 10H4v4h2M18 10h2v4h-2M9 6v12M15 6v12M9 12h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    <span class="tab-label">Séance</span>
+    <span class="tab-label" data-i18n="Séance">Séance</span>
   </button>
   <button class="tab-btn" data-tab="historique">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -42,26 +42,26 @@
       <circle cx="12" cy="14.5" r="1.2" fill="currentColor"/>
       <circle cx="8" cy="18" r="1.2" fill="currentColor"/>
     </svg>
-    <span class="tab-label">Historique</span>
+    <span class="tab-label" data-i18n="Historique">Historique</span>
   </button>
   <button class="tab-btn featured" data-tab="feed">
     <span class="tab-icon-badge">
       <img class="tab-icon horns-icon" src="icons/horns.png" alt="">
     </span>
-    <span class="tab-label">Feed</span>
+    <span class="tab-label" data-i18n="Feed">Feed</span>
   </button>
   <button class="tab-btn" data-tab="stats">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M4 20V10M12 20V4M20 20v-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    <span class="tab-label">Stats</span>
+    <span class="tab-label" data-i18n="Stats">Stats</span>
   </button>
   <button class="tab-btn" data-tab="reglages">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
       <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1.09-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9.6a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.36.36.84.6 1.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    <span class="tab-label">Réglages</span>
+    <span class="tab-label" data-i18n="Réglages">Réglages</span>
   </button>
 </nav>
 
@@ -93,18 +93,34 @@
     } catch (_) { done(); }
   }
 
+  // Textes de cet écran de secours (le module de traduction peut ne pas
+  // s'être chargé) : petit dictionnaire autonome.
+  var L = { fr: 0, en: 1, mfe: 2, pl: 3 }[(function () { try { return localStorage.getItem("skullcrusher_lang"); } catch (_) { return null; } })() || "fr"] || 0;
+  var T = {
+    fail: ["L'app n'a pas pu démarrer.", "The app could not start.", "Aplikasion-la pa finn kapav demare.", "Nie udało się uruchomić aplikacji."],
+    help: ["Vérifie ta connexion, puis appuie sur « Réparer » : ça vide le cache de l'app et la recharge (tes séances ne sont pas touchées).",
+           "Check your connection, then tap “Repair”: it clears the app cache and reloads it (your workouts are not affected).",
+           "Verifie to koneksion, apre pes « Repar » : sa vid kas aplikasion-la ek relans li (to bann sesion pa touse).",
+           "Sprawdź połączenie, a potem naciśnij „Napraw”: wyczyści to pamięć podręczną aplikacji i ją przeładuje (twoje treningi pozostaną nietknięte)."],
+    repair: ["Réparer", "Repair", "Repar", "Napraw"],
+    retry: ["Réessayer", "Try again", "Esey ankor", "Spróbuj ponownie"],
+    detail: ["Détail technique (à transmettre si ça persiste) :", "Technical details (send them if the problem persists):", "Detay teknik (avoy sa si problem-la kontinie) :", "Szczegóły techniczne (prześlij je, jeśli problem się powtarza):"],
+    none: ["aucune erreur signalée — le démarrage est bloqué (connexion à Firebase ?)", "no error reported — startup is stuck (Firebase connection?)", "okenn erer pa finn signale — demaraz-la bloke (koneksion Firebase ?)", "brak zgłoszonych błędów — uruchamianie się zawiesiło (połączenie z Firebase?)"]
+  };
+  function tr(k) { return T[k][L]; }
+
   setTimeout(function () {
     var view = document.getElementById("view");
     if (!view || view.textContent.trim() || view.children.length) return; // l'app a démarré
     var esc = function (t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
     view.innerHTML =
       '<div class="empty-state" style="text-align:left;">' +
-      '<p style="font-size:17px;color:var(--text);">L\'app n\'a pas pu démarrer.</p>' +
-      '<p class="muted">Vérifie ta connexion, puis appuie sur « Réparer » : ça vide le cache de l\'app et la recharge (tes séances ne sont pas touchées).</p>' +
-      '<button class="btn btn-primary" id="boot-repair" style="margin:10px 0;">Réparer</button>' +
-      '<button class="btn btn-secondary" id="boot-retry">Réessayer</button>' +
-      '<p class="muted" style="font-size:12px;margin-top:16px;">Détail technique (à transmettre si ça persiste) :<br>' +
-      (errors.length ? errors.map(esc).join("<br>") : "aucune erreur signalée — le démarrage est bloqué (connexion à Firebase ?)") +
+      '<p style="font-size:17px;color:var(--text);">' + esc(tr("fail")) + '</p>' +
+      '<p class="muted">' + esc(tr("help")) + '</p>' +
+      '<button class="btn btn-primary" id="boot-repair" style="margin:10px 0;">' + esc(tr("repair")) + '</button>' +
+      '<button class="btn btn-secondary" id="boot-retry">' + esc(tr("retry")) + '</button>' +
+      '<p class="muted" style="font-size:12px;margin-top:16px;">' + esc(tr("detail")) + '<br>' +
+      (errors.length ? errors.map(esc).join("<br>") : esc(tr("none"))) +
       '<br>' + esc(navigator.userAgent) + '</p></div>';
     document.getElementById("boot-repair").onclick = repair;
     document.getElementById("boot-retry").onclick = function () { location.reload(); };

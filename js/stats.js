@@ -12,10 +12,12 @@
 import { isoWeek, estimate1RM, esc } from "./utils.js";
 import { getExercises, getWorkouts, getSetsForPeriod, getSetsForExercise, invalidate, onAllSetsProgress } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
+import { t } from "./i18n.js";
 
 let chartMuscle = null;
 let chartExercise = null;
 
+// i18n-keys: "4 sem.", "8 sem.", "12 sem.", "26 sem.", "Tout", "1RM estimée (kg)", "Charge max (kg)", "Volume (séries)", "Tonnage (kg)", "Répétitions", "Semaine", "Exercice", "Groupe musculaire"
 const PERIODS = [
   { label: "4 sem.", weeks: 4 },
   { label: "8 sem.", weeks: 8 },
@@ -84,23 +86,23 @@ export async function renderStats(container) {
   const totalTonnage = workouts.reduce((acc, w) => acc + (w.total_tonnage || 0), 0);
 
   container.innerHTML = `
-    <h1 class="section-title">Statistiques</h1>
+    <h1 class="section-title">${t("Statistiques")}</h1>
     <div class="stat-grid">
-      <div class="stat-box"><span class="num">${workouts.length}</span><span class="lbl">séances</span></div>
-      <div class="stat-box"><span class="num">${Math.round(totalTonnage / 1000)}</span><span class="lbl">tonnes soulevées</span></div>
-      <div class="stat-box"><span class="num">${totalSets}</span><span class="lbl">séries loggées</span></div>
+      <div class="stat-box"><span class="num">${workouts.length}</span><span class="lbl">${t("séances")}</span></div>
+      <div class="stat-box"><span class="num">${Math.round(totalTonnage / 1000)}</span><span class="lbl">${t("tonnes soulevées")}</span></div>
+      <div class="stat-box"><span class="num">${totalSets}</span><span class="lbl">${t("séries loggées")}</span></div>
     </div>
 
     <div class="card">
-      <div class="muted" style="margin-bottom:4px;">Période</div>
+      <div class="muted" style="margin-bottom:4px;">${t("Période")}</div>
       <div class="chip-row" id="period-chips">
-        ${PERIODS.map(p => `<div class="chip ${state.periodWeeks === p.weeks ? "active" : ""}" data-weeks="${p.weeks ?? ""}">${p.label}</div>`).join("")}
+        ${PERIODS.map(p => `<div class="chip ${state.periodWeeks === p.weeks ? "active" : ""}" data-weeks="${p.weeks ?? ""}">${t(p.label)}</div>`).join("")}
       </div>
-      <div class="muted" style="margin:12px 0 4px;">Vue</div>
+      <div class="muted" style="margin:12px 0 4px;">${t("Vue")}</div>
       <div class="chip-row" id="mode-chips">
-        <div class="chip ${state.mode === "muscle" ? "active" : ""}" data-mode="muscle">Par muscle</div>
-        <div class="chip ${state.mode === "exercise" ? "active" : ""}" data-mode="exercise">Par exercice</div>
-        <div class="chip ${state.mode === "custom" ? "active" : ""}" data-mode="custom">Personnalisé</div>
+        <div class="chip ${state.mode === "muscle" ? "active" : ""}" data-mode="muscle">${t("Par muscle")}</div>
+        <div class="chip ${state.mode === "exercise" ? "active" : ""}" data-mode="exercise">${t("Par exercice")}</div>
+        <div class="chip ${state.mode === "custom" ? "active" : ""}" data-mode="custom">${t("Personnalisé")}</div>
       </div>
       <p class="muted" id="stats-load-info" style="margin:10px 0 0; font-size:12px;"></p>
     </div>
@@ -137,15 +139,15 @@ async function drawContent(ctx) {
   const info = ctx.container.querySelector("#stats-load-info");
   if (!content) return;
   const token = ++drawToken;
-  const periodLabel = state.periodWeeks ? `${state.periodWeeks} dernières semaines` : "tout l'historique";
+  const periodLabel = state.periodWeeks ? t("{n} dernières semaines", { n: state.periodWeeks }) : t("tout l'historique");
   const loadingTimer = setTimeout(() => {
     if (token !== drawToken) return;
-    content.innerHTML = `<div class="empty-state"><span class="num">···</span>Chargement ${state.mode === "exercise" ? "de l'exercice" : `— ${periodLabel}`}${state.periodWeeks || state.mode === "exercise" ? "" : "<br><span class=\"muted\">(tout l'historique : un peu plus long la première fois)</span>"}</div>`;
+    content.innerHTML = `<div class="empty-state"><span class="num">···</span>${state.mode === "exercise" ? t("Chargement de l'exercice") : `${t("Chargement")} — ${periodLabel}`}${state.periodWeeks || state.mode === "exercise" ? "" : `<br><span class="muted">(${t("tout l'historique : un peu plus long la première fois")})</span>`}</div>`;
   }, 150);
 
   onAllSetsProgress((n) => {
     const el = content.querySelector(".empty-state");
-    if (token === drawToken && el) el.innerHTML = `<span class="num">···</span>Chargement de tout l'historique… ${n} séries`;
+    if (token === drawToken && el) el.innerHTML = `<span class="num">···</span>${t("Chargement de tout l'historique… {n} séries", { n })}`;
   });
   let sets;
   try {
@@ -156,7 +158,7 @@ async function drawContent(ctx) {
     clearTimeout(loadingTimer);
     onAllSetsProgress(null);
     if (token === drawToken && content.isConnected) {
-      content.innerHTML = `<div class="empty-state">Chargement impossible.<br><span class="muted">${esc(err.message || "")}</span></div>`;
+      content.innerHTML = `<div class="empty-state">${t("Chargement impossible.")}<br><span class="muted">${esc(err.message || "")}</span></div>`;
     }
     return;
   }
@@ -166,8 +168,8 @@ async function drawContent(ctx) {
 
   if (info) {
     info.textContent = state.mode === "exercise"
-      ? `${sets.length} série(s) de cet exercice chargée(s)`
-      : `${sets.length} série(s) chargée(s) — ${periodLabel}`;
+      ? t("{n} série(s) de cet exercice chargée(s)", { n: sets.length })
+      : t("{n} série(s) chargée(s) — {period}", { n: sets.length, period: periodLabel });
   }
 
   if (state.mode === "muscle") {
@@ -184,8 +186,8 @@ function drawMuscleView(content, sets, exercises, muscleGroups) {
   content.innerHTML = `
     <div class="card">
       <div class="chip-row" id="muscle-chips">
-        <div class="chip ${state.muscle === "all" ? "active" : ""}" data-muscle="all">Tous</div>
-        ${muscleGroups.map(g => `<div class="chip ${state.muscle === g ? "active" : ""}" data-muscle="${esc(g)}">${esc(g)}</div>`).join("")}
+        <div class="chip ${state.muscle === "all" ? "active" : ""}" data-muscle="all">${t("Tous")}</div>
+        ${muscleGroups.map(g => `<div class="chip ${state.muscle === g ? "active" : ""}" data-muscle="${esc(g)}">${esc(t(g))}</div>`).join("")}
       </div>
       <div style="height:10px"></div>
       <canvas id="muscle-canvas" height="220"></canvas>
@@ -216,7 +218,7 @@ function drawMuscleView(content, sets, exercises, muscleGroups) {
     const values = labels.map(l => Math.round((perGroup[l] / weeksSpan) * 10) / 10);
     chartMuscle = new Chart(canvasEl, {
       type: "bar",
-      data: { labels, datasets: [{ label: "Séries / semaine", data: values, backgroundColor: "#E02424", borderRadius: 4 }] },
+      data: { labels: labels.map(l => t(l)), datasets: [{ label: t("Séries / semaine"), data: values, backgroundColor: "#E02424", borderRadius: 4 }] },
       options: chartOptions(false)
     });
     content.querySelector("#muscle-exlist").innerHTML = "";
@@ -231,7 +233,7 @@ function drawMuscleView(content, sets, exercises, muscleGroups) {
     const weeks = Object.keys(perWeek).sort();
     chartMuscle = new Chart(canvasEl, {
       type: "line",
-      data: { labels: weeks, datasets: [{ label: `Séries — ${state.muscle}`, data: weeks.map(w => perWeek[w]), borderColor: "#E02424", backgroundColor: "transparent", tension: 0.25 }] },
+      data: { labels: weeks, datasets: [{ label: `${t("Séries")} — ${t(state.muscle)}`, data: weeks.map(w => perWeek[w]), borderColor: "#E02424", backgroundColor: "transparent", tension: 0.25 }] },
       options: chartOptions(true)
     });
 
@@ -244,7 +246,7 @@ function drawMuscleView(content, sets, exercises, muscleGroups) {
       return `<div class="list-row"><div class="list-row-title">${esc(ex.name)}</div><div class="list-row-meta">${last ? `${last.weight_kg} kg × ${last.reps}` : "—"}</div></div>`;
     }).join("");
     content.querySelector("#muscle-exlist").innerHTML = rows
-      ? `<div class="muted" style="margin-bottom:4px;">Exercices du groupe — dernière série sur la période</div>${rows}`
+      ? `<div class="muted" style="margin-bottom:4px;">${t("Exercices du groupe — dernière série sur la période")}</div>${rows}`
       : "";
   }
 }
@@ -264,7 +266,7 @@ function drawExerciseView(content, exerciseSetsAll, ctx) {
       <select id="exercise-picker">
         ${exerciseNames.map(n => `<option value="${esc(n)}" ${n === state.exercise ? "selected" : ""}>${esc(n)}</option>`).join("")}
       </select>
-      <button class="btn btn-secondary btn-sm" id="exercise-sheet-btn" style="margin-top:10px;">Voir la fiche de l'exercice</button>
+      <button class="btn btn-secondary btn-sm" id="exercise-sheet-btn" style="margin-top:10px;">${t("Voir la fiche de l'exercice")}</button>
       <canvas id="exercise-canvas" height="220" style="margin-top:12px;"></canvas>
       <div id="exercise-1rm" class="muted" style="margin-top:10px;"></div>
     </div>
@@ -272,7 +274,7 @@ function drawExerciseView(content, exerciseSetsAll, ctx) {
   const picker = content.querySelector("#exercise-picker");
   if (!exerciseNames.length) {
     content.querySelector("#exercise-canvas").replaceWith(
-      Object.assign(document.createElement("p"), { className: "muted", textContent: "Pas encore de données." })
+      Object.assign(document.createElement("p"), { className: "muted", textContent: t("Pas encore de données.") })
     );
     return;
   }
@@ -302,8 +304,8 @@ function renderExerciseChart(content, allSets, exerciseName) {
     data: {
       labels: weeks,
       datasets: [
-        { label: "1RM estimée (kg)", data: weeks.map(w => perWeek[w].oneRM), borderColor: "#E02424", backgroundColor: "transparent", tension: 0.25 },
-        { label: "Charge max (kg)", data: weeks.map(w => perWeek[w].maxWeight), borderColor: "#B8B8BE", backgroundColor: "transparent", tension: 0.25 }
+        { label: t("1RM estimée (kg)"), data: weeks.map(w => perWeek[w].oneRM), borderColor: "#E02424", backgroundColor: "transparent", tension: 0.25 },
+        { label: t("Charge max (kg)"), data: weeks.map(w => perWeek[w].maxWeight), borderColor: "#B8B8BE", backgroundColor: "transparent", tension: 0.25 }
       ]
     },
     options: chartOptions(true, true)
@@ -311,8 +313,8 @@ function renderExerciseChart(content, allSets, exerciseName) {
 
   const last = sets[sets.length - 1];
   content.querySelector("#exercise-1rm").textContent = last
-    ? `Dernière série : ${last.weight_kg} kg × ${last.reps} — 1RM estimée ${estimate1RM(last.weight_kg, last.reps)} kg (formule d'Epley)`
-    : "Pas de série sur cette période.";
+    ? t("Dernière série : {kg} kg × {reps} — 1RM estimée {rm} kg (formule d'Epley)", { kg: last.weight_kg, reps: last.reps, rm: estimate1RM(last.weight_kg, last.reps) })
+    : t("Pas de série sur cette période.");
 }
 
 // ==================== VUE PERSONNALISÉE ====================
@@ -321,13 +323,13 @@ let chartCustom = null;
 function drawCustomView(content, allSets, exercises, exerciseNames, muscleGroups) {
   content.innerHTML = `
     <div class="card">
-      <div class="muted" style="margin-bottom:4px;">Axe Y — mesure</div>
+      <div class="muted" style="margin-bottom:4px;">${t("Axe Y — mesure")}</div>
       <select id="custom-y">
-        ${Y_METRICS.map(m => `<option value="${m.key}" ${state.customY === m.key ? "selected" : ""}>${m.label}</option>`).join("")}
+        ${Y_METRICS.map(m => `<option value="${m.key}" ${state.customY === m.key ? "selected" : ""}>${t(m.label)}</option>`).join("")}
       </select>
-      <div class="muted" style="margin:12px 0 4px;">Axe X — regroupement</div>
+      <div class="muted" style="margin:12px 0 4px;">${t("Axe X — regroupement")}</div>
       <select id="custom-x">
-        ${X_DIMENSIONS.map(d => `<option value="${d.key}" ${state.customX === d.key ? "selected" : ""}>${d.label}</option>`).join("")}
+        ${X_DIMENSIONS.map(d => `<option value="${d.key}" ${state.customX === d.key ? "selected" : ""}>${t(d.label)}</option>`).join("")}
       </select>
       <div id="custom-scope-wrap"></div>
       <canvas id="custom-canvas" height="240" style="margin-top:14px;"></canvas>
@@ -341,11 +343,11 @@ function drawCustomView(content, allSets, exercises, exerciseNames, muscleGroups
   const scopeWrap = content.querySelector("#custom-scope-wrap");
   if (state.customX === "week") {
     scopeWrap.innerHTML = `
-      <div class="muted" style="margin:12px 0 4px;">Portée</div>
+      <div class="muted" style="margin:12px 0 4px;">${t("Portée")}</div>
       <div class="chip-row" id="custom-scope-chips">
-        <div class="chip ${state.customScope === "all" ? "active" : ""}" data-scope="all">Tout confondu</div>
-        <div class="chip ${state.customScope === "exercise" ? "active" : ""}" data-scope="exercise">Un exercice</div>
-        <div class="chip ${state.customScope === "muscle" ? "active" : ""}" data-scope="muscle">Un groupe</div>
+        <div class="chip ${state.customScope === "all" ? "active" : ""}" data-scope="all">${t("Tout confondu")}</div>
+        <div class="chip ${state.customScope === "exercise" ? "active" : ""}" data-scope="exercise">${t("Un exercice")}</div>
+        <div class="chip ${state.customScope === "muscle" ? "active" : ""}" data-scope="muscle">${t("Un groupe")}</div>
       </div>
       <div id="custom-scope-picker" style="margin-top:8px;"></div>
     `;
@@ -366,7 +368,7 @@ function drawCustomView(content, allSets, exercises, exerciseNames, muscleGroups
       });
     } else if (state.customScope === "muscle") {
       if (!state.customScopeValue) state.customScopeValue = muscleGroups[0] || null;
-      pickerWrap.innerHTML = `<select id="custom-scope-value">${muscleGroups.map(g => `<option value="${esc(g)}" ${g === state.customScopeValue ? "selected" : ""}>${esc(g)}</option>`).join("")}</select>`;
+      pickerWrap.innerHTML = `<select id="custom-scope-value">${muscleGroups.map(g => `<option value="${esc(g)}" ${g === state.customScopeValue ? "selected" : ""}>${esc(t(g))}</option>`).join("")}</select>`;
       pickerWrap.querySelector("#custom-scope-value")?.addEventListener("change", (e) => {
         state.customScopeValue = e.target.value;
         renderCustomChart(content, allSets, exercises);
@@ -397,12 +399,12 @@ function renderCustomChart(content, allSets, exercises) {
   if (state.customX === "week") {
     if (state.customScope === "exercise" && state.customScopeValue) {
       filtered = filtered.filter(s => s.exercise_title === state.customScopeValue);
-      note = `Portée : ${state.customScopeValue}`;
+      note = t("Portée : {scope}", { scope: state.customScopeValue });
     } else if (state.customScope === "muscle" && state.customScopeValue) {
       filtered = filtered.filter(s => muscleGroupOf(s.exercise_title, exercises) === state.customScopeValue);
-      note = `Portée : ${state.customScopeValue}`;
+      note = t("Portée : {scope}", { scope: t(state.customScopeValue) });
     } else {
-      note = "Portée : tous les exercices confondus";
+      note = t("Portée : tous les exercices confondus");
     }
     const byWeek = {};
     filtered.forEach(s => {
@@ -417,7 +419,7 @@ function renderCustomChart(content, allSets, exercises) {
     filtered.forEach(s => { (byExercise[s.exercise_title] = byExercise[s.exercise_title] || []).push(s); });
     let entries = Object.entries(byExercise).map(([name, arr]) => [name, aggregate(arr, state.customY)]);
     entries = entries.filter(([, v]) => v != null).sort((a, b) => b[1] - a[1]);
-    if (entries.length > 20) { note = `${entries.length} exercices — 20 premiers affichés`; entries = entries.slice(0, 20); }
+    if (entries.length > 20) { note = t("{n} exercices — 20 premiers affichés", { n: entries.length }); entries = entries.slice(0, 20); }
     labels = entries.map(e => e[0]);
     values = entries.map(e => e[1]);
     chartType = "bar";
@@ -429,7 +431,7 @@ function renderCustomChart(content, allSets, exercises) {
     });
     let entries = Object.entries(byMuscle).map(([name, arr]) => [name, aggregate(arr, state.customY)]);
     entries = entries.filter(([, v]) => v != null).sort((a, b) => b[1] - a[1]);
-    labels = entries.map(e => e[0]);
+    labels = entries.map(e => t(e[0]));
     values = entries.map(e => e[1]);
     chartType = "bar";
   }
@@ -437,7 +439,7 @@ function renderCustomChart(content, allSets, exercises) {
   noteEl.textContent = note;
 
   if (!labels.length) {
-    canvasEl.replaceWith(Object.assign(document.createElement("p"), { className: "muted", textContent: "Pas de donnée pour cette combinaison." }));
+    canvasEl.replaceWith(Object.assign(document.createElement("p"), { className: "muted", textContent: t("Pas de donnée pour cette combinaison.") }));
     return;
   }
 
@@ -446,7 +448,7 @@ function renderCustomChart(content, allSets, exercises) {
     data: {
       labels,
       datasets: [{
-        label: yMetric.label,
+        label: t(yMetric.label),
         data: values,
         borderColor: "#E02424",
         backgroundColor: chartType === "bar" ? "#E02424" : "transparent",
