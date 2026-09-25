@@ -100,26 +100,29 @@ et redéployer, plutôt que de cliquer le lien.
 
 ## Connexion Spotify (facultatif)
 
-Sans cette étape, tout ce qui touche à la musique fonctionne déjà avec des liens Spotify (profil,
+Sans connexion, tout ce qui touche à la musique fonctionne déjà avec des liens Spotify (profil,
 playlists de routine et de séance, son du record, mur musical, défis). La connexion ajoute deux
-choses : le morceau en cours est proposé automatiquement comme « son du record », et la liste des
-morceaux écoutés pendant la séance (bande-son) est jointe à la séance.
+choses : le morceau en cours est proposé comme « son du record », et les morceaux écoutés pendant la
+séance peuvent être joints à la séance (bande-son).
 
-1. Va sur https://developer.spotify.com/dashboard, connecte-toi avec ton compte Spotify, **Create app**.
-2. Nom et description au choix. **Redirect URI** : `https://skullcrucher.github.io/Choquage-musculaire/`
-   (exactement, avec le `/` final). Coche **Web API**, accepte les conditions, **Save**.
-3. Dans **Settings** de l'app Spotify, copie le **Client ID** et colle-le dans `js/spotify-config.js`
-   (`SPOTIFY_CLIENT_ID = "..."`). Pas de « Client secret » à utiliser : l'app utilise la méthode PKCE.
-4. L'app Spotify démarre en **mode développement** : seuls les comptes ajoutés à la main peuvent se
-   connecter (onglet **User Management**, nom + email du compte Spotify), **5 personnes maximum**, et le
-   propriétaire de l'app Spotify doit avoir **Spotify Premium** (règles Spotify depuis février 2026).
-   Le mode étendu est réservé aux entreprises enregistrées avec au moins 250 000 utilisateurs actifs par mois.
-5. Dans l'app : Réglages → 🎧 Spotify → **Connecter Spotify**. Sur iPhone, fais-le depuis **Safari**
-   (pas depuis l'icône de l'écran d'accueil) : la connexion est enregistrée dans ton compte et marche
-   ensuite aussi dans l'app installée.
+Deux façons de se connecter, au choix de chaque utilisateur (Réglages → 🎧 Spotify) :
 
-La connexion est stockée dans `user_private/{uid}`, lisible par son seul propriétaire : pense à
-redéployer `firestore.rules`.
+- **Sa propre app Spotify (recommandé, sans rien à gérer pour l'administrateur)** : chacun crée
+  gratuitement une app sur https://developer.spotify.com/dashboard (compte Spotify **Premium** requis
+  par Spotify pour les apps en mode développement), colle l'adresse de redirection affichée dans
+  Réglages, coche **Web API**, puis saisit son **Client ID** dans Réglages. Le pas-à-pas est affiché
+  dans l'app.
+- **L'app Spotify partagée** (`SPOTIFY_CLIENT_ID` dans `js/spotify-config.js`) : en mode
+  développement, Spotify la limite à **5 comptes** ajoutés à la main par son propriétaire
+  (onglet **User Management**), et le propriétaire doit avoir Spotify Premium. Laisser vide pour que
+  chacun utilise sa propre app.
+
+Adresse de redirection à déclarer dans l'app Spotify : `https://skullcrucher.github.io/Choquage-musculaire/`
+(exactement, avec le `/` final).
+
+Sur iPhone, lancer la connexion depuis **Safari** (pas depuis l'icône de l'écran d'accueil) : la
+connexion est enregistrée dans le compte (`user_private/{uid}`, lisible par son seul propriétaire) et
+marche ensuite aussi dans l'app installée.
 
 ### Conformité Spotify
 

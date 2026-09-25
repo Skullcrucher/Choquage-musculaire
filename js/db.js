@@ -130,7 +130,7 @@ export async function purgeSpotifyData() {
     });
     await batch.commit();
   }
-  await setDoc(doc(dbase, "user_private", uid), { spotify_refresh_token: deleteField(), spotify_connected_at: deleteField() }, { merge: true });
+  await setDoc(doc(dbase, "user_private", uid), { spotify_refresh_token: deleteField(), spotify_token_client_id: deleteField(), spotify_connected_at: deleteField() }, { merge: true });
   return touched.length;
 }
 
