@@ -10,6 +10,7 @@ import { getExercises, invalidate } from "./cache.js";
 import { EXERCISE_SEED } from "./exercises-seed.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { getUser, signOutUser } from "./auth.js";
+import { openProfile, openProfileEditor } from "./profile.js";
 
 // Module des notifications en arrière-plan, chargé à la demande : si un
 // bloqueur de contenu le refuse, les Réglages s'affichent quand même.
@@ -57,7 +58,18 @@ export async function renderReglages(container) {
       <p class="muted" style="margin:0 0 10px;">${user?.email || ""}</p>
       <button class="btn btn-primary btn-sm" id="save-profile-btn">Enregistrer le profil</button>
       <p class="muted" id="profile-save-status" style="margin-top:6px;"></p>
+      <div class="btn-row" style="margin-top:6px;">
+        <button class="btn btn-secondary btn-sm" id="view-public-profile">Voir mon profil</button>
+        <button class="btn btn-secondary btn-sm" id="edit-public-profile">🏆 Exercices phares & 🎧 musique</button>
+      </div>
       <button class="btn btn-secondary" id="signout-btn" style="margin-top:10px;">Se déconnecter</button>
+    </div>
+
+    <div class="card" id="spotify-card" style="display:none;">
+      <div class="card-title">🎧 Spotify</div>
+      <p class="muted" style="margin-top:0;">Connecte ton compte pour proposer automatiquement le morceau en cours comme « son du record » et joindre la bande-son de tes séances (morceaux écoutés pendant l'entraînement).</p>
+      <p class="muted" id="spotify-status" style="font-size:13px;"></p>
+      <button class="btn btn-secondary btn-sm" id="spotify-btn"></button>
     </div>
 
     <div class="card">
@@ -117,6 +129,10 @@ export async function renderReglages(container) {
       <div id="exercise-lib"></div>
     </div>
   `;
+
+  setupSpotifyCard(container);
+  container.querySelector("#view-public-profile").onclick = () => openProfile(getUser()?.uid);
+  container.querySelector("#edit-public-profile").onclick = () => openProfileEditor(() => openProfile(getUser()?.uid));
 
   container.querySelector("#signout-btn").onclick = async () => {
     if (!confirm("Se déconnecter de Skullcrusher ?")) return;
@@ -401,6 +417,31 @@ function openExerciseEditModal(ex, container) {
       renderExerciseLib(container);
     };
   });
+}
+
+// Connexion Spotify (facultative, visible seulement si configurée).
+async function setupSpotifyCard(container) {
+  let sp;
+  try { sp = await import("./spotify-connect.js"); } catch (_) { return; }
+  if (!sp.spotifyConfigured()) return;
+  const card = container.querySelector("#spotify-card");
+  const status = container.querySelector("#spotify-status");
+  const btn = container.querySelector("#spotify-btn");
+  if (!card) return;
+  card.style.display = "";
+  const connected = await sp.isSpotifyConnected();
+  if (!btn.isConnected) return;
+  status.textContent = connected ? "✅ Compte Spotify connecté." : "Non connecté. Sur iPhone, lance la connexion depuis Safari (pas depuis l'icône) : elle marchera ensuite aussi dans l'app installée.";
+  btn.textContent = connected ? "Déconnecter Spotify" : "Connecter Spotify";
+  btn.onclick = async () => {
+    if (connected) {
+      await sp.disconnectSpotify();
+      toast("Spotify déconnecté");
+      setupSpotifyCard(container);
+    } else {
+      sp.connectSpotify();
+    }
+  };
 }
 
 // Vide le cache hors ligne et recharge : utile si le téléphone garde une

@@ -97,6 +97,28 @@ export async function updateMyProfile({ display_name, photo_data_url }) {
   await setDoc(doc(dbase, "profiles", uid), patch, { merge: true });
 }
 
+// Données privées de l'utilisateur (ex. connexion Spotify) : user_private/{uid},
+// lisible et modifiable par son seul propriétaire (voir firestore.rules).
+export async function getPrivateData() {
+  const snap = await getDoc(doc(dbase, "user_private", requireUid()));
+  return snap.exists() ? snap.data() : null;
+}
+
+export async function setPrivateData(patch) {
+  await setDoc(doc(dbase, "user_private", requireUid()), patch, { merge: true });
+}
+
+// Champs publics du profil (bio, exercices phares, musique...) : voir profile.js.
+export async function updatePublicProfile(patch) {
+  await setDoc(doc(dbase, "profiles", requireUid()), { ...patch, profile_updated_at: new Date().toISOString() }, { merge: true });
+}
+
+// Profils ayant renseigné de la musique (mur musical, portée "Communauté").
+export async function listMusicProfiles(max = 300) {
+  const snap = await getDocs(query(collection(dbase, "profiles"), where("has_music", "==", true), limit(max)));
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+}
+
 // Recherche d'utilisateurs par début de pseudo (insensible à la casse).
 // Seuls les profils enregistrés depuis l'ajout de search_name sont
 // trouvables : ensureSearchableProfile() rattrape les anciens.
@@ -288,6 +310,7 @@ export async function saveRoutine(routine, id = null) {
     description: routine.description || "",
     level: routine.level || "",
     goal: routine.goal || "",
+    playlist_url: routine.playlist_url || "",
     exercises: routine.exercises || [],
     ...routineDerived(routine.exercises),
     owner_uid: requireUid(),
@@ -340,6 +363,7 @@ export async function copyRoutine(routine) {
     description: routine.description || "",
     level: routine.level || "",
     goal: routine.goal || "",
+    playlist_url: routine.playlist_url || "",
     exercises,
     ...routineDerived(exercises),
     owner_uid: requireUid(),

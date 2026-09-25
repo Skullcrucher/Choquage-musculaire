@@ -6,8 +6,28 @@ import { fmtDateTime, fmtDuration, esc, safeImageUrl } from "./utils.js";
 import { getUser } from "./auth.js";
 import { openWorkoutDetail } from "./workout-detail.js";
 import { renderFriends, countIncomingRequests } from "./friends.js";
+import { openProfile } from "./profile.js";
+import { songHtml, bindSongLinks, parseSpotify } from "./music.js";
 
-let feedMode = "workouts"; // "workouts" | "friends"
+// Records, "son du record", playlist et bande-son d'une séance partagée.
+export function workoutMusicHtml(w) {
+  const records = Array.isArray(w.records) ? w.records : [];
+  const playlist = parseSpotify(w.soundtrack?.playlist_url);
+  const nbTracks = Array.isArray(w.soundtrack?.tracks) ? w.soundtrack.tracks.length : 0;
+  if (!records.length && !playlist && !nbTracks) return "";
+  const top = records[0];
+  return `
+    <div class="feed-music">
+      ${top ? `<div>🏆 <b>Record</b> : ${esc(top.exercise)} — ${esc(top.kg)} kg × ${esc(top.reps)}${records.length > 1 ? ` <span class="muted">(+${records.length - 1} autre${records.length > 2 ? "s" : ""})</span>` : ""}</div>` : ""}
+      ${top && w.record_song ? `<div>🎵 Porté par ${songHtml(w.record_song)}</div>` : ""}
+      ${playlist || nbTracks ? `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
+        ${playlist ? `<span class="song-link" data-playlist-url="${esc(playlist.url)}" data-playlist-title="Playlist de la séance">🎧 Playlist de la séance</span>` : ""}
+        ${nbTracks ? `<span class="muted">🎶 ${nbTracks} morceau${nbTracks > 1 ? "x" : ""} écouté${nbTracks > 1 ? "s" : ""}</span>` : ""}
+      </div>` : ""}
+    </div>`;
+}
+
+let feedMode = "workouts"; // "workouts" | "challenges" | "music" | "friends"
 
 const MUSCLE_EMOJI = {
   "Pectoraux": "💥", "Dos": "🦍", "Épaules": "🏔️", "Biceps": "💪", "Triceps": "🔱",
@@ -45,6 +65,8 @@ export async function renderFeedTab(container) {
     <h1 class="section-title">Feed <img class="title-horns" src="icons/horns.png" alt=""></h1>
     <div class="chip-row" id="feed-mode-chips" style="margin-bottom:14px;">
       <div class="chip ${feedMode === "workouts" ? "active" : ""}" data-fmode="workouts">Séances</div>
+      <div class="chip ${feedMode === "challenges" ? "active" : ""}" data-fmode="challenges">🏆 Défis</div>
+      <div class="chip ${feedMode === "music" ? "active" : ""}" data-fmode="music">🎧 Son</div>
       <div class="chip ${feedMode === "friends" ? "active" : ""}" data-fmode="friends">👥 Amis<span id="friend-req-count"></span></div>
     </div>
     <div id="feed-body"></div>
@@ -67,6 +89,8 @@ async function drawFeedBody(container) {
   const body = container.querySelector("#feed-body");
   if (!body) return;
   if (feedMode === "friends") await renderFriends(body);
+  else if (feedMode === "challenges") await (await import("./challenges.js")).renderChallenges(body);
+  else if (feedMode === "music") await (await import("./music-wall.js")).renderMusicWall(body);
   else await renderFeedWorkouts(body);
 }
 
@@ -91,9 +115,9 @@ async function renderFeedWorkouts(body) {
         return `
       <div class="card feed-card" data-w="${esc(w.id)}">
         <div style="display:flex; align-items:center; gap:10px;">
-          ${photo ? `<div style="width:38px; height:38px; border-radius:50%; background:center/cover no-repeat; background-image:url('${photo}'); flex-shrink:0;"></div>` : `<div style="width:38px; height:38px; border-radius:50%; background:var(--surface-raised); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:var(--amber); flex-shrink:0;">${esc(name[0].toUpperCase())}</div>`}
+          ${photo ? `<div data-profile="${esc(w.owner_uid)}" style="width:38px; height:38px; border-radius:50%; background:center/cover no-repeat; background-image:url('${photo}'); flex-shrink:0; cursor:pointer;"></div>` : `<div data-profile="${esc(w.owner_uid)}" style="cursor:pointer; width:38px; height:38px; border-radius:50%; background:var(--surface-raised); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:var(--amber); flex-shrink:0;">${esc(name[0].toUpperCase())}</div>`}
           <div style="flex:1; min-width:0;">
-            <div class="list-row-title">${esc(name)} <span class="muted" style="font-weight:400;">· ${esc(w.title)}</span></div>
+            <div class="list-row-title"><span class="profile-link" data-profile="${esc(w.owner_uid)}">${esc(name)}</span> <span class="muted" style="font-weight:400;">· ${esc(w.title)}</span></div>
             <div class="list-row-sub">${fmtDateTime(w.start_time)}${vibe ? ` · ${vibe.emoji} ${vibe.label}` : ""}</div>
           </div>
           <div class="list-row-meta" style="text-align:right; flex-shrink:0;">
@@ -103,6 +127,7 @@ async function renderFeedWorkouts(body) {
         </div>
         ${muscles.length ? `<div class="chip-row" style="margin-top:10px; margin-bottom:0;">${muscles.map(m => `<span class="feed-muscle-badge">${MUSCLE_EMOJI[m] || "⚡"} ${esc(m)}</span>`).join("")}</div>` : ""}
         ${fun ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">🏋️ ${w.total_tonnage} kg soulevés — ça pèse ${fun} !</p>` : ""}
+        ${workoutMusicHtml(w)}
         <div style="display:flex; justify-content:flex-end; margin-top:8px;">
           <button class="props-btn ${iReacted ? "reacted" : ""}" data-props="${esc(w.id)}">
             <img class="props-horns" src="icons/horns.png" alt="🤘">
@@ -113,6 +138,10 @@ async function renderFeedWorkouts(body) {
     `;
       }).join("");
 
+  bindSongLinks(wrap);
+  wrap.querySelectorAll("[data-profile]").forEach(el => {
+    el.onclick = (e) => { e.stopPropagation(); openProfile(el.dataset.profile); };
+  });
   wrap.querySelectorAll(".feed-card[data-w]").forEach(el => {
     el.onclick = () => openWorkoutDetail(
       workouts.find(w => w.id === el.dataset.w),

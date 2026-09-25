@@ -140,6 +140,11 @@ service cloud.firestore {
       }
     }
 
+    // Données privées de l'utilisateur (connexion Spotify) : lui seul.
+    match /user_private/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
     // Liste de ses propres votes (pour afficher les 👍 déjà donnés).
     match /user_votes/{uid} {
       allow read, write: if isSignedIn() && request.auth.uid == uid;

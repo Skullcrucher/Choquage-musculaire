@@ -716,3 +716,67 @@ canvas { max-width: 100%; }
 .exercise-name-link::after { content: " ›"; color: var(--amber); font-weight: 700; }
 .exercise-name-link:active { opacity: 0.6; }
 .title-horns { height: 0.95em; width: auto; vertical-align: -0.1em; margin-left: 4px; filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.8)); }
+
+/* ---------- Profil public ---------- */
+.profile-avatar {
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--surface-raised) center/cover no-repeat;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: var(--amber);
+}
+.profile-section-title {
+  font-family: 'Anton', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 17px;
+  margin: 18px 0 8px;
+}
+.profile-highlight {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 8px;
+}
+.profile-progress.up { color: var(--green); font-weight: 700; }
+.profile-progress.down { color: var(--red); font-weight: 700; }
+.profile-link { cursor: pointer; }
+.profile-link:active { opacity: 0.6; }
+.spotify-embed { width: 100%; border: 0; border-radius: 12px; margin-top: 10px; background: var(--surface-raised); }
+
+/* ---------- Musique : fin de séance, feed, séance ---------- */
+.finish-records {
+  background: rgba(224,36,36,0.10);
+  border: 1px solid rgba(224,36,36,0.35);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin: 8px 0 4px;
+  display: grid; gap: 6px;
+  font-size: 14px;
+}
+.feed-music {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  border-left: 3px solid var(--amber);
+  font-size: 13px;
+  display: grid; gap: 4px;
+}
+.song-link { color: var(--text); text-decoration: underline; text-decoration-color: var(--amber); text-underline-offset: 3px; cursor: pointer; }
+.soundtrack-list { margin: 4px 0 0; padding-left: 20px; display: grid; gap: 3px; }
+.workout-music {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 12px; margin-bottom: 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 14px; font-weight: 600;
+}
+
+/* Mur musical */
+.mw-bar-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) 40%; align-items: center; gap: 8px; padding: 5px 0; }
+.mw-rank { font-family: 'Anton', sans-serif; color: var(--text-dim); }
+.mw-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mw-bar { height: 8px; border-radius: 4px; background: var(--surface-raised); overflow: hidden; }
+.mw-bar > span { display: block; height: 100%; background: var(--amber); border-radius: 4px; }

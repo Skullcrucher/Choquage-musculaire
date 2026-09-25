@@ -4,6 +4,7 @@
 import * as db from "./db.js";
 import { toast, esc, safeImageUrl, debounce } from "./utils.js";
 import { invalidate } from "./cache.js";
+import { openProfile } from "./profile.js";
 
 function avatar(profile, size = 36) {
   const photo = safeImageUrl(profile?.photo_data_url);
@@ -13,10 +14,10 @@ function avatar(profile, size = 36) {
     : `<div style="width:${size}px; height:${size}px; border-radius:50%; background:var(--surface-raised); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--amber); flex-shrink:0;">${esc(name[0].toUpperCase())}</div>`;
 }
 
-function personRow(profile, actionsHtml) {
+function personRow(profile, actionsHtml, uid = profile?.uid) {
   return `
     <div class="list-row" style="cursor:default; gap:10px;">
-      <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+      <div style="display:flex; align-items:center; gap:10px; min-width:0; cursor:pointer;" ${uid ? `data-profile="${esc(uid)}"` : ""}>
         ${avatar(profile)}
         <div class="list-row-title" style="overflow:hidden; text-overflow:ellipsis;">${esc(profile?.display_name || "Utilisateur")}</div>
       </div>
@@ -56,22 +57,26 @@ export async function renderFriends(container) {
     </div>
     ${incoming.length ? `<div class="card">
       <div class="card-title">Demandes reçues</div>
-      ${incoming.map(f => personRow(profiles[f.other_uid], `
+      ${incoming.map(f => personRow({ uid: f.other_uid, ...profiles[f.other_uid] }, `
         <button class="btn btn-sm btn-primary" data-accept="${esc(f.id)}">Accepter</button>
         <button class="btn btn-sm btn-secondary" data-remove="${esc(f.id)}">Refuser</button>`)).join("")}
     </div>` : ""}
     <div class="card">
       <div class="card-title">Mes amis (${friends.length})</div>
-      ${friends.length ? friends.map(f => personRow(profiles[f.other_uid], `<button class="btn btn-sm btn-secondary" data-remove="${esc(f.id)}" data-confirm="1">Retirer</button>`)).join("")
+      ${friends.length ? friends.map(f => personRow({ uid: f.other_uid, ...profiles[f.other_uid] }, `<button class="btn btn-sm btn-secondary" data-remove="${esc(f.id)}" data-confirm="1">Retirer</button>`)).join("")
         : `<p class="muted" style="margin:0;">Pas encore d'amis. Cherche leur pseudo ci-dessus.</p>`}
     </div>
     ${outgoing.length ? `<div class="card">
       <div class="card-title">Demandes envoyées</div>
-      ${outgoing.map(f => personRow(profiles[f.other_uid], `<button class="btn btn-sm btn-secondary" data-remove="${esc(f.id)}">Annuler</button>`)).join("")}
+      ${outgoing.map(f => personRow({ uid: f.other_uid, ...profiles[f.other_uid] }, `<button class="btn btn-sm btn-secondary" data-remove="${esc(f.id)}">Annuler</button>`)).join("")}
     </div>` : ""}
   `;
 
   const refresh = () => renderFriends(container);
+  const bindProfiles = (root) => root.querySelectorAll("[data-profile]").forEach(el => {
+    el.onclick = () => openProfile(el.dataset.profile);
+  });
+  bindProfiles(container);
 
   container.querySelectorAll("[data-accept]").forEach(btn => btn.onclick = async () => {
     btn.disabled = true;
@@ -122,6 +127,7 @@ export async function renderFriends(container) {
             : `<span class="muted">Demande envoyée</span>`;
           return personRow(p, action);
         }).join("");
+    bindProfiles(resultsEl);
     resultsEl.querySelectorAll("[data-request]").forEach(btn => btn.onclick = async () => {
       btn.disabled = true;
       try {
