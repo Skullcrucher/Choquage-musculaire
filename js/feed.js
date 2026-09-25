@@ -8,6 +8,7 @@ import { openWorkoutDetail } from "./workout-detail.js";
 import { renderFriends, countIncomingRequests } from "./friends.js";
 import { openProfile } from "./profile.js";
 import { songHtml, bindSongLinks, parseSpotify } from "./music.js";
+import { t, tn } from "./i18n.js";
 
 // Records, "son du record", playlist et bande-son d'une séance partagée.
 export function workoutMusicHtml(w) {
@@ -18,11 +19,11 @@ export function workoutMusicHtml(w) {
   const top = records[0];
   return `
     <div class="feed-music">
-      ${top ? `<div>🏆 <b>Record</b> : ${esc(top.exercise)} — ${esc(top.kg)} kg × ${esc(top.reps)}${records.length > 1 ? ` <span class="muted">(+${records.length - 1} autre${records.length > 2 ? "s" : ""})</span>` : ""}</div>` : ""}
-      ${top && w.record_song ? `<div>🎵 Porté par ${songHtml(w.record_song)}</div>` : ""}
+      ${top ? `<div>🏆 <b>${t("Record")}</b> : ${esc(top.exercise)} — ${esc(top.kg)} kg × ${esc(top.reps)}${records.length > 1 ? ` <span class="muted">(${tn(records.length - 1, "+{n} autre", "+{n} autres")})</span>` : ""}</div>` : ""}
+      ${top && w.record_song ? `<div>🎵 ${t("Porté par")} ${songHtml(w.record_song)}</div>` : ""}
       ${playlist || nbTracks ? `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
-        ${playlist ? `<span class="song-link" data-playlist-url="${esc(playlist.url)}" data-playlist-title="Playlist de la séance">🎧 Playlist de la séance</span>` : ""}
-        ${nbTracks ? `<span class="muted">🎶 ${nbTracks} morceau${nbTracks > 1 ? "x" : ""} écouté${nbTracks > 1 ? "s" : ""}</span>` : ""}
+        ${playlist ? `<span class="song-link" data-playlist-url="${esc(playlist.url)}" data-playlist-title="${t("Playlist de la séance")}">🎧 ${t("Playlist de la séance")}</span>` : ""}
+        ${nbTracks ? `<span class="muted">🎶 ${tn(nbTracks, "{n} morceau écouté", "{n} morceaux écoutés")}</span>` : ""}
       </div>` : ""}
     </div>`;
 }
@@ -37,13 +38,14 @@ const MUSCLE_EMOJI = {
 
 function vibeTag(totalSets) {
   if (!totalSets) return null;
-  if (totalSets < 8) return { label: "Mise en jambe", emoji: "🙂" };
-  if (totalSets < 16) return { label: "Séance solide", emoji: "💪" };
-  if (totalSets < 26) return { label: "Grosse séance", emoji: "🔥" };
-  return { label: "Murder session", emoji: "🤘🔥" };
+  if (totalSets < 8) return { label: t("Mise en jambe"), emoji: "🙂" };
+  if (totalSets < 16) return { label: t("Séance solide"), emoji: "💪" };
+  if (totalSets < 26) return { label: t("Grosse séance"), emoji: "🔥" };
+  return { label: t("Murder session"), emoji: "🤘🔥" };
 }
 
 const TONNAGE_REFS = [
+  // i18n-keys: "un piano droit", "une moto", "une voiture citadine", "un éléphant d'Afrique", "un bus", "une baleine bleue"
   { kg: 90, label: "un piano droit", emoji: "🎹" },
   { kg: 200, label: "une moto", emoji: "🏍️" },
   { kg: 1200, label: "une voiture citadine", emoji: "🚗" },
@@ -57,17 +59,17 @@ function tonnageFun(kg) {
   let ref = TONNAGE_REFS[0];
   for (const r of TONNAGE_REFS) { if (kg >= r.kg * 0.6) ref = r; }
   const mult = Math.max(1, Math.round((kg / ref.kg) * 10) / 10);
-  return `${mult}× ${ref.emoji} ${ref.label}`;
+  return `${mult}× ${ref.emoji} ${t(ref.label)}`;
 }
 
 export async function renderFeedTab(container) {
   container.innerHTML = `
-    <h1 class="section-title">Feed <img class="title-horns" src="icons/horns.png" alt=""></h1>
+    <h1 class="section-title">${t("Feed")} <img class="title-horns" src="icons/horns.png" alt=""></h1>
     <div class="chip-row" id="feed-mode-chips" style="margin-bottom:14px;">
-      <div class="chip ${feedMode === "workouts" ? "active" : ""}" data-fmode="workouts">Séances</div>
-      <div class="chip ${feedMode === "challenges" ? "active" : ""}" data-fmode="challenges">🏆 Défis</div>
-      <div class="chip ${feedMode === "music" ? "active" : ""}" data-fmode="music">🎧 Son</div>
-      <div class="chip ${feedMode === "friends" ? "active" : ""}" data-fmode="friends">👥 Amis<span id="friend-req-count"></span></div>
+      <div class="chip ${feedMode === "workouts" ? "active" : ""}" data-fmode="workouts">${t("Séances")}</div>
+      <div class="chip ${feedMode === "challenges" ? "active" : ""}" data-fmode="challenges">🏆 ${t("Défis")}</div>
+      <div class="chip ${feedMode === "music" ? "active" : ""}" data-fmode="music">🎧 ${t("Son")}</div>
+      <div class="chip ${feedMode === "friends" ? "active" : ""}" data-fmode="friends">👥 ${t("Amis")}<span id="friend-req-count"></span></div>
     </div>
     <div id="feed-body"></div>
   `;
@@ -95,17 +97,17 @@ async function drawFeedBody(container) {
 }
 
 async function renderFeedWorkouts(body) {
-  body.innerHTML = `<div id="feed-list"><div class="empty-state"><span class="num">···</span>Chargement</div></div>`;
+  body.innerHTML = `<div id="feed-list"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>`;
   const wrap = body.querySelector("#feed-list");
   const workouts = await db.listFeedWorkouts(60);
   const myUid = getUser()?.uid;
   const profiles = await db.getProfiles(workouts.map(w => w.owner_uid));
 
   wrap.innerHTML = workouts.length === 0
-    ? `<div class="empty-state muted" style="padding:20px;">Aucune séance partagée pour l'instant.</div>`
+    ? `<div class="empty-state muted" style="padding:20px;">${t("Aucune séance partagée pour l'instant.")}</div>`
     : workouts.map(w => {
         const profile = profiles[w.owner_uid];
-        const name = w.owner_uid === myUid ? "Toi" : (profile?.display_name || w.owner_name || "Utilisateur");
+        const name = w.owner_uid === myUid ? t("Toi") : (profile?.display_name || w.owner_name || t("Utilisateur"));
         const photo = safeImageUrl(profile?.photo_data_url || w.owner_photo);
         const muscles = w.muscle_summary || [];
         const vibe = vibeTag(w.total_sets);
@@ -122,11 +124,11 @@ async function renderFeedWorkouts(body) {
           </div>
           <div class="list-row-meta" style="text-align:right; flex-shrink:0;">
             ${fmtDuration(w.start_time, w.end_time)}
-            ${w.total_sets ? `<div style="font-size:11px;">${w.total_sets} série${w.total_sets > 1 ? "s" : ""}</div>` : ""}
+            ${w.total_sets ? `<div style="font-size:11px;">${tn(w.total_sets, "{n} série", "{n} séries")}</div>` : ""}
           </div>
         </div>
-        ${muscles.length ? `<div class="chip-row" style="margin-top:10px; margin-bottom:0;">${muscles.map(m => `<span class="feed-muscle-badge">${MUSCLE_EMOJI[m] || "⚡"} ${esc(m)}</span>`).join("")}</div>` : ""}
-        ${fun ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">🏋️ ${w.total_tonnage} kg soulevés — ça pèse ${fun} !</p>` : ""}
+        ${muscles.length ? `<div class="chip-row" style="margin-top:10px; margin-bottom:0;">${muscles.map(m => `<span class="feed-muscle-badge">${MUSCLE_EMOJI[m] || "⚡"} ${esc(t(m))}</span>`).join("")}</div>` : ""}
+        ${fun ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">🏋️ ${t("{kg} kg soulevés — ça pèse {comparison} !", { kg: w.total_tonnage, comparison: fun })}</p>` : ""}
         ${workoutMusicHtml(w)}
         <div style="display:flex; justify-content:flex-end; margin-top:8px;">
           <button class="props-btn ${iReacted ? "reacted" : ""}" data-props="${esc(w.id)}">

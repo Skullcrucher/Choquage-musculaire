@@ -18,6 +18,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { SPOTIFY_CLIENT_ID } from "./spotify-config.js";
+import { t } from "./i18n.js";
 
 const SCOPES = "user-read-currently-playing user-read-recently-played";
 const LS_VERIFIER = "skullcrusher_spotify_verifier";
@@ -40,7 +41,7 @@ export async function getClientSettings() {
 
 export async function setOwnClientId(id) {
   const value = String(id || "").trim();
-  if (value && !isValidClientId(value)) throw new Error("Client ID invalide : 32 caractères (chiffres et lettres a à f).");
+  if (value && !isValidClientId(value)) throw new Error(t("Client ID invalide : 32 caractères (chiffres et lettres a à f)."));
   await db.setPrivateData({ spotify_client_id: value || null });
 }
 
@@ -54,7 +55,7 @@ function b64url(bytes) {
 
 export async function connectSpotify() {
   const { clientId } = await getClientSettings();
-  if (!clientId) throw new Error("Aucune app Spotify configurée : saisis le Client ID de ta propre app Spotify.");
+  if (!clientId) throw new Error(t("Aucune app Spotify configurée : saisis le Client ID de ta propre app Spotify."));
   localStorage.setItem(LS_CLIENT, clientId);
   const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
   const state = b64url(crypto.getRandomValues(new Uint8Array(12)));
@@ -100,21 +101,21 @@ export async function handleSpotifyRedirect() {
   history.replaceState(null, "", url.pathname + (url.search ? url.search : "") + url.hash);
   if (error) {
     return error === "access_denied"
-      ? "Connexion Spotify refusée. Si l'app Spotify partagée ne t'est pas ouverte, utilise ta propre app Spotify (Réglages → 🎧 Spotify)."
-      : `Connexion Spotify impossible (${error}).`;
+      ? t("Connexion Spotify refusée. Si l'app Spotify partagée ne t'est pas ouverte, utilise ta propre app Spotify (Réglages → 🎧 Spotify).")
+      : t("Connexion Spotify impossible ({error}).", { error });
   }
   const verifier = localStorage.getItem(LS_VERIFIER);
   if (!verifier || state !== localStorage.getItem(LS_STATE)) {
-    return "Connexion Spotify impossible ici : relance « Connecter Spotify » depuis cette même fenêtre (sur iPhone, depuis Safari).";
+    return t("Connexion Spotify impossible ici : relance « Connecter Spotify » depuis cette même fenêtre (sur iPhone, depuis Safari).");
   }
   const clientId = localStorage.getItem(LS_CLIENT) || (await getClientSettings()).clientId;
   localStorage.removeItem(LS_VERIFIER); localStorage.removeItem(LS_STATE); localStorage.removeItem(LS_CLIENT);
   try {
     await saveTokens(clientId, await tokenRequest(clientId, { grant_type: "authorization_code", code, redirect_uri: redirectUri(), code_verifier: verifier }));
-    return "Spotify connecté 🎧";
+    return t("Spotify connecté") + " 🎧";
   } catch (e) {
     console.error("[Skullcrusher] Échange du code Spotify", e);
-    return `Connexion Spotify échouée : ${e.message}`;
+    return t("Connexion Spotify échouée : {error}", { error: e.message });
   }
 }
 

@@ -5,6 +5,7 @@ import * as db from "./db.js";
 import { openModal, closeModal, esc, estimate1RM } from "./utils.js";
 import { getSetsForExercise } from "./cache.js";
 import { normalizePlaylistUrl, parseSongInput, songLabel, SPOTIFY_ICON } from "./music.js";
+import { t, tn } from "./i18n.js";
 
 // Bande-son jointe à une séance : liens des morceaux uniquement (voir music.js).
 const MAX_SOUNDTRACK = 10;
@@ -60,37 +61,37 @@ export async function openFinishDialog(workout, summary) {
 
   return new Promise((resolve) => {
     openModal(`
-      <h3 style="margin-bottom:4px;">Séance terminée 🤘</h3>
-      <p class="muted" style="margin-top:0;">${summary.sets} série${summary.sets > 1 ? "s" : ""} · ${summary.tonnage} kg soulevés</p>
+      <h3 style="margin-bottom:4px;">${t("Séance terminée")} 🤘</h3>
+      <p class="muted" style="margin-top:0;">${tn(summary.sets, "{n} série", "{n} séries")} · ${t("{kg} kg soulevés", { kg: summary.tonnage })}</p>
 
       ${records.length ? `
         <div class="finish-records">
           ${records.map(r => `<div>🏆 <b>${esc(r.exercise)}</b> — ${esc(r.kg)} kg × ${esc(r.reps)} <span class="muted">(1RM ${esc(r.one_rm)} kg, +${esc(Math.round((r.one_rm - r.prev_one_rm) * 10) / 10)} kg)</span></div>`).join("")}
         </div>
-        <label>🎵 Le son qui t'a porté</label>
-        <input id="fin-song" placeholder="Titre - Artiste, ou lien Spotify du morceau" value="${esc(nowPlaying ? `${nowPlaying.title} - ${nowPlaying.artist}` : "")}">
-        ${nowPlaying ? `<p class="muted spotify-attrib" style="font-size:12px; margin:4px 0 0;">${SPOTIFY_ICON} Pré-rempli avec le morceau en cours sur Spotify.</p>` : ""}
+        <label>🎵 ${t("Le son qui t'a porté")}</label>
+        <input id="fin-song" placeholder="${t("Titre - Artiste, ou lien Spotify du morceau")}" value="${esc(nowPlaying ? `${nowPlaying.title} - ${nowPlaying.artist}` : "")}">
+        ${nowPlaying ? `<p class="muted spotify-attrib" style="font-size:12px; margin:4px 0 0;">${SPOTIFY_ICON} ${t("Pré-rempli avec le morceau en cours sur Spotify.")}</p>` : ""}
       ` : ""}
 
-      <label>🎧 Playlist de la séance (facultatif)</label>
+      <label>🎧 ${t("Playlist de la séance (facultatif)")}</label>
       <input id="fin-playlist" placeholder="https://open.spotify.com/playlist/…" value="${esc(defaultPlaylist)}" inputmode="url">
 
       ${tracks.length ? `
         <label class="list-row" style="cursor:pointer; margin-top:10px;">
-          <span>🎶 Joindre la bande-son (${Math.min(tracks.length, MAX_SOUNDTRACK)} morceau${tracks.length > 1 ? "x" : ""} écouté${tracks.length > 1 ? "s" : ""})</span>
+          <span>🎶 ${tn(Math.min(tracks.length, MAX_SOUNDTRACK), "Joindre la bande-son ({n} morceau écouté)", "Joindre la bande-son ({n} morceaux écoutés)")}</span>
           <input type="checkbox" id="fin-tracks" checked style="width:auto;">
         </label>
-        <p class="muted spotify-attrib" style="font-size:12px; margin:0;">${SPOTIFY_ICON} ${tracks.slice(0, 4).map(t => esc(songLabel(t))).join(" · ")}${tracks.length > 4 ? " …" : ""}</p>
+        <p class="muted spotify-attrib" style="font-size:12px; margin:0;">${SPOTIFY_ICON} ${tracks.slice(0, 4).map(tr => esc(songLabel(tr))).join(" · ")}${tracks.length > 4 ? " …" : ""}</p>
       ` : ""}
 
       <label class="list-row" style="cursor:pointer; margin-top:10px;">
-        <span>Partager sur le feed</span>
+        <span>${t("Partager sur le feed")}</span>
         <input type="checkbox" id="fin-share" style="width:auto;">
       </label>
       <p id="fin-error" style="color:var(--red); min-height:1em; margin:4px 0;"></p>
       <div class="btn-row">
-        <button class="btn btn-secondary" id="fin-back">Revenir</button>
-        <button class="btn btn-primary" id="fin-save">Enregistrer</button>
+        <button class="btn btn-secondary" id="fin-back">${t("Revenir")}</button>
+        <button class="btn btn-primary" id="fin-save">${t("Enregistrer")}</button>
       </div>
     `, (m) => {
       m.querySelector("#fin-back").onclick = () => { closeModal(); resolve(null); };
@@ -98,13 +99,13 @@ export async function openFinishDialog(workout, summary) {
         const err = m.querySelector("#fin-error");
         const rawPlaylist = m.querySelector("#fin-playlist").value.trim();
         const playlist = normalizePlaylistUrl(rawPlaylist);
-        if (rawPlaylist && !playlist) { err.textContent = "Lien de playlist Spotify invalide (open.spotify.com/playlist/…)."; return; }
+        if (rawPlaylist && !playlist) { err.textContent = t("Lien de playlist Spotify invalide (open.spotify.com/playlist/…)."); return; }
         const songInput = m.querySelector("#fin-song")?.value.trim() || "";
         let song = songInput ? parseSongInput(songInput) : null;
-        if (songInput && !song) { err.textContent = "Morceau : écris « Titre - Artiste » ou colle un lien Spotify de titre."; return; }
+        if (songInput && !song) { err.textContent = t("Morceau : écris « Titre - Artiste » ou colle un lien Spotify de titre."); return; }
         // Morceau en cours accepté tel quel : on ne garde que son lien Spotify.
         if (song && nowPlaying && songInput === `${nowPlaying.title} - ${nowPlaying.artist}`) song = { url: nowPlaying.url, source: "spotify" };
-        if (song && /[<>]/.test((song.title || "") + (song.artist || ""))) { err.textContent = "Les caractères < et > ne sont pas autorisés."; return; }
+        if (song && /[<>]/.test((song.title || "") + (song.artist || ""))) { err.textContent = t("Les caractères < et > ne sont pas autorisés."); return; }
         const withTracks = !!m.querySelector("#fin-tracks")?.checked;
         closeModal();
         resolve({
@@ -113,7 +114,7 @@ export async function openFinishDialog(workout, summary) {
           record_song: records.length && song ? song : null,
           soundtrack: (playlist || withTracks) ? {
             playlist_url: playlist,
-            tracks: withTracks ? tracks.slice(0, MAX_SOUNDTRACK).map(t => ({ url: t.url, source: "spotify" })) : []
+            tracks: withTracks ? tracks.slice(0, MAX_SOUNDTRACK).map(tr => ({ url: tr.url, source: "spotify" })) : []
           } : null
         });
       };

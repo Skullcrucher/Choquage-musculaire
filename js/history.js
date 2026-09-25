@@ -5,21 +5,23 @@ import { fmtDateTime, fmtDuration, esc } from "./utils.js";
 import { getWorkouts } from "./cache.js";
 import { openWorkoutDetail } from "./workout-detail.js";
 import { renderRoutines } from "./routines.js";
+import { t, locale } from "./i18n.js";
 
 let viewMonth = new Date();
 let workoutsCache = [];
 let selectedDay = null;
 let mode = "mine"; // "mine" | "routines"
 
-const DOW = ["L", "M", "M", "J", "V", "S", "D"];
+// Initiales des jours (lundi → dimanche) dans la langue de l'app.
+const DOW = Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(locale(), { weekday: "narrow" }));
 
 export async function renderHistorique(container) {
   workoutsCache = await getWorkouts();
   container.innerHTML = `
-    <h1 class="section-title">Historique</h1>
+    <h1 class="section-title">${t("Historique")}</h1>
     <div class="chip-row" id="mode-chips" style="margin-bottom:14px;">
-      <div class="chip ${mode === "mine" ? "active" : ""}" data-mode="mine">Mes séances</div>
-      <div class="chip ${mode === "routines" ? "active" : ""}" data-mode="routines">Routines</div>
+      <div class="chip ${mode === "mine" ? "active" : ""}" data-mode="mine">${t("Mes séances")}</div>
+      <div class="chip ${mode === "routines" ? "active" : ""}" data-mode="routines">${t("Routines")}</div>
     </div>
     <div id="hist-content"></div>
   `;
@@ -53,7 +55,7 @@ function renderMine(content) {
       </div>
       <div class="cal-grid" id="cal-grid"></div>
     </div>
-    <h3 class="muted" style="margin:18px 0 6px;" id="list-label">Séances récentes</h3>
+    <h3 class="muted" style="margin:18px 0 6px;" id="list-label">${t("Séances récentes")}</h3>
     <div id="workout-list"></div>
   `;
   content.querySelector("#prev-month").onclick = () => { viewMonth.setMonth(viewMonth.getMonth() - 1); selectedDay = null; renderCalendar(content); renderList(content); };
@@ -64,7 +66,7 @@ function renderMine(content) {
 
 function renderCalendar(container) {
   const label = container.querySelector("#month-label");
-  label.textContent = viewMonth.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  label.textContent = viewMonth.toLocaleDateString(locale(), { month: "long", year: "numeric" });
 
   const grid = container.querySelector("#cal-grid");
   const year = viewMonth.getFullYear(), month = viewMonth.getMonth();
@@ -105,13 +107,13 @@ function renderList(container) {
   });
   if (selectedDay) {
     list = list.filter(w => new Date(w.start_time).getDate() === selectedDay);
-    label.textContent = `Séances du ${selectedDay} ${viewMonth.toLocaleDateString("fr-FR", { month: "long" })}`;
+    label.textContent = t("Séances du {date}", { date: new Date(viewMonth.getFullYear(), viewMonth.getMonth(), selectedDay).toLocaleDateString(locale(), { day: "numeric", month: "long" }) });
   } else {
-    label.textContent = "Séances du mois";
+    label.textContent = t("Séances du mois");
   }
   const wrap = container.querySelector("#workout-list");
   wrap.innerHTML = list.length === 0
-    ? `<div class="empty-state muted" style="padding:20px;">Aucune séance.</div>`
+    ? `<div class="empty-state muted" style="padding:20px;">${t("Aucune séance.")}</div>`
     : list.map(w => `
       <div class="list-row" data-w="${w.id}">
         <div>

@@ -8,6 +8,7 @@ import * as db from "./db.js";
 import { esc } from "./utils.js";
 import { songHtml, bindSongLinks, parseSpotify } from "./music.js";
 import { openProfile } from "./profile.js";
+import { t } from "./i18n.js";
 
 let scope = "friends"; // "friends" | "community"
 
@@ -30,10 +31,10 @@ function bump(map, key, label, weight, extra = {}) {
 export async function renderMusicWall(container) {
   container.innerHTML = `
     <div class="chip-row" id="mw-scope" style="margin-bottom:12px;">
-      <div class="chip ${scope === "friends" ? "active" : ""}" data-scope="friends">👥 Mes amis</div>
-      <div class="chip ${scope === "community" ? "active" : ""}" data-scope="community">🌍 Communauté</div>
+      <div class="chip ${scope === "friends" ? "active" : ""}" data-scope="friends">👥 ${t("Mes amis")}</div>
+      <div class="chip ${scope === "community" ? "active" : ""}" data-scope="community">🌍 ${t("Communauté")}</div>
     </div>
-    <div id="mw-body"><div class="empty-state"><span class="num">···</span>Chargement</div></div>`;
+    <div id="mw-body"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>`;
   container.querySelectorAll("[data-scope]").forEach(c => c.onclick = () => { scope = c.dataset.scope; renderMusicWall(container); });
   const body = container.querySelector("#mw-body");
 
@@ -53,11 +54,11 @@ export async function renderMusicWall(container) {
     }
   } catch (err) {
     console.error("[Skullcrusher] Mur musical", err);
-    body.innerHTML = `<div class="empty-state">Chargement impossible.</div>`;
+    body.innerHTML = `<div class="empty-state">${t("Chargement impossible.")}</div>`;
     return;
   }
   if (!body.isConnected) return;
-  const nameOf = (uid) => uid === myUid ? "Toi" : (profiles.find(p => p.uid === uid)?.display_name || "Quelqu'un");
+  const nameOf = (uid) => uid === myUid ? t("Toi") : (profiles.find(p => p.uid === uid)?.display_name || t("Quelqu'un"));
 
   // Artistes déclarés par les utilisateurs dans leur profil. Les écoutes
   // récupérées via Spotify ne sont jamais agrégées en classement : la
@@ -71,32 +72,32 @@ export async function renderMusicWall(container) {
 
   body.innerHTML = `
     <div class="card">
-      <div class="card-title">🔥 Artistes qui font soulever</div>
-      <p class="muted" style="margin:-4px 0 8px; font-size:12px;">D'après les artistes que chacun met en avant sur son profil.</p>
+      <div class="card-title">🔥 ${t("Artistes qui font soulever")}</div>
+      <p class="muted" style="margin:-4px 0 8px; font-size:12px;">${t("D'après les artistes que chacun met en avant sur son profil.")}</p>
       ${topArtists.length ? topArtists.map((a, i) => `
         <div class="mw-bar-row">
           <span class="mw-rank">${i + 1}</span>
           <span class="mw-label">${esc(a.label)}</span>
           <span class="mw-bar"><span style="width:${Math.max(8, Math.round((a.count / max) * 100))}%"></span></span>
-        </div>`).join("") : `<p class="muted" style="margin:0;">Personne n'a encore renseigné d'artiste. Ajoute le tien : Réglages → 🎧 musique.</p>`}
+        </div>`).join("") : `<p class="muted" style="margin:0;">${t("Personne n'a encore renseigné d'artiste. Ajoute le tien : Réglages → 🎧 musique.")}</p>`}
     </div>
 
     <div class="card">
-      <div class="card-title">🏆 Les sons des records</div>
+      <div class="card-title">🏆 ${t("Les sons des records")}</div>
       ${recordSongs.length ? recordSongs.map(w => `
         <div class="list-row" style="cursor:default; display:block;">
           <div class="list-row-title"><span class="profile-link" data-profile="${esc(w.owner_uid)}">${esc(nameOf(w.owner_uid))}</span> — ${esc(w.records[0].exercise)} ${esc(w.records[0].kg)} kg × ${esc(w.records[0].reps)}</div>
           <div class="list-row-sub">🎵 ${songHtml(w.record_song)}</div>
-        </div>`).join("") : `<p class="muted" style="margin:0;">Bats un record et indique le son qui t'a porté à la fin de ta séance : il apparaîtra ici.</p>`}
+        </div>`).join("") : `<p class="muted" style="margin:0;">${t("Bats un record et indique le son qui t'a porté à la fin de ta séance : il apparaîtra ici.")}</p>`}
     </div>
 
     <div class="card">
-      <div class="card-title">🎧 Playlists de salle</div>
+      <div class="card-title">🎧 ${t("Playlists de salle")}</div>
       ${playlists.length ? playlists.map(p => `
         <div class="list-row" style="cursor:default;">
-          <span class="list-row-title profile-link" data-profile="${esc(p.uid)}">${esc(p.uid === myUid ? "Toi" : p.display_name || "Utilisateur")}</span>
-          <button class="btn btn-sm btn-secondary" style="width:auto;" data-playlist-url="${esc(parseSpotify(p.music.playlist_url).url)}" data-playlist-title="Playlist de ${esc(p.display_name || "salle")}">Écouter</button>
-        </div>`).join("") : `<p class="muted" style="margin:0;">Aucune playlist de salle partagée pour l'instant.</p>`}
+          <span class="list-row-title profile-link" data-profile="${esc(p.uid)}">${esc(p.uid === myUid ? t("Toi") : p.display_name || t("Utilisateur"))}</span>
+          <button class="btn btn-sm btn-secondary" style="width:auto;" data-playlist-url="${esc(parseSpotify(p.music.playlist_url).url)}" data-playlist-title="${esc(t("Playlist de {name}", { name: p.display_name || t("salle") }))}">${t("Écouter")}</button>
+        </div>`).join("") : `<p class="muted" style="margin:0;">${t("Aucune playlist de salle partagée pour l'instant.")}</p>`}
     </div>
 
   `;

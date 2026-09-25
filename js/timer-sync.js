@@ -7,6 +7,7 @@
 // à l'heure, même app fermée ou écran verrouillé.
 // ============================================================
 import { PUSH_SERVER_URL } from "./timer-sync-config.js";
+import { t } from "./i18n.js";
 
 const LS_PUSH_KEY = "skullcrusher_push_enabled";
 const SERVER = PUSH_SERVER_URL.replace(/\/+$/, "");
@@ -43,18 +44,18 @@ async function getSubscription() {
 
 // À appeler depuis un geste de l'utilisateur (demande d'autorisation).
 export async function enablePush() {
-  if (!pushConfigured()) throw new Error("Serveur de notifications non configuré (js/timer-sync-config.js).");
+  if (!pushConfigured()) throw new Error(t("Serveur de notifications non configuré (js/timer-sync-config.js)."));
   if (!pushSupported()) {
     throw new Error(isIos() && !isStandalone()
-      ? "Sur iPhone, ajoute d'abord l'app à ton écran d'accueil (Partager → Sur l'écran d'accueil), puis active les notifications depuis l'app installée."
-      : "Les notifications push ne sont pas prises en charge par ce navigateur.");
+      ? t("Sur iPhone, ajoute d'abord l'app à ton écran d'accueil (Partager → Sur l'écran d'accueil), puis active les notifications depuis l'app installée.")
+      : t("Les notifications push ne sont pas prises en charge par ce navigateur."));
   }
   const perm = Notification.permission === "default" ? await Notification.requestPermission() : Notification.permission;
-  if (perm !== "granted") throw new Error("Autorisation refusée — active les notifications pour cette app dans les réglages de l'iPhone.");
+  if (perm !== "granted") throw new Error(t("Autorisation refusée — active les notifications pour cette app dans les réglages de l'iPhone."));
 
   const reg = await navigator.serviceWorker.ready;
   const res = await fetch(`${SERVER}/vapid-public-key`);
-  if (!res.ok) throw new Error("Serveur de notifications injoignable.");
+  if (!res.ok) throw new Error(t("Serveur de notifications injoignable."));
   const { publicKey } = await res.json();
   let sub = await reg.pushManager.getSubscription();
   // Un abonnement créé avec une autre clé serveur ne peut pas être réutilisé.
@@ -105,8 +106,8 @@ export async function scheduleRestPush(endMs, body) {
     await post("/schedule", {
       subscription: sub.toJSON(),
       delayMs: Math.max(0, Math.round(endMs - Date.now())),
-      title: "Repos terminé 🤘",
-      body: body || "C'est reparti pour la série suivante."
+      title: t("Repos terminé") + " 🤘",
+      body: body || t("C'est reparti pour la série suivante.")
     });
     return true;
   } catch (e) {

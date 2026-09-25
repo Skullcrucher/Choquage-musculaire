@@ -1,11 +1,12 @@
 // ============================================================
 // UTILITAIRES PARTAGÉS
 // ============================================================
+import { t, locale } from "./i18n.js";
 
 // Version affichée dans Réglages → À propos. À incrémenter avec
 // CACHE_NAME dans service-worker.js à chaque mise en ligne, pour voir d'un
 // coup d'œil si le téléphone utilise bien la dernière version.
-export const APP_VERSION = "50";
+export const APP_VERSION = "51";
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
@@ -60,13 +61,13 @@ export function closeModal() {
 export function fmtDate(iso, opts = {}) {
   if (!iso) return "—";
   const d = new Date(iso);
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric", ...opts });
+  return d.toLocaleDateString(locale(), { day: "numeric", month: "short", year: "numeric", ...opts });
 }
 
 export function fmtDateTime(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
-  return d.toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString(locale(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 export function fmtDuration(startIso, endIso) {
@@ -109,10 +110,10 @@ export function debounce(fn, ms = 300) {
 export function resizeImageFile(file, maxSize = 160, quality = 0.75) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Lecture du fichier impossible"));
+    reader.onerror = () => reject(new Error(t("Lecture du fichier impossible")));
     reader.onload = () => {
       const img = new Image();
-      img.onerror = () => reject(new Error("Image invalide"));
+      img.onerror = () => reject(new Error(t("Image invalide")));
       img.onload = () => {
         const side = Math.min(img.width, img.height);
         const sx = (img.width - side) / 2;
@@ -160,15 +161,15 @@ export async function fireRestEndNotification() {
   try {
     if ("serviceWorker" in navigator) {
       const reg = await navigator.serviceWorker.ready;
-      await reg.showNotification("Repos terminé 🤘", {
-        body: "C'est reparti pour la série suivante.",
+      await reg.showNotification(t("Repos terminé") + " 🤘", {
+        body: t("C'est reparti pour la série suivante."),
         icon: "icons/icon-192.png",
         badge: "icons/icon-192.png",
         tag: "skullcrusher-rest-timer",
         renotify: true
       });
     } else {
-      new Notification("Repos terminé", { body: "C'est reparti pour la série suivante." });
+      new Notification(t("Repos terminé"), { body: t("C'est reparti pour la série suivante.") });
     }
   } catch (e) {
     console.warn("[Skullcrusher] Notification impossible :", e);

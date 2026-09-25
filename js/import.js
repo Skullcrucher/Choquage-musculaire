@@ -6,6 +6,7 @@
 // duration_seconds,rpe
 // ============================================================
 import { importRows } from "./db.js";
+import { t } from "./i18n.js";
 
 const LBS_TO_KG = 0.45359237;
 const MILES_TO_KM = 1.609344;
@@ -158,12 +159,12 @@ export async function importCsvFile(file, onProgress) {
   const { rows, unparsedDates, headers } = parseCsvText(text);
   if (rows.length === 0) {
     if (!headers.includes("exercise_title") || !headers.includes("start_time")) {
-      throw new Error("Ce fichier ne ressemble pas à un export Hevy (colonnes exercise_title / start_time introuvables). Dans Hevy : Profil → Réglages → Exporter les données → Exporter les séances.");
+      throw new Error(t("Ce fichier ne ressemble pas à un export Hevy (colonnes exercise_title / start_time introuvables). Dans Hevy : Profil → Réglages → Exporter les données → Exporter les séances."));
     }
     if (unparsedDates.length) {
-      throw new Error(`Format de date non reconnu (ex. « ${unparsedDates[0]} »). Signale-le pour qu'on l'ajoute.`);
+      throw new Error(t("Format de date non reconnu (ex. « {sample} »). Signale-le pour qu'on l'ajoute.", { sample: unparsedDates[0] }));
     }
-    throw new Error("Aucune ligne exploitable trouvée dans ce fichier.");
+    throw new Error(t("Aucune ligne exploitable trouvée dans ce fichier."));
   }
   return await importRows(rows, onProgress);
 }

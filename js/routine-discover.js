@@ -6,7 +6,9 @@ import * as db from "./db.js";
 import { toast, openModal, closeModal, attachAutocomplete, esc, debounce } from "./utils.js";
 import { getExercises, getRoutines, invalidate } from "./cache.js";
 import { spotifyEmbed } from "./music.js";
+import { t, tn } from "./i18n.js";
 
+// i18n-keys: "Courte (≤ 4 exos)", "Moyenne (5-7)", "Longue (8+)", "Les plus populaires", "Les plus récentes", "Moins d'exercices", "Plus d'exercices", "Tout", "👥 Amis", "🌍 Communauté"
 const SIZES = {
   short: { label: "Courte (≤ 4 exos)", test: n => n <= 4 },
   medium: { label: "Moyenne (5-7)", test: n => n >= 5 && n <= 7 },
@@ -33,7 +35,7 @@ function activeFilterCount() {
 }
 
 export async function renderDiscover(content, onLibraryChanged) {
-  content.innerHTML = `<div class="empty-state"><span class="num">···</span>Chargement</div>`;
+  content.innerHTML = `<div class="empty-state"><span class="num">···</span>${t("Chargement")}</div>`;
   const myUid = db.getCurrentUser()?.uid;
   const [all, friendships, myVotes, myRoutines, exercises] = await Promise.all([
     db.listDiscoverRoutines(),
@@ -53,26 +55,26 @@ export async function renderDiscover(content, onLibraryChanged) {
 
   content.innerHTML = `
     <div style="position:relative;">
-      <input id="d-text" type="search" placeholder="Rechercher une routine, un exercice, un auteur…" value="${esc(filters.text)}">
+      <input id="d-text" type="search" placeholder="${t("Rechercher une routine, un exercice, un auteur…")}" value="${esc(filters.text)}">
     </div>
     <div style="display:flex; gap:8px; margin:10px 0;">
-      <select id="d-sort" style="flex:1;">${Object.entries(SORTS).map(([k, v]) => `<option value="${k}" ${k === filters.sort ? "selected" : ""}>${v}</option>`).join("")}</select>
-      <button class="btn btn-secondary btn-sm" id="d-toggle-filters" style="width:auto; white-space:nowrap;">Filtres<span id="d-filter-count"></span></button>
+      <select id="d-sort" style="flex:1;">${Object.entries(SORTS).map(([k, v]) => `<option value="${k}" ${k === filters.sort ? "selected" : ""}>${t(v)}</option>`).join("")}</select>
+      <button class="btn btn-secondary btn-sm" id="d-toggle-filters" style="width:auto; white-space:nowrap;">${t("Filtres")}<span id="d-filter-count"></span></button>
     </div>
     <div id="d-filters" style="display:${filtersOpen ? "block" : "none"};" class="card">
-      <label style="margin-top:0;">Source</label>
-      <div class="chip-row" id="d-source">${Object.entries(SOURCES).map(([k, v]) => `<div class="chip ${filters.source === k ? "active" : ""}" data-source="${k}">${v}</div>`).join("")}</div>
-      <label>Muscles travaillés</label>
-      <div class="chip-row" id="d-muscles">${db.EXO_GROUPS.map(g => `<div class="chip ${filters.muscles.includes(g) ? "active" : ""}" data-muscle="${esc(g)}">${esc(g)}</div>`).join("")}</div>
-      <label>Contient l'exercice</label>
+      <label style="margin-top:0;">${t("Source")}</label>
+      <div class="chip-row" id="d-source">${Object.entries(SOURCES).map(([k, v]) => `<div class="chip ${filters.source === k ? "active" : ""}" data-source="${k}">${t(v)}</div>`).join("")}</div>
+      <label>${t("Muscles travaillés")}</label>
+      <div class="chip-row" id="d-muscles">${db.EXO_GROUPS.map(g => `<div class="chip ${filters.muscles.includes(g) ? "active" : ""}" data-muscle="${esc(g)}">${esc(t(g))}</div>`).join("")}</div>
+      <label>${t("Contient l'exercice")}</label>
       <div style="position:relative;"><input id="d-exercise" placeholder="ex: Squat" value="${esc(filters.exercise)}"></div>
       <div class="field-row">
-        <div><label>Niveau</label><select id="d-level"><option value="">Tous</option>${Object.entries(db.ROUTINE_LEVELS).map(([k, v]) => `<option value="${k}" ${k === filters.level ? "selected" : ""}>${v}</option>`).join("")}</select></div>
-        <div><label>Objectif</label><select id="d-goal"><option value="">Tous</option>${Object.entries(db.ROUTINE_GOALS).map(([k, v]) => `<option value="${k}" ${k === filters.goal ? "selected" : ""}>${v}</option>`).join("")}</select></div>
+        <div><label>${t("Niveau")}</label><select id="d-level"><option value="">${t("Tous")}</option>${Object.entries(db.ROUTINE_LEVELS).map(([k, v]) => `<option value="${k}" ${k === filters.level ? "selected" : ""}>${v}</option>`).join("")}</select></div>
+        <div><label>${t("Objectif")}</label><select id="d-goal"><option value="">${t("Tous")}</option>${Object.entries(db.ROUTINE_GOALS).map(([k, v]) => `<option value="${k}" ${k === filters.goal ? "selected" : ""}>${v}</option>`).join("")}</select></div>
       </div>
-      <label>Durée</label>
-      <div class="chip-row" id="d-size">${Object.entries(SIZES).map(([k, v]) => `<div class="chip ${filters.size === k ? "active" : ""}" data-size="${k}">${v.label}</div>`).join("")}</div>
-      <button class="btn btn-secondary btn-sm" id="d-reset" style="margin-top:8px;">Réinitialiser les filtres</button>
+      <label>${t("Durée")}</label>
+      <div class="chip-row" id="d-size">${Object.entries(SIZES).map(([k, v]) => `<div class="chip ${filters.size === k ? "active" : ""}" data-size="${k}">${t(v.label)}</div>`).join("")}</div>
+      <button class="btn btn-secondary btn-sm" id="d-reset" style="margin-top:8px;">${t("Réinitialiser les filtres")}</button>
     </div>
     <p class="muted" id="d-count" style="font-size:13px; margin:6px 0 10px;"></p>
     <div id="d-results"></div>
@@ -155,14 +157,14 @@ function drawResults(content, ctx) {
   const n = activeFilterCount();
   content.querySelector("#d-filter-count").textContent = n ? ` (${n})` : "";
   const list = applyFilters(ctx);
-  content.querySelector("#d-count").textContent = `${list.length} routine${list.length > 1 ? "s" : ""}`;
+  content.querySelector("#d-count").textContent = tn(list.length, "{n} routine", "{n} routines");
 
   if (ctx.routines.length === 0) {
-    results.innerHTML = `<div class="empty-state muted" style="padding:20px;">Aucune routine partagée pour l'instant.<br>Partage les tiennes depuis « Mes routines » !</div>`;
+    results.innerHTML = `<div class="empty-state muted" style="padding:20px;">${t("Aucune routine partagée pour l'instant.")}<br>${t("Partage les tiennes depuis « Mes routines » !")}</div>`;
     return;
   }
   if (list.length === 0) {
-    results.innerHTML = `<div class="empty-state muted" style="padding:20px;">Aucune routine ne correspond à ces critères.</div>`;
+    results.innerHTML = `<div class="empty-state muted" style="padding:20px;">${t("Aucune routine ne correspond à ces critères.")}</div>`;
     return;
   }
   const medals = ["🥇", "🥈", "🥉"];
@@ -185,17 +187,17 @@ function routineCard(r, ctx, medal) {
       <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
         <div style="min-width:0;">
           <div class="card-title" style="margin-bottom:2px;">${medal ? `${medal} ` : ""}${esc(r.name)}</div>
-          <div class="muted" style="font-size:13px;">par ${mine ? "toi" : esc(r.owner_name || "Anonyme")}${ctx.friendUids.has(r.owner_uid) ? " · 👥 ami" : ""} · ${count} exercice${count > 1 ? "s" : ""}</div>
+          <div class="muted" style="font-size:13px;">${t("par {name}", { name: mine ? t("toi") : esc(r.owner_name || t("Anonyme")) })}${ctx.friendUids.has(r.owner_uid) ? ` · 👥 ${t("ami")}` : ""} · ${tn(count, "{n} exercice", "{n} exercices")}</div>
         </div>
-        <button class="vote-btn ${voted ? "voted" : ""}" data-vote="${esc(r.id)}" ${mine ? "disabled title=\"Tu ne peux pas voter pour ta routine\"" : ""}>👍 <span>${r.vote_count || 0}</span></button>
+        <button class="vote-btn ${voted ? "voted" : ""}" data-vote="${esc(r.id)}" ${mine ? `disabled title="${t("Tu ne peux pas voter pour ta routine")}"` : ""}>👍 <span>${r.vote_count || 0}</span></button>
       </div>
       ${r.description ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">${esc(r.description)}</p>` : ""}
       <div class="chip-row" style="margin:10px 0 0;">
-        ${(r.muscle_groups || []).map(m => `<span class="feed-muscle-badge">${esc(m)}</span>`).join("")}
+        ${(r.muscle_groups || []).map(m => `<span class="feed-muscle-badge">${esc(t(m))}</span>`).join("")}
         ${meta.map(m => `<span class="routine-badge">${esc(m)}</span>`).join("")}
-        ${r.playlist_url ? `<span class="routine-badge">🎧 playlist</span>` : ""}
+        ${r.playlist_url ? `<span class="routine-badge">🎧 ${t("playlist")}</span>` : ""}
       </div>
-      ${mine ? "" : `<button class="btn btn-sm ${copied ? "btn-secondary" : "btn-primary"}" data-copy="${esc(r.id)}" style="margin-top:10px;" ${copied ? "disabled" : ""}>${copied ? "✓ Dans ta bibliothèque" : "+ Ajouter à ma bibliothèque"}</button>`}
+      ${mine ? "" : `<button class="btn btn-sm ${copied ? "btn-secondary" : "btn-primary"}" data-copy="${esc(r.id)}" style="margin-top:10px;" ${copied ? "disabled" : ""}>${copied ? t("✓ Dans ta bibliothèque") : t("+ Ajouter à ma bibliothèque")}</button>`}
     </div>
   `;
 }
@@ -224,7 +226,7 @@ async function vote(r, ctx, btn, redraw) {
     redraw();
   } catch (err) {
     console.error("[Skullcrusher] Erreur vote routine", err);
-    toast("Vote impossible, réessaie");
+    toast(t("Vote impossible, réessaie"));
     btn.disabled = false;
   }
 }
@@ -236,11 +238,11 @@ async function addToLibrary(r, ctx, btn, redraw) {
     await db.copyRoutine(r);
     ctx.copiedIds.add(r.id);
     invalidate("routines");
-    toast("Ajoutée à tes routines", 2200, { horns: true });
+    toast(t("Ajoutée à tes routines"), 2200, { horns: true });
     redraw();
   } catch (err) {
     console.error("[Skullcrusher] Erreur ajout routine", err);
-    toast("Impossible d'ajouter cette routine");
+    toast(t("Impossible d'ajouter cette routine"));
     btn.disabled = false;
   }
 }
@@ -251,22 +253,22 @@ function openRoutineDetail(r, ctx, redraw) {
   const refreshModal = () => { closeModal(); redraw(); openRoutineDetail(r, ctx, redraw); };
   openModal(`
     <h3 style="margin-bottom:4px;">${esc(r.name)}</h3>
-    <p class="muted" style="margin-top:0;">par ${mine ? "toi" : esc(r.owner_name || "Anonyme")} · 👍 ${r.vote_count || 0}</p>
+    <p class="muted" style="margin-top:0;">${t("par {name}", { name: mine ? t("toi") : esc(r.owner_name || t("Anonyme")) })} · 👍 ${r.vote_count || 0}</p>
     ${r.description ? `<p>${esc(r.description)}</p>` : ""}
-    ${r.playlist_url ? `<div class="muted" style="font-size:13px;">🎧 Playlist de la routine</div>${spotifyEmbed(r.playlist_url, 152)}` : ""}
+    ${r.playlist_url ? `<div class="muted" style="font-size:13px;">🎧 ${t("Playlist de la routine")}</div>${spotifyEmbed(r.playlist_url, 152)}` : ""}
     ${(r.exercises || []).map(e => `
       <div class="list-row" style="cursor:default;">
         <div>
           <div class="list-row-title">${esc(e.exercise_name)}</div>
           <div class="list-row-sub">${esc(e.muscle_group || "")}</div>
         </div>
-        <div class="list-row-meta">${esc(e.target_sets)} × ${esc(e.reps_target)}<div style="font-size:11px;">repos ${esc(e.rest_seconds)} s</div></div>
-      </div>`).join("") || `<p class="muted">Aucun exercice.</p>`}
+        <div class="list-row-meta">${esc(e.target_sets)} × ${esc(e.reps_target)}<div style="font-size:11px;">${t("repos {n} s", { n: esc(e.rest_seconds) })}</div></div>
+      </div>`).join("") || `<p class="muted">${t("Aucun exercice.")}</p>`}
     <div class="btn-row" style="margin-top:14px;">
-      <button class="btn btn-secondary" id="rd-close">Fermer</button>
-      ${mine ? "" : `<button class="btn btn-secondary" id="rd-vote">${ctx.myVotes[r.id] ? "Retirer mon 👍" : "👍 Voter"}</button>`}
+      <button class="btn btn-secondary" id="rd-close">${t("Fermer")}</button>
+      ${mine ? "" : `<button class="btn btn-secondary" id="rd-vote">${ctx.myVotes[r.id] ? t("Retirer mon 👍") : t("👍 Voter")}</button>`}
     </div>
-    ${mine ? "" : `<button class="btn btn-primary" id="rd-copy" style="margin-top:10px;" ${ctx.copiedIds.has(r.id) ? "disabled" : ""}>${ctx.copiedIds.has(r.id) ? "✓ Dans ta bibliothèque" : "+ Ajouter à ma bibliothèque"}</button>`}
+    ${mine ? "" : `<button class="btn btn-primary" id="rd-copy" style="margin-top:10px;" ${ctx.copiedIds.has(r.id) ? "disabled" : ""}>${ctx.copiedIds.has(r.id) ? t("✓ Dans ta bibliothèque") : t("+ Ajouter à ma bibliothèque")}</button>`}
   `, (modalEl) => {
     modalEl.querySelector("#rd-close").onclick = closeModal;
     const voteBtn = modalEl.querySelector("#rd-vote");

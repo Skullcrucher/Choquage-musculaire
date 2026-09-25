@@ -4,6 +4,7 @@
 // musical et les défis.
 // ============================================================
 import { openModal, closeModal, esc } from "./utils.js";
+import { t } from "./i18n.js";
 
 // N'accepte que des liens open.spotify.com et reconstruit l'URL à partir du
 // type et de l'identifiant : rien de ce que l'utilisateur tape n'est
@@ -36,14 +37,14 @@ export function spotifyEmbed(linkOrUrl, height = 152) {
 }
 
 // Ouvre le lecteur dans une fenêtre (ex. playlist d'une séance du feed).
-export function openSpotifyPlayer(url, title = "Écouter") {
+export function openSpotifyPlayer(url, title = t("Écouter")) {
   const link = parseSpotify(url);
   if (!link) return;
   openModal(`
     <h3 style="margin-bottom:6px;">${esc(title)}</h3>
     ${spotifyEmbed(link, link.type === "track" ? 152 : 380)}
-    <a class="btn btn-secondary btn-sm" style="margin-top:10px;" href="${link.url}" target="_blank" rel="noopener">Ouvrir dans Spotify</a>
-    <button class="btn btn-secondary" id="sp-close" style="margin-top:10px;">Fermer</button>
+    <a class="btn btn-secondary btn-sm" style="margin-top:10px;" href="${link.url}" target="_blank" rel="noopener">${t("Ouvrir dans Spotify")}</a>
+    <button class="btn btn-secondary" id="sp-close" style="margin-top:10px;">${t("Fermer")}</button>
   `, (m) => { m.querySelector("#sp-close").onclick = closeModal; });
 }
 
@@ -69,7 +70,7 @@ export function parseSongInput(raw) {
 export function songLabel(song) {
   if (!song) return "";
   if (song.title) return song.artist ? `${song.title} — ${song.artist}` : song.title;
-  return song.url ? "Écouter sur Spotify" : "";
+  return song.url ? t("Écouter sur Spotify") : "";
 }
 
 // Morceau en ligne (feed, listes) : texte saisi, ou lien Spotify avec le logo.
@@ -78,7 +79,7 @@ export function songHtml(song) {
   if (song?.title) {
     return link ? `<span class="song-link" data-song-url="${esc(link.url)}">${esc(songLabel(song))}</span>` : esc(songLabel(song));
   }
-  return link ? `<span class="song-link spotify-attrib" data-song-url="${esc(link.url)}">${SPOTIFY_ICON} Écouter le morceau</span>` : "";
+  return link ? `<span class="song-link spotify-attrib" data-song-url="${esc(link.url)}">${SPOTIFY_ICON} ${t("Écouter le morceau")}</span>` : "";
 }
 
 // Morceau en grand (détail d'une séance) : lecteur Spotify compact pour un
@@ -91,9 +92,9 @@ export function songBlockHtml(song) {
 
 export function bindSongLinks(root) {
   root.querySelectorAll("[data-song-url]").forEach(el => {
-    el.onclick = (e) => { e.stopPropagation(); openSpotifyPlayer(el.dataset.songUrl, "Morceau"); };
+    el.onclick = (e) => { e.stopPropagation(); openSpotifyPlayer(el.dataset.songUrl, t("Morceau")); };
   });
   root.querySelectorAll("[data-playlist-url]").forEach(el => {
-    el.onclick = (e) => { e.stopPropagation(); openSpotifyPlayer(el.dataset.playlistUrl, el.dataset.playlistTitle || "Playlist"); };
+    el.onclick = (e) => { e.stopPropagation(); openSpotifyPlayer(el.dataset.playlistUrl, el.dataset.playlistTitle || t("Playlist")); };
   });
 }

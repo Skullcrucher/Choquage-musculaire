@@ -6,6 +6,7 @@ import { toast, openModal, closeModal, fmtDateTime, debounce, attachAutocomplete
 import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { parseSpotify, openSpotifyPlayer } from "./music.js";
+import { t, tn, locale } from "./i18n.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
 let restTimerInterval = null;
@@ -38,7 +39,7 @@ export async function renderSeance(container) {
   const activeId = localStorage.getItem(LS_KEY);
   if (activeId) {
     if (!currentWorkout || currentWorkout.id !== activeId) {
-      currentWorkout = loadLocalState() || { id: activeId, title: "Séance", start_time: new Date().toISOString(), exercises: [] };
+      currentWorkout = loadLocalState() || { id: activeId, title: t("Séance"), start_time: new Date().toISOString(), exercises: [] };
     }
     renderActiveWorkout(container);
   } else {
@@ -50,22 +51,22 @@ async function renderStartScreen(container) {
   const [routines, workouts] = await Promise.all([getRoutines(), getWorkouts()]);
   const weekCount = countThisWeek(workouts);
   container.innerHTML = `
-    <h1 class="section-title">Séance</h1>
+    <h1 class="section-title">${t("Séance")}</h1>
     <div class="card-hero">
-      <div class="muted" style="margin-bottom:2px;">Cette semaine</div>
+      <div class="muted" style="margin-bottom:2px;">${t("Cette semaine")}</div>
       <span class="num" style="font-size:56px; color:var(--amber); display:block; line-height:1;">${weekCount}</span>
-      <div class="muted">séance${weekCount > 1 ? "s" : ""} bouclée${weekCount > 1 ? "s" : ""}</div>
+      <div class="muted">${weekCount > 1 ? t("séances bouclées") : t("séance bouclée")}</div>
     </div>
-    <button class="btn btn-primary" id="start-empty">+ Démarrer une séance vide</button>
+    <button class="btn btn-primary" id="start-empty">+ ${t("Démarrer une séance vide")}</button>
     <div style="height:18px"></div>
-    ${routines.length ? `<h3 class="muted" style="margin-bottom:8px; text-transform:none; font-family:'Inter',sans-serif; font-weight:600; font-size:14px;">Depuis une routine</h3>` : ""}
+    ${routines.length ? `<h3 class="muted" style="margin-bottom:8px; text-transform:none; font-family:'Inter',sans-serif; font-weight:600; font-size:14px;">${t("Depuis une routine")}</h3>` : ""}
     ${routines.map(r => `
       <div class="card" style="cursor:pointer" data-start-routine="${r.id}">
         <div class="card-title">${esc(r.name)}</div>
-        <div class="muted">${(r.exercises || []).length} exercice${(r.exercises || []).length > 1 ? "s" : ""}</div>
+        <div class="muted">${tn((r.exercises || []).length, "{n} exercice", "{n} exercices")}</div>
       </div>
     `).join("")}
-    ${routines.length === 0 ? `<p class="muted">Pas encore de routine — crée-en une dans l'onglet Routines, ou démarre une séance vide.</p>` : ""}
+    ${routines.length === 0 ? `<p class="muted">${t("Pas encore de routine — crée-en une dans l'onglet Routines, ou démarre une séance vide.")}</p>` : ""}
   `;
   container.querySelector("#start-empty").onclick = (e) => startWorkout(null, null, e.currentTarget);
   container.querySelectorAll("[data-start-routine]").forEach(el => {
@@ -76,7 +77,7 @@ async function renderStartScreen(container) {
 function withTimeout(promise, ms, label) {
   return Promise.race([
     promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} n'a pas répondu (délai dépassé). Vérifie ta connexion ou désactive un éventuel bloqueur de contenu pour ce site.`)), ms))
+    new Promise((_, reject) => setTimeout(() => reject(new Error(t("{label} n'a pas répondu (délai dépassé). Vérifie ta connexion ou désactive un éventuel bloqueur de contenu pour ce site.", { label }))), ms))
   ]);
 }
 
@@ -88,8 +89,8 @@ async function startWorkout(routineId, routine = null, triggerEl = null) {
   }
   try {
     const now = new Date();
-    const title = routine ? routine.name : `Séance du ${now.toLocaleDateString("fr-FR")}`;
-    const id = await withTimeout(db.createWorkout({ title, start_time: now.toISOString() }), 15000, "Création de la séance");
+    const title = routine ? routine.name : t("Séance du {date}", { date: now.toLocaleDateString(locale()) });
+    const id = await withTimeout(db.createWorkout({ title, start_time: now.toISOString() }), 15000, t("Création de la séance"));
 
     const routineExercises = routine?.exercises || [];
     await db.loadRestPrefs().catch(() => null);
@@ -124,7 +125,7 @@ async function startWorkout(routineId, routine = null, triggerEl = null) {
     await renderSeance(document.getElementById("view"));
   } catch (err) {
     console.error("Erreur démarrage séance", err);
-    toast(err.message || "Impossible de démarrer la séance");
+    toast(err.message || t("Impossible de démarrer la séance"));
     if (triggerEl) { delete triggerEl.dataset.busy; triggerEl.style.opacity = ""; }
   }
 }
@@ -134,13 +135,13 @@ function renderActiveWorkout(container) {
     <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
       <h1 class="section-title" style="margin-bottom:0;">${esc(currentWorkout.title)}</h1>
     </div>
-    <p class="muted" style="margin-top:0;">Débutée à ${fmtDateTime(currentWorkout.start_time)}</p>
+    <p class="muted" style="margin-top:0;">${t("Débutée à {time}", { time: fmtDateTime(currentWorkout.start_time) })}</p>
     <div id="workout-music"></div>
     <div id="exercise-list"></div>
-    <button class="btn btn-secondary" id="add-exercise" style="margin-top:6px;">+ Ajouter un exercice</button>
+    <button class="btn btn-secondary" id="add-exercise" style="margin-top:6px;">+ ${t("Ajouter un exercice")}</button>
     <div style="height:14px"></div>
-    <button class="btn btn-primary" id="finish-workout">Terminer la séance</button>
-    <button class="btn btn-danger" id="cancel-workout" style="margin-top:8px;">Annuler la séance</button>
+    <button class="btn btn-primary" id="finish-workout">${t("Terminer la séance")}</button>
+    <button class="btn btn-danger" id="cancel-workout" style="margin-top:8px;">${t("Annuler la séance")}</button>
   `;
   renderExerciseList(container.querySelector("#exercise-list"));
   renderWorkoutMusic(container.querySelector("#workout-music"));
@@ -155,11 +156,11 @@ function renderActiveWorkout(container) {
 async function renderWorkoutMusic(el) {
   if (!el || !currentWorkout) return;
   let url = currentWorkout.playlist_url;
-  let label = "Playlist de la routine";
+  let label = t("Playlist de la routine");
   if (!url) {
     const profile = await db.getProfile(db.getCurrentUser()?.uid).catch(() => null);
     url = profile?.music?.playlist_url || "";
-    label = "Ma playlist de salle";
+    label = t("Ma playlist de salle");
   }
   const link = parseSpotify(url);
   if (!link || !el.isConnected) return;
@@ -167,8 +168,8 @@ async function renderWorkoutMusic(el) {
     <div class="workout-music">
       <span>🎧 ${esc(label)}</span>
       <span style="display:flex; gap:6px;">
-        <button class="btn btn-sm btn-secondary" id="wm-listen" style="width:auto;">Écouter ici</button>
-        <a class="btn btn-sm btn-primary" style="width:auto;" href="${link.url}" target="_blank" rel="noopener">Ouvrir Spotify</a>
+        <button class="btn btn-sm btn-secondary" id="wm-listen" style="width:auto;">${t("Écouter ici")}</button>
+        <a class="btn btn-sm btn-primary" style="width:auto;" href="${link.url}" target="_blank" rel="noopener">${t("Ouvrir Spotify")}</a>
       </span>
     </div>`;
   el.querySelector("#wm-listen").onclick = () => openSpotifyPlayer(link.url, label);
@@ -182,12 +183,12 @@ function renderExerciseList(el) {
         <button class="rest-chip" data-rest="${exIdx}" title="Temps de repos">⏱ ${fmtRest(ex.rest_timer_seconds || 90)}</button>
       </div>
       <div class="set-header">
-        <div>#</div><div>kg</div><div>reps</div><div>type</div><div></div>
+        <div>#</div><div>kg</div><div>${t("reps")}</div><div>${t("type")}</div><div></div>
       </div>
       ${ex.sets.map((s, sIdx) => setRowHtml(s, exIdx, sIdx)).join("")}
-      <button class="add-set-btn" data-add-set="${exIdx}">＋ Ajouter une série</button>
+      <button class="add-set-btn" data-add-set="${exIdx}">＋ ${t("Ajouter une série")}</button>
     </div>
-  `).join("") || `<div class="empty-state"><span class="num">＋</span>Ajoute un premier exercice pour commencer.</div>`;
+  `).join("") || `<div class="empty-state"><span class="num">＋</span>${t("Ajoute un premier exercice pour commencer.")}</div>`;
 
   el.querySelectorAll("[data-ex-detail]").forEach(h => {
     h.onclick = () => {
@@ -254,7 +255,7 @@ function renderExerciseList(el) {
       }
       if (set.done && set.weight_kg != null && set.reps != null) {
         const ex = currentWorkout.exercises[exIdx];
-        startRestTimer(ex.rest_timer_seconds || 90, `Prochaine série : ${ex.exercise_title}`);
+        startRestTimer(ex.rest_timer_seconds || 90, t("Prochaine série : {exercise}", { exercise: ex.exercise_title }));
       }
       saveLocalState();
       check.classList.toggle("checked", set.done);
@@ -263,7 +264,8 @@ function renderExerciseList(el) {
 }
 
 function setRowHtml(s, exIdx, sIdx) {
-  const badgeLabel = { normal: "—", warmup: "échauf.", dropset: "drop", failure: "échec" }[s.set_type];
+  // i18n-keys: "échauf.", "drop", "échec"
+  const badgeLabel = t({ normal: "—", warmup: "échauf.", dropset: "drop", failure: "échec" }[s.set_type]);
   return `
     <div class="set-row" data-ex="${exIdx}" data-set="${sIdx}">
       <div class="set-index">${s.set_index}</div>
@@ -303,8 +305,8 @@ function openRestPicker(exIdx) {
   let value = ex.rest_timer_seconds || 90;
   const presets = [30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
   openModal(`
-    <h3 style="margin-bottom:4px;">Repos · ${esc(ex.exercise_title)}</h3>
-    <p class="muted" style="margin-top:0;">Mémorisé pour les prochaines séances.</p>
+    <h3 style="margin-bottom:4px;">${t("Repos")} · ${esc(ex.exercise_title)}</h3>
+    <p class="muted" style="margin-top:0;">${t("Mémorisé pour les prochaines séances.")}</p>
     <div style="display:flex; align-items:center; justify-content:center; gap:14px; margin:14px 0;">
       <button class="btn btn-secondary btn-sm" id="rp-minus" style="width:auto;">−15 s</button>
       <div id="rp-value" style="font-family:'Anton',sans-serif; font-size:40px; color:var(--amber); min-width:110px; text-align:center;"></div>
@@ -314,8 +316,8 @@ function openRestPicker(exIdx) {
       ${presets.map(p => `<div class="chip" data-rp="${p}">${fmtRest(p)}</div>`).join("")}
     </div>
     <div class="btn-row" style="margin-top:14px;">
-      <button class="btn btn-secondary" id="rp-cancel">Annuler</button>
-      <button class="btn btn-primary" id="rp-save">Enregistrer</button>
+      <button class="btn btn-secondary" id="rp-cancel">${t("Annuler")}</button>
+      <button class="btn btn-primary" id="rp-save">${t("Enregistrer")}</button>
     </div>
   `, (modalEl) => {
     const draw = () => {
@@ -332,7 +334,7 @@ function openRestPicker(exIdx) {
       closeModal();
       renderExerciseList(document.getElementById("exercise-list"));
       db.saveRestPref(ex.exercise_title, value).catch(e => console.warn("[Skullcrusher] Mémorisation du repos impossible :", e));
-      toast(`Repos ${fmtRest(value)} pour ${ex.exercise_title}`);
+      toast(t("Repos {time} pour {exercise}", { time: fmtRest(value), exercise: ex.exercise_title }));
     };
     draw();
   });
@@ -342,13 +344,13 @@ async function openAddExerciseModal() {
   const exercises = await getExercises();
   const names = exercises.map(e => e.name);
   const modal = openModal(`
-    <h3>Ajouter un exercice</h3>
-    <label>Nom de l'exercice</label>
-    <div style="position:relative;"><input id="ex-name" placeholder="ex: Développé Couché (Barre)"></div>
-    <label>Groupe musculaire (si nouvel exercice)</label>
-    <select id="ex-group">${db.EXO_GROUPS.map(g => `<option ${g === "Autre" ? "selected" : ""}>${g}</option>`).join("")}</select>
+    <h3>${t("Ajouter un exercice")}</h3>
+    <label>${t("Nom de l'exercice")}</label>
+    <div style="position:relative;"><input id="ex-name" placeholder="${t("ex: Développé Couché (Barre)")}"></div>
+    <label>${t("Groupe musculaire (si nouvel exercice)")}</label>
+    <select id="ex-group">${db.EXO_GROUPS.map(g => `<option value="${g}" ${g === "Autre" ? "selected" : ""}>${t(g)}</option>`).join("")}</select>
     <div style="height:16px"></div>
-    <button class="btn btn-primary" id="confirm-add-ex">Ajouter</button>
+    <button class="btn btn-primary" id="confirm-add-ex">${t("Ajouter")}</button>
   `);
   attachAutocomplete(modal.querySelector("#ex-name"), names, (picked) => {
     const ex = exercises.find(e => e.name === picked);
@@ -386,7 +388,7 @@ async function openAddExerciseModal() {
       saveLocalState();
       const list = document.getElementById("exercise-list");
       if (list) renderExerciseList(list);
-      toast(`Séries pré-remplies depuis ta dernière séance de ${finalName}`);
+      toast(t("Séries pré-remplies depuis ta dernière séance de {exercise}", { exercise: finalName }));
     }).catch(histErr => console.error("[Skullcrusher] Erreur récupération historique exercice (pas de pré-remplissage)", histErr));
   };
 }
@@ -442,14 +444,14 @@ function renderRestTimerBar() {
     restTimerEnd = null;
     localStorage.removeItem(LS_REST_KEY);
     fireRestEndNotification();
-    toast("Repos terminé", 2200, { horns: true });
+    toast(t("Repos terminé"), 2200, { horns: true });
     return;
   }
   const mm = Math.floor(remaining / 60);
   const ss = String(remaining % 60).padStart(2, "0");
   const bar = document.createElement("div");
   bar.className = "rest-timer";
-  bar.innerHTML = `<span>Repos · ${mm}:${ss}</span><span><button id="rt-add">+15s</button> <button id="rt-skip">passer</button></span>`;
+  bar.innerHTML = `<span>${t("Repos")} · ${mm}:${ss}</span><span><button id="rt-add">+15s</button> <button id="rt-skip">${t("passer")}</button></span>`;
   document.body.appendChild(bar);
   bar.querySelector("#rt-add").onclick = () => {
     restTimerEnd += 15000;
@@ -477,16 +479,16 @@ async function finishWorkout() {
   )];
   // Écran de fin : records, son du record, playlist, bande-son Spotify, partage.
   const finishBtn = document.getElementById("finish-workout");
-  if (finishBtn) { finishBtn.disabled = true; finishBtn.textContent = "Calcul des records…"; }
+  if (finishBtn) { finishBtn.disabled = true; finishBtn.textContent = t("Calcul des records…"); }
   let extra;
   try {
     const { openFinishDialog } = await import("./finish.js");
     extra = await openFinishDialog(currentWorkout, { sets: loggedSets, tonnage: totalTonnage });
   } catch (e) {
     console.error("[Skullcrusher] Écran de fin de séance indisponible", e);
-    extra = { shared: loggedSets > 0 && confirm("Partager cette séance sur le feed ?"), records: [], record_song: null, soundtrack: null };
+    extra = { shared: loggedSets > 0 && confirm(t("Partager cette séance sur le feed ?")), records: [], record_song: null, soundtrack: null };
   }
-  if (finishBtn) { finishBtn.disabled = false; finishBtn.textContent = "Terminer la séance"; }
+  if (finishBtn) { finishBtn.disabled = false; finishBtn.textContent = t("Terminer la séance"); }
   if (!extra) return null; // retour à la séance
   await db.updateWorkout(currentWorkout.id, {
     end_time: new Date().toISOString(),
@@ -508,7 +510,7 @@ async function finishWorkout() {
   document.querySelectorAll(".rest-timer").forEach(el => el.remove());
   const finished = currentWorkout;
   currentWorkout = null;
-  toast("Séance enregistrée", 2200, { horns: true });
+  toast(t("Séance enregistrée"), 2200, { horns: true });
   // Met à jour les exercices phares / chiffres du profil public, en arrière-plan.
   import("./profile.js").then(m => m.refreshMyProfileHighlights()).catch(e => console.warn("[Skullcrusher] Profil public non mis à jour :", e));
   await renderSeance(document.getElementById("view"));
@@ -516,7 +518,7 @@ async function finishWorkout() {
 }
 
 async function cancelWorkout() {
-  if (!confirm("Supprimer cette séance et toutes ses séries ?")) return;
+  if (!confirm(t("Supprimer cette séance et toutes ses séries ?"))) return;
   await db.deleteWorkout(currentWorkout.id);
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
