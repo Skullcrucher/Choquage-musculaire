@@ -3,7 +3,6 @@
 // ============================================================
 import * as db from "./db.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce, attachAutocomplete, fireRestEndNotification, esc } from "./utils.js";
-import { scheduleRestPush, cancelRestPush } from "./push.js";
 import { getExercises, getRoutines, getWorkouts, getAllSets, invalidate } from "./cache.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
@@ -307,9 +306,23 @@ async function openAddExerciseModal() {
 
 let restPushBody = "";
 
+// Module des notifications en arrière-plan, chargé à la demande : si un
+// bloqueur de contenu le refuse, le minuteur fonctionne quand même (seule
+// la notification hors de l'app manque).
+const loadTimerSync = () => import("./timer-sync.js").catch((e) => {
+  console.warn("[Skullcrusher] Module de notifications indisponible :", e);
+  return null;
+});
+function scheduleRestPush(endMs, body) {
+  loadTimerSync().then(m => m?.scheduleRestPush(endMs, body));
+}
+function cancelRestPush() {
+  loadTimerSync().then(m => m?.cancelRestPush());
+}
+
 // Le compte à rebours affiché tourne dans l'app ; la notification de fin,
 // elle, est confiée au serveur push pour arriver même si on est passé sur
-// une autre app (voir push.js).
+// une autre app (voir timer-sync.js).
 function startRestTimer(seconds, pushBody = "") {
   clearInterval(restTimerInterval);
   restTimerEnd = Date.now() + seconds * 1000;

@@ -27,8 +27,8 @@ compte Cloudflare.
    - `CLOUDFLARE_ACCOUNT_ID` = l'identifiant de l'étape 3
 6. **Déploiement** : onglet *Actions* du dépôt → *Déployer le serveur push* →
    *Run workflow*. À la fin (1-2 min), ouvre le job : la dernière ligne donne
-   l'adresse du serveur, du type `https://skullcrusher-push.clement.workers.dev`.
-7. **Brancher l'app** : sur GitHub, modifie `js/push-config.js` et colle cette
+   l'adresse du serveur, du type `https://skullcrusher-timer.clement.workers.dev`.
+7. **Brancher l'app** : sur GitHub, modifie `js/timer-sync-config.js` et colle cette
    adresse entre les guillemets de `PUSH_SERVER_URL`, puis *Commit changes*.
    Vérifie en ouvrant `<adresse>/vapid-public-key` dans un navigateur : tu dois
    voir `{"publicKey":"..."}`.

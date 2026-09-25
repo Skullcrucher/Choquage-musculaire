@@ -10,9 +10,29 @@ import { getExercises, invalidate } from "./cache.js";
 import { EXERCISE_SEED } from "./exercises-seed.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { getUser, signOutUser } from "./auth.js";
-import { pushConfigured, pushActive, enablePush, disablePush, scheduleRestPush, isIos, isStandalone } from "./push.js";
+
+// Module des notifications en arrière-plan, chargé à la demande : si un
+// bloqueur de contenu le refuse, les Réglages s'affichent quand même.
+const TIMER_SYNC_FALLBACK = {
+  unavailable: true,
+  pushConfigured: () => false,
+  pushActive: () => false,
+  enablePush: async () => { throw new Error("module de notifications bloqué (bloqueur de contenu ?)"); },
+  disablePush: async () => {},
+  scheduleRestPush: async () => false,
+  isIos: () => /iPad|iPhone|iPod/.test(navigator.userAgent),
+  isStandalone: () => window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true
+};
+async function loadTimerSync() {
+  try { return await import("./timer-sync.js"); } catch (e) {
+    console.warn("[Skullcrusher] Module de notifications indisponible :", e);
+    return TIMER_SYNC_FALLBACK;
+  }
+}
 
 export async function renderReglages(container) {
+  const timerSync = await loadTimerSync();
+  const { pushConfigured, pushActive, enablePush, disablePush, scheduleRestPush, isIos, isStandalone } = timerSync;
   const user = getUser();
   const profile = user ? await db.getProfile(user.uid) : null;
   const displayName = profile?.display_name || user?.displayName || "Utilisateur";
@@ -166,6 +186,7 @@ export async function renderReglages(container) {
     notifyTest.style.display = notifyToggle.checked && pushActive() ? "" : "none";
     if (!notifyToggle.checked) { notifyStatus.textContent = ""; return; }
     if (pushActive()) notifyStatus.textContent = "✅ Activées — elles arrivent même si tu es sur une autre app ou écran verrouillé.";
+    else if (timerSync.unavailable) notifyStatus.textContent = "Activées seulement app ouverte : un bloqueur de contenu empêche le module de notifications de se charger.";
     else if (!pushConfigured()) notifyStatus.textContent = "Activées, mais seulement quand l'app est à l'écran : le serveur de notifications n'est pas encore configuré.";
     else notifyStatus.textContent = "Activées seulement app ouverte — désactive puis réactive pour les recevoir aussi sur une autre app.";
   }

@@ -1,7 +1,7 @@
 # Serveur de notifications push du minuteur de repos (Cloudflare Workers,
 # offre gratuite). Déployé automatiquement par
 # .github/workflows/deploy-push-worker.yml — voir push-worker/README.md.
-name = "skullcrusher-push"
+name = "skullcrusher-timer"
 main = "src/index.js"
 compatibility_date = "2025-06-01"
 workers_dev = true
