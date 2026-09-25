@@ -5,6 +5,23 @@ import * as db from "./db.js";
 import { openModal, closeModal, fmtDateTime, fmtDuration, estimate1RM, toast, esc } from "./utils.js";
 import { getUser } from "./auth.js";
 import { invalidate } from "./cache.js";
+import { songHtml, bindSongLinks, spotifyEmbed } from "./music.js";
+
+// Records, son du record, playlist (lecteur) et bande-son de la séance.
+function musicSectionHtml(w) {
+  const records = Array.isArray(w.records) ? w.records : [];
+  const tracks = Array.isArray(w.soundtrack?.tracks) ? w.soundtrack.tracks : [];
+  const playlist = w.soundtrack?.playlist_url;
+  if (!records.length && !tracks.length && !playlist) return "";
+  return `
+    <div class="feed-music" style="margin-bottom:14px;">
+      ${records.map(r => `<div>🏆 <b>${esc(r.exercise)}</b> — ${esc(r.kg)} kg × ${esc(r.reps)} <span class="muted">(1RM ${esc(r.one_rm)} kg, +${esc(Math.round((r.one_rm - r.prev_one_rm) * 10) / 10)} kg)</span></div>`).join("")}
+      ${records.length && w.record_song ? `<div>🎵 Porté par ${songHtml(w.record_song)}</div>` : ""}
+      ${playlist ? spotifyEmbed(playlist, 152) : ""}
+      ${tracks.length ? `<div class="muted" style="margin-top:8px;">🎶 Bande-son de la séance</div>
+        <ol class="soundtrack-list">${tracks.map(t => `<li>${songHtml(t)}</li>`).join("")}</ol>` : ""}
+    </div>`;
+}
 
 export async function openWorkoutDetail(workout, onDeleted) {
   const isOwner = !workout.owner_uid || workout.owner_uid === getUser()?.uid;
@@ -21,6 +38,7 @@ export async function openWorkoutDetail(workout, onDeleted) {
     <p class="muted" style="margin-top:-8px;">
       ${workout.owner_name && !isOwner ? `${esc(workout.owner_name)} · ` : ""}${fmtDateTime(workout.start_time)} · ${fmtDuration(workout.start_time, workout.end_time)}
     </p>
+    ${musicSectionHtml(workout)}
     ${Object.entries(byExercise).map(([name, exSets]) => `
       <div style="margin-bottom:12px;">
         <div style="font-family:'Barlow Condensed',sans-serif; font-size:17px; margin-bottom:4px;">${esc(name)}</div>
@@ -42,6 +60,7 @@ export async function openWorkoutDetail(workout, onDeleted) {
     </div>
   `, (modalEl) => {
     modalEl.querySelector("#close-detail").onclick = closeModal;
+    bindSongLinks(modalEl);
     const shareBtn = modalEl.querySelector("#toggle-share");
     if (shareBtn) shareBtn.onclick = async () => {
       shareBtn.disabled = true;

@@ -10,33 +10,10 @@
 import * as db from "./db.js";
 import { openModal, closeModal, toast, esc, safeImageUrl, attachAutocomplete, estimate1RM } from "./utils.js";
 import { getExercises, getWorkouts, getSetsForExercise } from "./cache.js";
+import { parseSpotify, spotifyEmbed } from "./music.js";
 
 const MAX_HIGHLIGHTS = 3;
 const WEEK_MS = 7 * 24 * 3600 * 1000;
-
-// ---------- Spotify ----------
-// N'accepte que des liens open.spotify.com, et reconstruit l'URL à partir
-// du type et de l'identifiant : rien de ce que l'utilisateur tape n'est
-// injecté tel quel dans la page.
-export function parseSpotify(raw) {
-  if (!raw) return null;
-  try {
-    const u = new URL(String(raw).trim());
-    if (u.protocol !== "https:" || u.hostname !== "open.spotify.com") return null;
-    const m = u.pathname.match(/^\/(?:intl-[a-z]{2}(?:-[a-z]{2})?\/)?(playlist|artist|album|track|user|show|episode)\/([A-Za-z0-9._-]{1,80})\/?$/i);
-    if (!m) return null;
-    const type = m[1].toLowerCase();
-    return { type, id: m[2], url: `https://open.spotify.com/${type}/${m[2]}` };
-  } catch (_) {
-    return null;
-  }
-}
-
-function spotifyEmbed(link, height = 152) {
-  if (!link || link.type === "user") return "";
-  return `<iframe class="spotify-embed" src="https://open.spotify.com/embed/${link.type}/${encodeURIComponent(link.id)}?theme=0" height="${height}" frameborder="0" loading="lazy"
-    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" title="Lecteur Spotify"></iframe>`;
-}
 
 // ---------- Calculs (sur l'appareil du propriétaire) ----------
 function monthKey(iso) {
@@ -121,6 +98,10 @@ export async function refreshMyProfileHighlights(profile = null) {
   const patch = {};
   if (names.length) patch.highlights = await Promise.all(names.map(computeHighlight));
   if (p?.show_stats) patch.public_stats = await computePublicStats();
+  if (p?.challenge?.opt_in) {
+    const { computeMyWeeks } = await import("./challenges.js");
+    patch.challenge = await computeMyWeeks();
+  }
   if (Object.keys(patch).length) await db.updatePublicProfile(patch);
 }
 
@@ -325,7 +306,8 @@ export async function openProfileEditor(onSaved = () => {}) {
           show_stats: showStats,
           public_stats: publicStats,
           highlights,
-          music: { ...links, artist_name: val("#pf-artist-name") }
+          music: { ...links, artist_name: val("#pf-artist-name") },
+          has_music: !!(links.playlist_url || links.artist_url || links.spotify_profile_url || val("#pf-artist-name"))
         });
         closeModal();
         toast("Profil mis à jour");

@@ -6,6 +6,7 @@ import { toast, openModal, closeModal, attachAutocomplete, esc } from "./utils.j
 import { getExercises, getRoutines, invalidate } from "./cache.js";
 import { renderDiscover } from "./routine-discover.js";
 import { guessMuscleGroup } from "./import.js";
+import { normalizePlaylistUrl } from "./music.js";
 
 let routinesMode = "mine"; // "mine" | "discover"
 
@@ -57,9 +58,10 @@ async function renderMyRoutines(content) {
         ${r.source?.owner_name ? `<div class="muted" style="font-size:12px; margin-bottom:4px;">Ajoutée depuis la routine de ${esc(r.source.owner_name)}</div>` : ""}
         ${r.description ? `<div class="muted" style="font-size:13px; margin-bottom:6px;">${esc(r.description)}</div>` : ""}
         <div class="muted" style="margin-bottom:10px;">${(r.exercises || []).map(e => esc(e.exercise_name)).join(" · ")}</div>
-        ${routineMetaChips(r).length || r.vote_count ? `<div class="chip-row" style="margin:0 0 10px;">
+        ${routineMetaChips(r).length || r.vote_count || r.playlist_url ? `<div class="chip-row" style="margin:0 0 10px;">
           ${routineMetaChips(r).map(c => `<span class="feed-muscle-badge">${esc(c)}</span>`).join("")}
           ${r.vote_count ? `<span class="feed-muscle-badge">👍 ${r.vote_count}</span>` : ""}
+          ${r.playlist_url ? `<span class="routine-badge">🎧 playlist</span>` : ""}
         </div>` : ""}
         <div class="btn-row">
           <button class="btn btn-sm btn-secondary" data-edit="${esc(r.id)}">Modifier</button>
@@ -161,6 +163,7 @@ async function openRoutineEditor(routine, onSaved) {
     description: routine?.description || "",
     level: routine?.level || "",
     goal: routine?.goal || "",
+    playlist_url: routine?.playlist_url || "",
     exercises: routine ? JSON.parse(JSON.stringify(routine.exercises || [])) : []
   };
   const options = (map, current) => `<option value="">—</option>` +
@@ -176,6 +179,8 @@ async function openRoutineEditor(routine, onSaved) {
       <div><label>Niveau</label><select id="r-level">${options(db.ROUTINE_LEVELS, state.level)}</select></div>
       <div><label>Objectif</label><select id="r-goal">${options(db.ROUTINE_GOALS, state.goal)}</select></div>
     </div>
+    <label>🎧 Playlist Spotify de la routine (facultatif)</label>
+    <input id="r-playlist" value="${esc(state.playlist_url)}" placeholder="https://open.spotify.com/playlist/…" inputmode="url">
     <div id="r-exercises" style="margin-top:14px;"></div>
     <button class="btn btn-secondary btn-sm" id="r-add-ex" style="margin-top:6px;">+ Ajouter un exercice</button>
     <div style="height:16px"></div>
@@ -195,6 +200,9 @@ async function openRoutineEditor(routine, onSaved) {
       state.description = modalEl.querySelector("#r-desc").value.trim();
       state.level = modalEl.querySelector("#r-level").value;
       state.goal = modalEl.querySelector("#r-goal").value;
+      const rawPlaylist = modalEl.querySelector("#r-playlist").value.trim();
+      state.playlist_url = normalizePlaylistUrl(rawPlaylist);
+      if (rawPlaylist && !state.playlist_url) { toast("Lien de playlist Spotify invalide"); return; }
       if (!state.name) { toast("Donne un nom à la routine"); return; }
       if (/[<>]/.test(state.name + state.description)) { toast("Les caractères < et > ne sont pas autorisés"); return; }
       state.exercises = state.exercises.filter(e => e.exercise_name.trim());

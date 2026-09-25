@@ -5,6 +5,7 @@ import * as db from "./db.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce, attachAutocomplete, fireRestEndNotification, esc } from "./utils.js";
 import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
+import { parseSpotify, openSpotifyPlayer } from "./music.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
 let restTimerInterval = null;
@@ -96,6 +97,7 @@ async function startWorkout(routineId, routine = null, triggerEl = null) {
 
     currentWorkout = {
       id, title, start_time: now.toISOString(),
+      playlist_url: routine?.playlist_url || "",
       exercises: routineExercises.map((ex, i) => {
         const lastSets = lastSetsByExercise[i];
         const targetCount = ex.target_sets || 3;
@@ -133,6 +135,7 @@ function renderActiveWorkout(container) {
       <h1 class="section-title" style="margin-bottom:0;">${esc(currentWorkout.title)}</h1>
     </div>
     <p class="muted" style="margin-top:0;">Débutée à ${fmtDateTime(currentWorkout.start_time)}</p>
+    <div id="workout-music"></div>
     <div id="exercise-list"></div>
     <button class="btn btn-secondary" id="add-exercise" style="margin-top:6px;">+ Ajouter un exercice</button>
     <div style="height:14px"></div>
@@ -140,10 +143,35 @@ function renderActiveWorkout(container) {
     <button class="btn btn-danger" id="cancel-workout" style="margin-top:8px;">Annuler la séance</button>
   `;
   renderExerciseList(container.querySelector("#exercise-list"));
+  renderWorkoutMusic(container.querySelector("#workout-music"));
   container.querySelector("#add-exercise").onclick = () => openAddExerciseModal();
   container.querySelector("#finish-workout").onclick = finishWorkout;
   container.querySelector("#cancel-workout").onclick = cancelWorkout;
   resumeRestTimerIfAny();
+}
+
+// Playlist de la routine (ou, à défaut, playlist de salle du profil) :
+// un bouton pour la lancer dans Spotify pendant la séance.
+async function renderWorkoutMusic(el) {
+  if (!el || !currentWorkout) return;
+  let url = currentWorkout.playlist_url;
+  let label = "Playlist de la routine";
+  if (!url) {
+    const profile = await db.getProfile(db.getCurrentUser()?.uid).catch(() => null);
+    url = profile?.music?.playlist_url || "";
+    label = "Ma playlist de salle";
+  }
+  const link = parseSpotify(url);
+  if (!link || !el.isConnected) return;
+  el.innerHTML = `
+    <div class="workout-music">
+      <span>🎧 ${esc(label)}</span>
+      <span style="display:flex; gap:6px;">
+        <button class="btn btn-sm btn-secondary" id="wm-listen" style="width:auto;">Écouter ici</button>
+        <a class="btn btn-sm btn-primary" style="width:auto;" href="${link.url}" target="_blank" rel="noopener">Ouvrir Spotify</a>
+      </span>
+    </div>`;
+  el.querySelector("#wm-listen").onclick = () => openSpotifyPlayer(link.url, label);
 }
 
 function renderExerciseList(el) {
@@ -447,13 +475,28 @@ async function finishWorkout() {
       .filter(ex => ex.sets.some(s => s.weight_kg != null || s.reps != null))
       .map(ex => ex.muscle_group || "Autre")
   )];
-  const shared = loggedSets > 0 && confirm("Partager cette séance sur le feed ?\n(Sinon elle reste privée — tu pourras la partager plus tard depuis l'Historique.)");
+  // Écran de fin : records, son du record, playlist, bande-son Spotify, partage.
+  const finishBtn = document.getElementById("finish-workout");
+  if (finishBtn) { finishBtn.disabled = true; finishBtn.textContent = "Calcul des records…"; }
+  let extra;
+  try {
+    const { openFinishDialog } = await import("./finish.js");
+    extra = await openFinishDialog(currentWorkout, { sets: loggedSets, tonnage: totalTonnage });
+  } catch (e) {
+    console.error("[Skullcrusher] Écran de fin de séance indisponible", e);
+    extra = { shared: loggedSets > 0 && confirm("Partager cette séance sur le feed ?"), records: [], record_song: null, soundtrack: null };
+  }
+  if (finishBtn) { finishBtn.disabled = false; finishBtn.textContent = "Terminer la séance"; }
+  if (!extra) return null; // retour à la séance
   await db.updateWorkout(currentWorkout.id, {
     end_time: new Date().toISOString(),
     muscle_summary: muscleSummary,
     total_sets: loggedSets,
     total_tonnage: totalTonnage,
-    shared
+    shared: loggedSets > 0 && extra.shared,
+    records: extra.records || [],
+    record_song: extra.record_song || null,
+    soundtrack: extra.soundtrack || null
   });
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);

@@ -5,6 +5,7 @@
 import * as db from "./db.js";
 import { toast, openModal, closeModal, attachAutocomplete, esc, debounce } from "./utils.js";
 import { getExercises, getRoutines, invalidate } from "./cache.js";
+import { spotifyEmbed } from "./music.js";
 
 const SIZES = {
   short: { label: "Courte (≤ 4 exos)", test: n => n <= 4 },
@@ -192,6 +193,7 @@ function routineCard(r, ctx, medal) {
       <div class="chip-row" style="margin:10px 0 0;">
         ${(r.muscle_groups || []).map(m => `<span class="feed-muscle-badge">${esc(m)}</span>`).join("")}
         ${meta.map(m => `<span class="routine-badge">${esc(m)}</span>`).join("")}
+        ${r.playlist_url ? `<span class="routine-badge">🎧 playlist</span>` : ""}
       </div>
       ${mine ? "" : `<button class="btn btn-sm ${copied ? "btn-secondary" : "btn-primary"}" data-copy="${esc(r.id)}" style="margin-top:10px;" ${copied ? "disabled" : ""}>${copied ? "✓ Dans ta bibliothèque" : "+ Ajouter à ma bibliothèque"}</button>`}
     </div>
@@ -251,6 +253,7 @@ function openRoutineDetail(r, ctx, redraw) {
     <h3 style="margin-bottom:4px;">${esc(r.name)}</h3>
     <p class="muted" style="margin-top:0;">par ${mine ? "toi" : esc(r.owner_name || "Anonyme")} · 👍 ${r.vote_count || 0}</p>
     ${r.description ? `<p>${esc(r.description)}</p>` : ""}
+    ${r.playlist_url ? `<div class="muted" style="font-size:13px;">🎧 Playlist de la routine</div>${spotifyEmbed(r.playlist_url, 152)}` : ""}
     ${(r.exercises || []).map(e => `
       <div class="list-row" style="cursor:default;">
         <div>

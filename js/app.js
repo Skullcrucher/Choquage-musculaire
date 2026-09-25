@@ -80,6 +80,13 @@ initAuth((user) => {
     if (!appStarted) {
       appStarted = true;
       switchTab(activeTab);
+      // Retour de la page de connexion Spotify (?code=...), s'il y en a un.
+      if (/[?&](code|error)=/.test(location.search)) {
+        import("./spotify-connect.js")
+          .then(m => m.handleSpotifyRedirect())
+          .then(msg => { if (msg) import("./utils.js").then(u => u.toast(msg, 4000)); })
+          .catch(e => console.warn("[Skullcrusher] Retour Spotify :", e));
+      }
     }
     // si on revient d'une déconnexion suivie d'une reconnexion, on est déjà sur un onglet valide
   } else {

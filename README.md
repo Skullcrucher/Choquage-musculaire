@@ -97,3 +97,25 @@ et redéployer, plutôt que de cliquer le lien.
 - Pas de vidéos d'exercices, pas de calcul RPE avancé (RPE est stocké mais pas exploité dans les graphes).
 - Le minuteur de repos a besoin du serveur de notifications (`push-worker/`, gratuit) pour prévenir à l'heure quand on est sur une autre app ou écran verrouillé : voir `push-worker/README.md`. Sans lui, la notification n'arrive qu'au retour dans l'app.
 - Si tu veux qu'on ajoute l'authentification, des routines partagées entre plusieurs séances types, ou l'export vers Apple Santé, dis-le et on itère.
+
+## Connexion Spotify (facultatif)
+
+Sans cette étape, tout ce qui touche à la musique fonctionne déjà avec des liens Spotify (profil,
+playlists de routine et de séance, son du record, mur musical, défis). La connexion ajoute deux
+choses : le morceau en cours est proposé automatiquement comme « son du record », et la liste des
+morceaux écoutés pendant la séance (bande-son) est jointe à la séance.
+
+1. Va sur https://developer.spotify.com/dashboard, connecte-toi avec ton compte Spotify, **Create app**.
+2. Nom et description au choix. **Redirect URI** : `https://skullcrucher.github.io/Choquage-musculaire/`
+   (exactement, avec le `/` final). Coche **Web API**, accepte les conditions, **Save**.
+3. Dans **Settings** de l'app Spotify, copie le **Client ID** et colle-le dans `js/spotify-config.js`
+   (`SPOTIFY_CLIENT_ID = "..."`). Pas de « Client secret » à utiliser : l'app utilise la méthode PKCE.
+4. L'app Spotify démarre en **mode développement** : seuls les comptes ajoutés à la main peuvent se
+   connecter (onglet **User Management**, nom + email du compte Spotify, 25 personnes maximum).
+   Au-delà, il faut demander à Spotify une extension de quota.
+5. Dans l'app : Réglages → 🎧 Spotify → **Connecter Spotify**. Sur iPhone, fais-le depuis **Safari**
+   (pas depuis l'icône de l'écran d'accueil) : la connexion est enregistrée dans ton compte et marche
+   ensuite aussi dans l'app installée.
+
+La connexion est stockée dans `user_private/{uid}`, lisible par son seul propriétaire : pense à
+redéployer `firestore.rules`.

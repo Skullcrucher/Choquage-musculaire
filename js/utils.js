@@ -36,12 +36,15 @@ export function safeImageUrl(url) {
   return "";
 }
 
-export function openModal(innerHtml, onMount) {
+// options.onDismiss : appelé si l'utilisateur ferme en touchant à côté.
+export function openModal(innerHtml, onMount, options = {}) {
   const backdrop = document.createElement("div");
   backdrop.className = "modal-backdrop";
   backdrop.innerHTML = `<div class="modal">${innerHtml}</div>`;
   backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) closeModal();
+    if (e.target !== backdrop) return;
+    closeModal();
+    if (options.onDismiss) options.onDismiss();
   });
   document.body.appendChild(backdrop);
   document.body.style.overflow = "hidden";
