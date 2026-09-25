@@ -88,9 +88,10 @@ export async function isSpotifyConnected() {
   try { return !!(await db.getPrivateData())?.spotify_refresh_token; } catch (_) { return false; }
 }
 
+// Déconnexion : jeton + données Spotify stockées dans les séances effacés.
 export async function disconnectSpotify() {
   access = null;
-  await db.setPrivateData({ spotify_refresh_token: null });
+  return db.purgeSpotifyData();
 }
 
 async function getAccessToken() {

@@ -67,7 +67,7 @@ export async function renderReglages(container) {
 
     <div class="card" id="spotify-card" style="display:none;">
       <div class="card-title">🎧 Spotify</div>
-      <p class="muted" style="margin-top:0;">Connecte ton compte pour proposer automatiquement le morceau en cours comme « son du record » et joindre la bande-son de tes séances (morceaux écoutés pendant l'entraînement).</p>
+      <p class="muted" style="margin-top:0;">Connecte ton compte pour proposer automatiquement le morceau en cours comme « son du record » et joindre la bande-son de tes séances (morceaux écoutés pendant l'entraînement). <a href="privacy.html" style="color:var(--text);">Données utilisées</a></p>
       <p class="muted" id="spotify-status" style="font-size:13px;"></p>
       <button class="btn btn-secondary btn-sm" id="spotify-btn"></button>
     </div>
@@ -117,6 +117,7 @@ export async function renderReglages(container) {
       <div class="card-title">À propos</div>
       <p class="muted" style="margin-top:0;">Version de l'app : <b>${APP_VERSION}</b> · Projet Firebase : ${esc(firebaseConfig.projectId)}</p>
       <button class="btn btn-secondary btn-sm" id="force-update">Forcer la mise à jour</button>
+      <p style="margin:10px 0 0;"><a href="privacy.html" style="color:var(--text); text-decoration-color:var(--amber);">Politique de confidentialité</a></p>
       <p class="muted">Ajoute cette page à ton écran d'accueil (icône Partager → "Sur l'écran d'accueil") pour l'utiliser comme une app.</p>
     </div>
 
@@ -419,6 +420,29 @@ function openExerciseEditModal(ex, container) {
   });
 }
 
+// Information obligatoire avant la connexion Spotify : quelles données,
+// pourquoi, et comment les supprimer.
+function openSpotifyConsent(onAccept) {
+  openModal(`
+    <h3>Connecter Spotify</h3>
+    <p class="muted" style="margin-top:0;">Skullcrusher demandera à Spotify l'accès à :</p>
+    <ul style="padding-left:20px; line-height:1.5;">
+      <li><b>Morceau en cours d'écoute</b> — pour te proposer le « son du record » en fin de séance.</li>
+      <li><b>Morceaux écoutés récemment</b> — pour te proposer de joindre la bande-son à ta séance.</li>
+    </ul>
+    <p class="muted">Rien n'est enregistré sans ton accord, seuls les liens des morceaux sont conservés, et tes écoutes ne sont jamais analysées ni transmises à des tiers.
+    La déconnexion efface le jeton et toutes les données venues de Spotify.</p>
+    <p><a href="privacy.html" style="color:var(--text); text-decoration-color:var(--amber);">Politique de confidentialité</a></p>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="sc-cancel">Annuler</button>
+      <button class="btn btn-primary" id="sc-ok">Continuer vers Spotify</button>
+    </div>
+  `, (m) => {
+    m.querySelector("#sc-cancel").onclick = closeModal;
+    m.querySelector("#sc-ok").onclick = () => { closeModal(); onAccept(); };
+  });
+}
+
 // Connexion Spotify (facultative, visible seulement si configurée).
 async function setupSpotifyCard(container) {
   let sp;
@@ -435,11 +459,19 @@ async function setupSpotifyCard(container) {
   btn.textContent = connected ? "Déconnecter Spotify" : "Connecter Spotify";
   btn.onclick = async () => {
     if (connected) {
-      await sp.disconnectSpotify();
-      toast("Spotify déconnecté");
+      if (!confirm("Déconnecter Spotify ? Les bandes-son et les sons de record venus de Spotify seront effacés de tes séances.")) return;
+      btn.disabled = true;
+      try {
+        const n = await sp.disconnectSpotify();
+        toast(`Spotify déconnecté${n ? ` — données effacées de ${n} séance(s)` : ""}`, 3500);
+      } catch (e) {
+        console.error("[Skullcrusher] Déconnexion Spotify", e);
+        toast("Déconnexion impossible, réessaie");
+      }
+      btn.disabled = false;
       setupSpotifyCard(container);
     } else {
-      sp.connectSpotify();
+      openSpotifyConsent(() => sp.connectSpotify());
     }
   };
 }

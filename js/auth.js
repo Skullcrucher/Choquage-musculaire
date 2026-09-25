@@ -51,6 +51,7 @@ export function renderLoginGate(container) {
       <p class="muted" id="login-error" style="margin-top:12px; color:var(--red);"></p>
       <button class="props-btn-invisible" id="forgot-btn" style="background:none; border:none; color:var(--steel); font-size:13px; margin-top:6px; cursor:pointer;">Mot de passe oublié ?</button>
       <p class="muted" style="margin-top:18px; font-size:12px;">Tes séances restent privées, sauf celles que tu partages sur le feed. La bibliothèque d'exercices est commune à tous ; tes routines sont personnelles.</p>
+      <a href="privacy.html" class="muted" style="font-size:12px; margin-top:8px; display:inline-block;">Politique de confidentialité</a>
     </div>
   `;
 

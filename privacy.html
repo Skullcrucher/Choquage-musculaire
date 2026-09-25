@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B0B0C">
+<title>Confidentialité — Skullcrusher</title>
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .privacy { max-width: 720px; margin: 0 auto; padding: 24px 16px 60px; line-height: 1.55; }
+  .privacy h1 { font-size: 30px; margin: 10px 0 4px; }
+  .privacy h2 { font-size: 20px; margin: 28px 0 8px; color: var(--amber); }
+  .privacy ul { padding-left: 20px; }
+  .privacy li { margin-bottom: 6px; }
+  .privacy a { color: var(--text); text-decoration-color: var(--amber); }
+</style>
+</head>
+<body>
+<main class="privacy">
+  <p><a href="./">← Retour à l'app</a></p>
+  <h1>Politique de confidentialité</h1>
+  <p class="muted">Skullcrusher — application de suivi de musculation. Dernière mise à jour : 25 septembre 2026.</p>
+
+  <h2>Qui est responsable ?</h2>
+  <p>Skullcrusher est une application personnelle et non commerciale, éditée par son administrateur
+  (contact : <a href="mailto:bouvet.clement@gmail.com">bouvet.clement@gmail.com</a>). Aucune donnée n'est vendue,
+  louée, ni utilisée à des fins publicitaires.</p>
+
+  <h2>Données collectées et utilisation</h2>
+  <ul>
+    <li><b>Compte</b> : adresse email et mot de passe (gérés par Firebase Authentication de Google ; le mot de passe n'est jamais visible par l'administrateur). Utilisation : te connecter.</li>
+    <li><b>Entraînement</b> : séances, séries, poids, répétitions, routines, temps de repos, import CSV Hevy. <b>Privés par défaut</b> : visibles par toi seul, sauf les séances que tu partages sur le feed et les routines que tu partages.</li>
+    <li><b>Profil public</b> (visible par les utilisateurs connectés de l'app) : pseudo, photo, et uniquement ce que tu choisis d'y mettre — bio, niveau, objectif, salle, exercices phares (meilleure 1RM, meilleure série, progression), chiffres globaux (si la case est cochée), artiste, playlist et profil Spotify.</li>
+    <li><b>Amis et défis</b> : liste d'amis ; si tu participes aux défis, tes totaux de la semaine (tonnage, séances, séries) sont visibles par tes amis.</li>
+    <li><b>Notifications du minuteur</b> : si tu les actives, l'adresse technique d'abonnement aux notifications de ton appareil et l'heure de fin de ton repos sont envoyées au serveur de notifications (Cloudflare) le temps d'envoyer la notification.</li>
+  </ul>
+
+  <h2>Connexion Spotify (facultative)</h2>
+  <p>Si tu connectes ton compte Spotify, l'app demande uniquement deux autorisations :</p>
+  <ul>
+    <li><b>Morceau en cours d'écoute</b> (<code>user-read-currently-playing</code>) : pour te proposer, à la fin d'une séance, le morceau en cours comme « son du record ».</li>
+    <li><b>Morceaux écoutés récemment</b> (<code>user-read-recently-played</code>) : pour te proposer de joindre à ta séance les morceaux écoutés pendant l'entraînement.</li>
+  </ul>
+  <p>Ce que l'app en fait :</p>
+  <ul>
+    <li>Ces informations sont lues <b>seulement à la fin d'une séance</b>, pour te les proposer. Rien n'est enregistré sans ton accord.</li>
+    <li>Si tu les joins à ta séance, seuls les <b>liens des morceaux</b> sont enregistrés (10 maximum) ; leurs titres sont affichés par le lecteur officiel de Spotify. Ils sont visibles par les personnes qui voient la séance (toi, et les autres utilisateurs si tu la partages sur le feed).</li>
+    <li>Tes écoutes ne sont <b>jamais analysées, agrégées en statistiques ou classements</b>, ni transmises à des tiers.</li>
+    <li>Un jeton de connexion Spotify est conservé dans ton compte (lisible par toi seul) pour que la connexion marche sur tous tes appareils.</li>
+    <li><b>Déconnexion</b> : Réglages → 🎧 Spotify → « Déconnecter Spotify ». Le jeton et toutes les données venues de Spotify (bandes-son, sons de record issus du morceau en cours) sont effacés immédiatement. Tu peux aussi retirer l'accès depuis ton compte Spotify (Paramètres → Applications).</li>
+  </ul>
+  <p>Les liens Spotify que tu colles toi-même (playlist, artiste, morceau) et le lecteur intégré sont des fonctions publiques de Spotify, régies par les conditions de Spotify.</p>
+
+  <h2>Où sont stockées les données ?</h2>
+  <ul>
+    <li><b>Google Firebase</b> (Authentication, Firestore) : compte et données de l'app.</li>
+    <li><b>Cloudflare</b> : serveur de notifications du minuteur (abonnement et heure de fin du repos, supprimés après l'envoi ou l'annulation).</li>
+    <li><b>GitHub Pages</b> : hébergement du site (journaux techniques du serveur web).</li>
+    <li><b>Spotify</b> : uniquement si tu connectes ton compte ou utilises le lecteur intégré.</li>
+  </ul>
+  <p>L'accès aux données est protégé par des règles de sécurité : chacun ne peut lire que ses propres données privées.</p>
+
+  <h2>Durée de conservation</h2>
+  <p>Tes données sont conservées tant que ton compte existe. Tu peux à tout moment supprimer tes séances
+  (Réglages → Réinitialiser), vider ton profil public, quitter les défis ou déconnecter Spotify.</p>
+
+  <h2>Tes droits (RGPD)</h2>
+  <p>Tu peux demander l'accès, la rectification, l'export ou la suppression de tes données, y compris la
+  suppression complète de ton compte, en écrivant à <a href="mailto:bouvet.clement@gmail.com">bouvet.clement@gmail.com</a>.
+  Tu peux aussi exporter tes séries en CSV depuis Réglages → Export. En cas de désaccord, tu peux saisir la CNIL (cnil.fr).</p>
+
+  <p style="margin-top:32px;"><a href="./">← Retour à l'app</a></p>
+</main>
+</body>
+</html>

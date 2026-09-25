@@ -108,6 +108,32 @@ export async function setPrivateData(patch) {
   await setDoc(doc(dbase, "user_private", requireUid()), patch, { merge: true });
 }
 
+// Déconnexion de Spotify : efface le jeton et toutes les données venues de
+// Spotify dans les séances de l'utilisateur (bandes-son, son du record issu
+// du morceau en cours), comme l'exige la politique développeurs Spotify.
+// Les playlists et morceaux collés à la main (liens) sont conservés.
+export async function purgeSpotifyData() {
+  const uid = requireUid();
+  const snap = await getDocs(query(collection(dbase, "workouts"), where("owner_uid", "==", uid)));
+  const touched = snap.docs.filter(d => {
+    const w = d.data();
+    return (w.soundtrack?.tracks || []).length || w.record_song?.source === "spotify";
+  });
+  for (let i = 0; i < touched.length; i += 400) {
+    const batch = writeBatch(dbase);
+    touched.slice(i, i + 400).forEach(d => {
+      const w = d.data();
+      const patch = {};
+      if ((w.soundtrack?.tracks || []).length) patch["soundtrack.tracks"] = [];
+      if (w.record_song?.source === "spotify") patch.record_song = null;
+      batch.update(d.ref, patch);
+    });
+    await batch.commit();
+  }
+  await setDoc(doc(dbase, "user_private", uid), { spotify_refresh_token: deleteField(), spotify_connected_at: deleteField() }, { merge: true });
+  return touched.length;
+}
+
 // Champs publics du profil (bio, exercices phares, musique...) : voir profile.js.
 export async function updatePublicProfile(patch) {
   await setDoc(doc(dbase, "profiles", requireUid()), { ...patch, profile_updated_at: new Date().toISOString() }, { merge: true });

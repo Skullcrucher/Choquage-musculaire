@@ -111,11 +111,21 @@ morceaux écoutés pendant la séance (bande-son) est jointe à la séance.
 3. Dans **Settings** de l'app Spotify, copie le **Client ID** et colle-le dans `js/spotify-config.js`
    (`SPOTIFY_CLIENT_ID = "..."`). Pas de « Client secret » à utiliser : l'app utilise la méthode PKCE.
 4. L'app Spotify démarre en **mode développement** : seuls les comptes ajoutés à la main peuvent se
-   connecter (onglet **User Management**, nom + email du compte Spotify, 25 personnes maximum).
-   Au-delà, il faut demander à Spotify une extension de quota.
+   connecter (onglet **User Management**, nom + email du compte Spotify), **5 personnes maximum**, et le
+   propriétaire de l'app Spotify doit avoir **Spotify Premium** (règles Spotify depuis février 2026).
+   Le mode étendu est réservé aux entreprises enregistrées avec au moins 250 000 utilisateurs actifs par mois.
 5. Dans l'app : Réglages → 🎧 Spotify → **Connecter Spotify**. Sur iPhone, fais-le depuis **Safari**
    (pas depuis l'icône de l'écran d'accueil) : la connexion est enregistrée dans ton compte et marche
    ensuite aussi dans l'app installée.
 
 La connexion est stockée dans `user_private/{uid}`, lisible par son seul propriétaire : pense à
 redéployer `firestore.rules`.
+
+### Conformité Spotify
+
+- Logo Spotify affiché à côté de tout contenu issu de la connexion Spotify ; titres affichés par le
+  lecteur officiel de Spotify.
+- Seuls les liens des morceaux sont enregistrés (10 par séance maximum) ; aucune statistique ni
+  classement n'est tiré des écoutes, rien n'est transmis à des tiers.
+- Information avant connexion et politique de confidentialité (`privacy.html`).
+- La déconnexion efface le jeton et toutes les données venues de Spotify dans les séances.
