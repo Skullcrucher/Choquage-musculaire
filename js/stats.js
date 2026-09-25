@@ -1,9 +1,16 @@
 // ============================================================
 // ONGLET STATISTIQUES — filtres période / muscle / exercice,
 // évolution dans le temps
+//
+// Pour rester rapide, l'onglet ne télécharge que ce qu'il affiche :
+//   - les chiffres du haut viennent des résumés de séances (total_sets,
+//     total_tonnage), sans lire une seule série ;
+//   - les vues "par muscle" et "personnalisé" chargent la période choisie ;
+//   - la vue "par exercice" ne charge que l'exercice choisi.
+// "Tout" charge l'historique complet (plus long la première fois).
 // ============================================================
 import { isoWeek, estimate1RM, esc } from "./utils.js";
-import { getExercises, getWorkouts, getAllSets, invalidate } from "./cache.js";
+import { getExercises, getWorkouts, getSetsForPeriod, getSetsForExercise, invalidate, onAllSetsProgress } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 
 let chartMuscle = null;
@@ -68,19 +75,20 @@ function inPeriod(iso, weeks) {
 }
 
 export async function renderStats(container) {
-  const [sets, exercises, workouts] = await Promise.all([getAllSets(), getExercises(), getWorkouts()]);
-  const exerciseNames = [...new Set(sets.map(s => s.exercise_title))].sort();
+  const [exercises, workouts] = await Promise.all([getExercises(), getWorkouts()]);
+  const exerciseNames = [...new Set(exercises.map(e => e.name))].sort((a, b) => a.localeCompare(b, "fr"));
   const muscleGroups = [...new Set(exercises.map(e => e.muscle_group))].sort();
   if (!state.exercise && exerciseNames.length) state.exercise = exerciseNames[0];
 
-  const totalVolume = sets.reduce((acc, s) => acc + (s.weight_kg || 0) * (s.reps || 0), 0);
+  const totalSets = workouts.reduce((acc, w) => acc + (w.total_sets || 0), 0);
+  const totalTonnage = workouts.reduce((acc, w) => acc + (w.total_tonnage || 0), 0);
 
   container.innerHTML = `
     <h1 class="section-title">Statistiques</h1>
     <div class="stat-grid">
       <div class="stat-box"><span class="num">${workouts.length}</span><span class="lbl">séances</span></div>
-      <div class="stat-box"><span class="num">${Math.round(totalVolume / 1000)}</span><span class="lbl">tonnes soulevées</span></div>
-      <div class="stat-box"><span class="num">${sets.length}</span><span class="lbl">séries loggées</span></div>
+      <div class="stat-box"><span class="num">${Math.round(totalTonnage / 1000)}</span><span class="lbl">tonnes soulevées</span></div>
+      <div class="stat-box"><span class="num">${totalSets}</span><span class="lbl">séries loggées</span></div>
     </div>
 
     <div class="card">
@@ -94,38 +102,80 @@ export async function renderStats(container) {
         <div class="chip ${state.mode === "exercise" ? "active" : ""}" data-mode="exercise">Par exercice</div>
         <div class="chip ${state.mode === "custom" ? "active" : ""}" data-mode="custom">Personnalisé</div>
       </div>
+      <p class="muted" id="stats-load-info" style="margin:10px 0 0; font-size:12px;"></p>
     </div>
 
     <div id="stats-content"></div>
   `;
 
+  const ctx = { container, exercises, exerciseNames, muscleGroups };
   container.querySelectorAll("#period-chips .chip").forEach(chip => {
     chip.onclick = () => {
       state.periodWeeks = chip.dataset.weeks ? parseInt(chip.dataset.weeks, 10) : null;
       container.querySelectorAll("#period-chips .chip").forEach(c => c.classList.toggle("active", c === chip));
-      drawContent(container, sets, exercises, exerciseNames, muscleGroups);
+      drawContent(ctx);
     };
   });
   container.querySelectorAll("#mode-chips .chip").forEach(chip => {
     chip.onclick = () => {
       state.mode = chip.dataset.mode;
       container.querySelectorAll("#mode-chips .chip").forEach(c => c.classList.toggle("active", c === chip));
-      drawContent(container, sets, exercises, exerciseNames, muscleGroups);
+      drawContent(ctx);
     };
   });
 
-  drawContent(container, sets, exercises, exerciseNames, muscleGroups);
+  await drawContent(ctx);
 }
 
-function drawContent(container, sets, exercises, exerciseNames, muscleGroups) {
-  const content = container.querySelector("#stats-content");
+let drawToken = 0;
+
+// Charge uniquement les séries nécessaires à la vue et à la période
+// affichées, puis dessine. Un changement rapide de filtre annule
+// l'affichage d'un chargement devenu obsolète.
+async function drawContent(ctx) {
+  const content = ctx.container.querySelector("#stats-content");
+  const info = ctx.container.querySelector("#stats-load-info");
   if (!content) return;
+  const token = ++drawToken;
+  const periodLabel = state.periodWeeks ? `${state.periodWeeks} dernières semaines` : "tout l'historique";
+  const loadingTimer = setTimeout(() => {
+    if (token !== drawToken) return;
+    content.innerHTML = `<div class="empty-state"><span class="num">···</span>Chargement ${state.mode === "exercise" ? "de l'exercice" : `— ${periodLabel}`}${state.periodWeeks || state.mode === "exercise" ? "" : "<br><span class=\"muted\">(tout l'historique : un peu plus long la première fois)</span>"}</div>`;
+  }, 150);
+
+  onAllSetsProgress((n) => {
+    const el = content.querySelector(".empty-state");
+    if (token === drawToken && el) el.innerHTML = `<span class="num">···</span>Chargement de tout l'historique… ${n} séries`;
+  });
+  let sets;
+  try {
+    sets = state.mode === "exercise" && state.exercise
+      ? await getSetsForExercise(state.exercise)
+      : await getSetsForPeriod(state.periodWeeks);
+  } catch (err) {
+    clearTimeout(loadingTimer);
+    onAllSetsProgress(null);
+    if (token === drawToken && content.isConnected) {
+      content.innerHTML = `<div class="empty-state">Chargement impossible.<br><span class="muted">${esc(err.message || "")}</span></div>`;
+    }
+    return;
+  }
+  clearTimeout(loadingTimer);
+  onAllSetsProgress(null);
+  if (token !== drawToken || !content.isConnected) return;
+
+  if (info) {
+    info.textContent = state.mode === "exercise"
+      ? `${sets.length} série(s) de cet exercice chargée(s)`
+      : `${sets.length} série(s) chargée(s) — ${periodLabel}`;
+  }
+
   if (state.mode === "muscle") {
-    drawMuscleView(content, sets, exercises, muscleGroups);
+    drawMuscleView(content, sets, ctx.exercises, ctx.muscleGroups);
   } else if (state.mode === "exercise") {
-    drawExerciseView(content, sets, exerciseNames);
+    drawExerciseView(content, sets, ctx);
   } else {
-    drawCustomView(content, sets, exercises, exerciseNames, muscleGroups);
+    drawCustomView(content, sets, ctx.exercises, ctx.exerciseNames, ctx.muscleGroups);
   }
 }
 
@@ -135,7 +185,7 @@ function drawMuscleView(content, sets, exercises, muscleGroups) {
     <div class="card">
       <div class="chip-row" id="muscle-chips">
         <div class="chip ${state.muscle === "all" ? "active" : ""}" data-muscle="all">Tous</div>
-        ${muscleGroups.map(g => `<div class="chip ${state.muscle === g ? "active" : ""}" data-muscle="${g}">${g}</div>`).join("")}
+        ${muscleGroups.map(g => `<div class="chip ${state.muscle === g ? "active" : ""}" data-muscle="${esc(g)}">${esc(g)}</div>`).join("")}
       </div>
       <div style="height:10px"></div>
       <canvas id="muscle-canvas" height="220"></canvas>
@@ -187,14 +237,14 @@ function drawMuscleView(content, sets, exercises, muscleGroups) {
 
     // liste des exercices de ce groupe avec leur dernière série connue
     const exList = exercises.filter(e => e.muscle_group === state.muscle);
-    const rows = exList.map(ex => {
+    const rows = exList.filter(ex => sets.some(s => s.exercise_title === ex.name)).map(ex => {
       const exSets = sets.filter(s => s.exercise_title === ex.name && s.weight_kg && s.reps)
         .sort((a, b) => new Date(b.workout_start_time || 0) - new Date(a.workout_start_time || 0));
       const last = exSets[0];
       return `<div class="list-row"><div class="list-row-title">${esc(ex.name)}</div><div class="list-row-meta">${last ? `${last.weight_kg} kg × ${last.reps}` : "—"}</div></div>`;
     }).join("");
     content.querySelector("#muscle-exlist").innerHTML = rows
-      ? `<div class="muted" style="margin-bottom:4px;">Exercices du groupe</div>${rows}`
+      ? `<div class="muted" style="margin-bottom:4px;">Exercices du groupe — dernière série sur la période</div>${rows}`
       : "";
   }
 }
@@ -207,11 +257,12 @@ function weeksBetweenAllData(sets) {
 }
 
 // ==================== VUE PAR EXERCICE ====================
-function drawExerciseView(content, allSets, exerciseNames) {
+function drawExerciseView(content, exerciseSetsAll, ctx) {
+  const exerciseNames = ctx.exerciseNames;
   content.innerHTML = `
     <div class="card">
       <select id="exercise-picker">
-        ${exerciseNames.map(n => `<option value="${n}" ${n === state.exercise ? "selected" : ""}>${n}</option>`).join("")}
+        ${exerciseNames.map(n => `<option value="${esc(n)}" ${n === state.exercise ? "selected" : ""}>${esc(n)}</option>`).join("")}
       </select>
       <button class="btn btn-secondary btn-sm" id="exercise-sheet-btn" style="margin-top:10px;">Voir la fiche de l'exercice</button>
       <canvas id="exercise-canvas" height="220" style="margin-top:12px;"></canvas>
@@ -225,9 +276,10 @@ function drawExerciseView(content, allSets, exerciseNames) {
     );
     return;
   }
-  picker.onchange = () => { state.exercise = picker.value; drawExerciseView(content, allSets, exerciseNames); };
+  // Changer d'exercice recharge uniquement les séries de cet exercice.
+  picker.onchange = () => { state.exercise = picker.value; drawContent(ctx); };
   content.querySelector("#exercise-sheet-btn").onclick = () => openExerciseDetail(state.exercise);
-  renderExerciseChart(content, allSets, state.exercise);
+  renderExerciseChart(content, exerciseSetsAll, state.exercise);
 }
 
 function renderExerciseChart(content, allSets, exerciseName) {
@@ -307,14 +359,14 @@ function drawCustomView(content, allSets, exercises, exerciseNames, muscleGroups
     const pickerWrap = scopeWrap.querySelector("#custom-scope-picker");
     if (state.customScope === "exercise") {
       if (!state.customScopeValue) state.customScopeValue = exerciseNames[0] || null;
-      pickerWrap.innerHTML = `<select id="custom-scope-value">${exerciseNames.map(n => `<option value="${n}" ${n === state.customScopeValue ? "selected" : ""}>${n}</option>`).join("")}</select>`;
+      pickerWrap.innerHTML = `<select id="custom-scope-value">${exerciseNames.map(n => `<option value="${esc(n)}" ${n === state.customScopeValue ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>`;
       pickerWrap.querySelector("#custom-scope-value")?.addEventListener("change", (e) => {
         state.customScopeValue = e.target.value;
         renderCustomChart(content, allSets, exercises);
       });
     } else if (state.customScope === "muscle") {
       if (!state.customScopeValue) state.customScopeValue = muscleGroups[0] || null;
-      pickerWrap.innerHTML = `<select id="custom-scope-value">${muscleGroups.map(g => `<option value="${g}" ${g === state.customScopeValue ? "selected" : ""}>${g}</option>`).join("")}</select>`;
+      pickerWrap.innerHTML = `<select id="custom-scope-value">${muscleGroups.map(g => `<option value="${esc(g)}" ${g === state.customScopeValue ? "selected" : ""}>${esc(g)}</option>`).join("")}</select>`;
       pickerWrap.querySelector("#custom-scope-value")?.addEventListener("change", (e) => {
         state.customScopeValue = e.target.value;
         renderCustomChart(content, allSets, exercises);
@@ -409,10 +461,10 @@ function renderCustomChart(content, allSets, exercises) {
 function chartOptions(showLegend, legendLabels = false) {
   return {
     responsive: true,
-    plugins: { legend: { display: showLegend, labels: { color: "#F1EFEA" } } },
+    plugins: { legend: { display: showLegend, labels: { color: "#EEEDEB" } } },
     scales: {
-      x: { ticks: { color: "#8B8D96" }, grid: { display: false } },
-      y: { ticks: { color: "#8B8D96" }, grid: { color: "#2C2C36" } }
+      x: { ticks: { color: "#8D8D92" }, grid: { display: false } },
+      y: { ticks: { color: "#8D8D92" }, grid: { color: "#26262A" } }
     }
   };
 }

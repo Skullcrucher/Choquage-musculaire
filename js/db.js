@@ -6,7 +6,7 @@ import {
   initializeFirestore,
   collection, doc, setDoc, getDoc, getDocs, deleteDoc,
   updateDoc, addDoc, query, orderBy, where, collectionGroup, limit,
-  writeBatch, deleteField, increment
+  writeBatch, deleteField, increment, startAfter
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
@@ -504,22 +504,49 @@ export async function listSetsForExercise(exerciseName, max = 3000) {
   return snap.docs.map(d => ({ id: d.id, ...d.data(), workout_id: d.ref.parent.parent.id }));
 }
 
-export async function listAllSets(max = 5000) {
-  console.log(`[Skullcrusher] listAllSets → requête démarrée (max ${max})…`);
+// Historique complet, téléchargé par tranches : une seule réponse de
+// ~10 000 séries est lente et peut échouer sur une connexion moyenne.
+// onProgress(nbChargées) permet d'afficher l'avancement.
+const SETS_PAGE_SIZE = 2000;
+
+export async function listAllSets(max = 50000, onProgress = () => {}) {
+  console.log(`[Skullcrusher] listAllSets → requête démarrée (max ${max}, par tranches de ${SETS_PAGE_SIZE})…`);
+  const uid = requireUid();
+  const result = [];
+  let last = null;
   try {
-    const snap = await getDocs(query(
-      collectionGroup(dbase, "sets"),
-      where("owner_uid", "==", requireUid()),
-      orderBy("workout_start_time", "desc"),
-      limit(max)
-    ));
-    const result = snap.docs.map(d => ({ id: d.id, ...d.data(), workout_id: d.ref.parent.parent.id }));
-    console.log(`[Skullcrusher] listAllSets → ${result.length} série(s) reçue(s). Exemple :`, result[0]);
+    while (result.length < max) {
+      const constraints = [
+        where("owner_uid", "==", uid),
+        orderBy("workout_start_time", "desc"),
+        ...(last ? [startAfter(last)] : []),
+        limit(Math.min(SETS_PAGE_SIZE, max - result.length))
+      ];
+      const snap = await getDocs(query(collectionGroup(dbase, "sets"), ...constraints));
+      snap.docs.forEach(d => result.push({ id: d.id, ...d.data(), workout_id: d.ref.parent.parent.id }));
+      onProgress(result.length);
+      if (snap.docs.length < SETS_PAGE_SIZE) break;
+      last = snap.docs[snap.docs.length - 1];
+    }
+    console.log(`[Skullcrusher] listAllSets → ${result.length} série(s) reçue(s).`);
     return result;
   } catch (err) {
     console.error("[Skullcrusher] listAllSets → erreur :", err);
     throw err;
   }
+}
+
+// Séries depuis une date (période des Stats) : même index que listAllSets
+// (owner_uid + workout_start_time), mais seulement la période demandée.
+export async function listSetsSince(sinceIso, max = 30000) {
+  const snap = await getDocs(query(
+    collectionGroup(dbase, "sets"),
+    where("owner_uid", "==", requireUid()),
+    where("workout_start_time", ">=", sinceIso),
+    orderBy("workout_start_time", "desc"),
+    limit(max)
+  ));
+  return snap.docs.map(d => ({ id: d.id, ...d.data(), workout_id: d.ref.parent.parent.id }));
 }
 
 // ==================== IMPORT CSV avec déduplication ====================
