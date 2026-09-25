@@ -2,16 +2,15 @@
 // FICHE D'EXERCICE — muscles, conseils, vidéo, historique
 // ============================================================
 import { openModal, closeModal, estimate1RM, isoWeek, fmtDateTime, esc } from "./utils.js";
-import { getAllSets } from "./cache.js";
+import { getSetsForExercise } from "./cache.js";
 import { EXERCISE_GUIDES } from "./exercise-guides.js";
 
 let detailChart = null;
 
 export async function openExerciseDetail(exerciseName, muscleGroupFallback = "") {
   const guide = EXERCISE_GUIDES[exerciseName];
-  const allSets = await getAllSets();
-  const sets = allSets
-    .filter(s => s.exercise_title === exerciseName && s.weight_kg != null && s.reps != null)
+  const sets = (await getSetsForExercise(exerciseName))
+    .filter(s => s.weight_kg != null && s.reps != null)
     .sort((a, b) => new Date(b.workout_start_time || 0) - new Date(a.workout_start_time || 0));
 
   const best1RM = sets.length ? Math.max(...sets.map(s => estimate1RM(s.weight_kg, s.reps))) : null;

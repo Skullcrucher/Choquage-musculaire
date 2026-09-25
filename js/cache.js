@@ -26,6 +26,19 @@ export const getRoutines = () => cached("routines", () => db.listRoutines());
 export const getWorkouts = (max = 500) => cached("workouts", () => db.listWorkouts(max));
 export const getAllSets = (max = 8000) => cached("sets", () => db.listAllSets(max));
 
+// Séries d'un seul exercice : depuis l'historique complet s'il est déjà en
+// mémoire (onglet Stats ouvert), sinon en ne téléchargeant que cet exercice
+// — charger tout l'historique (~10 000 séries) prend une quinzaine de secondes.
+export async function getSetsForExercise(exerciseName) {
+  if (store.sets) return store.sets.filter(s => s.exercise_title === exerciseName);
+  try {
+    return await db.listSetsForExercise(exerciseName);
+  } catch (e) {
+    console.warn("[Skullcrusher] Requête par exercice impossible, repli sur l'historique complet :", e);
+    return (await getAllSets()).filter(s => s.exercise_title === exerciseName);
+  }
+}
+
 // Donnée déjà en mémoire, sans déclencher de chargement (null sinon).
 export function peek(key) {
   return store[key];

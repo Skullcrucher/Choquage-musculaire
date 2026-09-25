@@ -703,3 +703,8 @@ canvas { max-width: 100%; }
   cursor: pointer;
 }
 .rest-chip:active { transform: scale(0.94); }
+
+/* Nom d'exercice cliquable pendant la séance -> fiche de l'exercice */
+.exercise-name-link { cursor: pointer; }
+.exercise-name-link::after { content: " ›"; color: var(--amber); font-weight: 700; }
+.exercise-name-link:active { opacity: 0.6; }
