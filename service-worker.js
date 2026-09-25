@@ -1,5 +1,5 @@
 // À incrémenter avec APP_VERSION (js/utils.js) à chaque mise en ligne.
-const CACHE_NAME = "skullcrusher-cache-v38";
+const CACHE_NAME = "skullcrusher-cache-v39";
 const APP_SHELL = [
   "./",
   "./index.html",

@@ -76,6 +76,50 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- Filet de sécurité au démarrage : si l'app n'a rien affiché au bout de
+     quelques secondes (fichier introuvable, erreur JavaScript, ancienne
+     version en cache...), on affiche l'erreur et un bouton de réparation
+     au lieu d'un écran noir. Script classique : il tourne même si les
+     modules de l'app échouent. -->
+<script>
+(function () {
+  var errors = [];
+  function note(msg) { if (msg && errors.length < 5) errors.push(String(msg).slice(0, 300)); }
+  window.addEventListener("error", function (e) {
+    if (e.target && e.target !== window && e.target.src) note("Chargement impossible : " + e.target.src);
+    else note(e.message + (e.filename ? " (" + e.filename.split("/").pop() + ":" + e.lineno + ")" : ""));
+  }, true);
+  window.addEventListener("unhandledrejection", function (e) { note(e.reason && (e.reason.message || e.reason)); });
+  window.__skullBootError = note;
+
+  function repair() {
+    var done = function () { location.reload(); };
+    try {
+      var tasks = [];
+      if (navigator.serviceWorker) tasks.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
+      if (window.caches) tasks.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }));
+      Promise.all(tasks).then(done, done);
+    } catch (_) { done(); }
+  }
+
+  setTimeout(function () {
+    var view = document.getElementById("view");
+    if (!view || view.textContent.trim() || view.children.length) return; // l'app a démarré
+    var esc = function (t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+    view.innerHTML =
+      '<div class="empty-state" style="text-align:left;">' +
+      '<p style="font-size:17px;color:var(--text);">L\'app n\'a pas pu démarrer.</p>' +
+      '<p class="muted">Vérifie ta connexion, puis appuie sur « Réparer » : ça vide le cache de l\'app et la recharge (tes séances ne sont pas touchées).</p>' +
+      '<button class="btn btn-primary" id="boot-repair" style="margin:10px 0;">Réparer</button>' +
+      '<button class="btn btn-secondary" id="boot-retry">Réessayer</button>' +
+      '<p class="muted" style="font-size:12px;margin-top:16px;">Détail technique (à transmettre si ça persiste) :<br>' +
+      (errors.length ? errors.map(esc).join("<br>") : "aucune erreur signalée — le démarrage est bloqué (connexion à Firebase ?)") +
+      '<br>' + esc(navigator.userAgent) + '</p></div>';
+    document.getElementById("boot-repair").onclick = repair;
+    document.getElementById("boot-retry").onclick = function () { location.reload(); };
+  }, 12000);
+})();
+</script>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>
