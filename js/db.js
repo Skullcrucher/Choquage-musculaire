@@ -123,6 +123,43 @@ async function myPublicName() {
   return profile?.display_name || auth.currentUser?.displayName || "Anonyme";
 }
 
+// ---------- Temps de repos mémorisés par exercice ----------
+// Rangés dans le profil (écriture réservée à son propriétaire, voir
+// firestore.rules) sous rest_prefs : { "nom d'exercice en minuscules": secondes }.
+// Une copie locale permet un affichage immédiat, même hors connexion.
+const LS_REST_PREFS = "skullcrusher_rest_prefs";
+let restPrefs = null;
+
+function readLocalRestPrefs() {
+  try { return JSON.parse(localStorage.getItem(LS_REST_PREFS) || "{}"); } catch (_) { return {}; }
+}
+
+export async function loadRestPrefs() {
+  if (restPrefs) return restPrefs;
+  restPrefs = readLocalRestPrefs();
+  try {
+    const profile = await getProfile(requireUid());
+    restPrefs = { ...restPrefs, ...(profile?.rest_prefs || {}) };
+    localStorage.setItem(LS_REST_PREFS, JSON.stringify(restPrefs));
+  } catch (e) {
+    console.warn("[Skullcrusher] Temps de repos mémorisés indisponibles (copie locale utilisée) :", e);
+  }
+  return restPrefs;
+}
+
+export function restPrefFor(exerciseName) {
+  const prefs = restPrefs || readLocalRestPrefs();
+  return prefs[String(exerciseName || "").trim().toLowerCase()] || null;
+}
+
+export async function saveRestPref(exerciseName, seconds) {
+  const key = String(exerciseName || "").trim().toLowerCase();
+  if (!key) return;
+  restPrefs = { ...(restPrefs || readLocalRestPrefs()), [key]: seconds };
+  try { localStorage.setItem(LS_REST_PREFS, JSON.stringify(restPrefs)); } catch (_) {}
+  await setDoc(doc(dbase, "profiles", requireUid()), { rest_prefs: { [key]: seconds } }, { merge: true });
+}
+
 // ---------- Utilitaire : clé déterministe pour la déduplication ----------
 async function sha1(str) {
   const buf = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(str));
@@ -457,7 +494,7 @@ export async function listSets(workoutId) {
 }
 
 // Requête transversale : toutes les séries d'un exercice donné, toutes séances confondues
-export async function listSetsForExercise(exerciseName, max = 500) {
+export async function listSetsForExercise(exerciseName, max = 3000) {
   const snap = await getDocs(
     query(collectionGroup(dbase, "sets"),
       where("owner_uid", "==", requireUid()),

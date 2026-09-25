@@ -96,15 +96,6 @@ export async function renderReglages(container) {
     </div>
 
     <div class="card">
-      <div class="card-title">Bibliothèque d'exercices</div>
-      <p class="muted" style="margin-top:0;">Complète ta bibliothèque avec ${EXERCISE_SEED.length} exercices standards (barre, haltère, machine, poulie, poids du corps) — les exercices déjà présents ne sont pas dupliqués.</p>
-      <button class="btn btn-secondary" id="load-seed">Charger la bibliothèque standard</button>
-      <p class="muted" style="margin:10px 0 0; font-size:13px;">Bibliothèque commune à tous les utilisateurs : tu peux modifier les exercices que tu as ajoutés, pas ceux des autres.</p>
-      <div style="height:12px"></div>
-      <div id="exercise-lib"></div>
-    </div>
-
-    <div class="card">
       <div class="card-title">Export</div>
       <p class="muted" style="margin-top:0;">Télécharge toutes tes séries au format CSV.</p>
       <button class="btn btn-secondary" id="export-csv">Exporter en CSV</button>
@@ -115,6 +106,15 @@ export async function renderReglages(container) {
       <p class="muted" style="margin-top:0;">Version de l'app : <b>${APP_VERSION}</b> · Projet Firebase : ${esc(firebaseConfig.projectId)}</p>
       <button class="btn btn-secondary btn-sm" id="force-update">Forcer la mise à jour</button>
       <p class="muted">Ajoute cette page à ton écran d'accueil (icône Partager → "Sur l'écran d'accueil") pour l'utiliser comme une app.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Bibliothèque d'exercices</div>
+      <p class="muted" style="margin-top:0;">Complète ta bibliothèque avec ${EXERCISE_SEED.length} exercices standards (barre, haltère, machine, poulie, poids du corps) — les exercices déjà présents ne sont pas dupliqués.</p>
+      <button class="btn btn-secondary" id="load-seed">Charger la bibliothèque standard</button>
+      <p class="muted" style="margin:10px 0 0; font-size:13px;">Bibliothèque commune à tous les utilisateurs : tu peux modifier les exercices que tu as ajoutés, pas ceux des autres.</p>
+      <div style="height:12px"></div>
+      <div id="exercise-lib"></div>
     </div>
   `;
 
