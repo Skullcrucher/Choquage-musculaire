@@ -554,30 +554,37 @@ export async function listSetsForExercise(exerciseName, max = 3000) {
   return snap.docs.map(d => ({ id: d.id, ...d.data(), workout_id: d.ref.parent.parent.id }));
 }
 
-// Historique complet, téléchargé par tranches : une seule réponse de
-// ~10 000 séries est lente et peut échouer sur une connexion moyenne.
-// onProgress(nbChargées) permet d'afficher l'avancement.
+// Séries de l'utilisateur, les plus récentes d'abord, téléchargées par
+// tranches de 2 000 : Firestore refuse toute requête dont la limite
+// dépasse 10 000, et une seule grosse réponse est lente et fragile sur une
+// connexion moyenne. onProgress(nbChargées) permet d'afficher l'avancement.
 const SETS_PAGE_SIZE = 2000;
 
-export async function listAllSets(max = 50000, onProgress = () => {}) {
-  console.log(`[Skullcrusher] listAllSets → requête démarrée (max ${max}, par tranches de ${SETS_PAGE_SIZE})…`);
+async function listSetsPaged(extraConstraints, max, onProgress = () => {}) {
   const uid = requireUid();
   const result = [];
   let last = null;
+  while (result.length < max) {
+    const snap = await getDocs(query(collectionGroup(dbase, "sets"),
+      where("owner_uid", "==", uid),
+      ...extraConstraints,
+      orderBy("workout_start_time", "desc"),
+      ...(last ? [startAfter(last)] : []),
+      limit(Math.min(SETS_PAGE_SIZE, max - result.length))
+    ));
+    snap.docs.forEach(d => result.push({ id: d.id, ...d.data(), workout_id: d.ref.parent.parent.id }));
+    onProgress(result.length);
+    if (snap.docs.length < SETS_PAGE_SIZE) break;
+    last = snap.docs[snap.docs.length - 1];
+  }
+  return result;
+}
+
+// Historique complet.
+export async function listAllSets(max = 50000, onProgress = () => {}) {
+  console.log(`[Skullcrusher] listAllSets → requête démarrée (max ${max}, par tranches de ${SETS_PAGE_SIZE})…`);
   try {
-    while (result.length < max) {
-      const constraints = [
-        where("owner_uid", "==", uid),
-        orderBy("workout_start_time", "desc"),
-        ...(last ? [startAfter(last)] : []),
-        limit(Math.min(SETS_PAGE_SIZE, max - result.length))
-      ];
-      const snap = await getDocs(query(collectionGroup(dbase, "sets"), ...constraints));
-      snap.docs.forEach(d => result.push({ id: d.id, ...d.data(), workout_id: d.ref.parent.parent.id }));
-      onProgress(result.length);
-      if (snap.docs.length < SETS_PAGE_SIZE) break;
-      last = snap.docs[snap.docs.length - 1];
-    }
+    const result = await listSetsPaged([], max, onProgress);
     console.log(`[Skullcrusher] listAllSets → ${result.length} série(s) reçue(s).`);
     return result;
   } catch (err) {
@@ -588,15 +595,8 @@ export async function listAllSets(max = 50000, onProgress = () => {}) {
 
 // Séries depuis une date (période des Stats) : même index que listAllSets
 // (owner_uid + workout_start_time), mais seulement la période demandée.
-export async function listSetsSince(sinceIso, max = 30000) {
-  const snap = await getDocs(query(
-    collectionGroup(dbase, "sets"),
-    where("owner_uid", "==", requireUid()),
-    where("workout_start_time", ">=", sinceIso),
-    orderBy("workout_start_time", "desc"),
-    limit(max)
-  ));
-  return snap.docs.map(d => ({ id: d.id, ...d.data(), workout_id: d.ref.parent.parent.id }));
+export async function listSetsSince(sinceIso, max = 50000, onProgress = () => {}) {
+  return listSetsPaged([where("workout_start_time", ">=", sinceIso)], max, onProgress);
 }
 
 // ==================== IMPORT CSV avec déduplication ====================
