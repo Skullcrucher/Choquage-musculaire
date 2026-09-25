@@ -716,3 +716,32 @@ canvas { max-width: 100%; }
 .exercise-name-link::after { content: " ›"; color: var(--amber); font-weight: 700; }
 .exercise-name-link:active { opacity: 0.6; }
 .title-horns { height: 0.95em; width: auto; vertical-align: -0.1em; margin-left: 4px; filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.8)); }
+
+/* ---------- Profil public ---------- */
+.profile-avatar {
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--surface-raised) center/cover no-repeat;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: var(--amber);
+}
+.profile-section-title {
+  font-family: 'Anton', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 17px;
+  margin: 18px 0 8px;
+}
+.profile-highlight {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 8px;
+}
+.profile-progress.up { color: var(--green); font-weight: 700; }
+.profile-progress.down { color: var(--red); font-weight: 700; }
+.profile-link { cursor: pointer; }
+.profile-link:active { opacity: 0.6; }
+.spotify-embed { width: 100%; border: 0; border-radius: 12px; margin-top: 10px; background: var(--surface-raised); }

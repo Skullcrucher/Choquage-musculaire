@@ -97,6 +97,11 @@ export async function updateMyProfile({ display_name, photo_data_url }) {
   await setDoc(doc(dbase, "profiles", uid), patch, { merge: true });
 }
 
+// Champs publics du profil (bio, exercices phares, musique...) : voir profile.js.
+export async function updatePublicProfile(patch) {
+  await setDoc(doc(dbase, "profiles", requireUid()), { ...patch, profile_updated_at: new Date().toISOString() }, { merge: true });
+}
+
 // Recherche d'utilisateurs par début de pseudo (insensible à la casse).
 // Seuls les profils enregistrés depuis l'ajout de search_name sont
 // trouvables : ensureSearchableProfile() rattrape les anciens.

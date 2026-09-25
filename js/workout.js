@@ -466,6 +466,8 @@ async function finishWorkout() {
   const finished = currentWorkout;
   currentWorkout = null;
   toast("Séance enregistrée", 2200, { horns: true });
+  // Met à jour les exercices phares / chiffres du profil public, en arrière-plan.
+  import("./profile.js").then(m => m.refreshMyProfileHighlights()).catch(e => console.warn("[Skullcrusher] Profil public non mis à jour :", e));
   await renderSeance(document.getElementById("view"));
   return finished;
 }

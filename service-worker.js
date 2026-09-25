@@ -19,6 +19,7 @@ const APP_SHELL = [
   "./js/routines.js",
   "./js/routine-discover.js",
   "./js/friends.js",
+  "./js/profile.js",
   "./js/history.js",
   "./js/feed.js",
   "./js/workout-detail.js",

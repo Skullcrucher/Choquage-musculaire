@@ -10,6 +10,7 @@ import { getExercises, invalidate } from "./cache.js";
 import { EXERCISE_SEED } from "./exercises-seed.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { getUser, signOutUser } from "./auth.js";
+import { openProfile, openProfileEditor } from "./profile.js";
 
 // Module des notifications en arrière-plan, chargé à la demande : si un
 // bloqueur de contenu le refuse, les Réglages s'affichent quand même.
@@ -57,6 +58,10 @@ export async function renderReglages(container) {
       <p class="muted" style="margin:0 0 10px;">${user?.email || ""}</p>
       <button class="btn btn-primary btn-sm" id="save-profile-btn">Enregistrer le profil</button>
       <p class="muted" id="profile-save-status" style="margin-top:6px;"></p>
+      <div class="btn-row" style="margin-top:6px;">
+        <button class="btn btn-secondary btn-sm" id="view-public-profile">Voir mon profil</button>
+        <button class="btn btn-secondary btn-sm" id="edit-public-profile">🏆 Exercices phares & 🎧 musique</button>
+      </div>
       <button class="btn btn-secondary" id="signout-btn" style="margin-top:10px;">Se déconnecter</button>
     </div>
 
@@ -117,6 +122,9 @@ export async function renderReglages(container) {
       <div id="exercise-lib"></div>
     </div>
   `;
+
+  container.querySelector("#view-public-profile").onclick = () => openProfile(getUser()?.uid);
+  container.querySelector("#edit-public-profile").onclick = () => openProfileEditor(() => openProfile(getUser()?.uid));
 
   container.querySelector("#signout-btn").onclick = async () => {
     if (!confirm("Se déconnecter de Skullcrusher ?")) return;

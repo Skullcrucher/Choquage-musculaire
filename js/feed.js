@@ -6,6 +6,7 @@ import { fmtDateTime, fmtDuration, esc, safeImageUrl } from "./utils.js";
 import { getUser } from "./auth.js";
 import { openWorkoutDetail } from "./workout-detail.js";
 import { renderFriends, countIncomingRequests } from "./friends.js";
+import { openProfile } from "./profile.js";
 
 let feedMode = "workouts"; // "workouts" | "friends"
 
@@ -91,9 +92,9 @@ async function renderFeedWorkouts(body) {
         return `
       <div class="card feed-card" data-w="${esc(w.id)}">
         <div style="display:flex; align-items:center; gap:10px;">
-          ${photo ? `<div style="width:38px; height:38px; border-radius:50%; background:center/cover no-repeat; background-image:url('${photo}'); flex-shrink:0;"></div>` : `<div style="width:38px; height:38px; border-radius:50%; background:var(--surface-raised); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:var(--amber); flex-shrink:0;">${esc(name[0].toUpperCase())}</div>`}
+          ${photo ? `<div data-profile="${esc(w.owner_uid)}" style="width:38px; height:38px; border-radius:50%; background:center/cover no-repeat; background-image:url('${photo}'); flex-shrink:0; cursor:pointer;"></div>` : `<div data-profile="${esc(w.owner_uid)}" style="cursor:pointer; width:38px; height:38px; border-radius:50%; background:var(--surface-raised); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:var(--amber); flex-shrink:0;">${esc(name[0].toUpperCase())}</div>`}
           <div style="flex:1; min-width:0;">
-            <div class="list-row-title">${esc(name)} <span class="muted" style="font-weight:400;">· ${esc(w.title)}</span></div>
+            <div class="list-row-title"><span class="profile-link" data-profile="${esc(w.owner_uid)}">${esc(name)}</span> <span class="muted" style="font-weight:400;">· ${esc(w.title)}</span></div>
             <div class="list-row-sub">${fmtDateTime(w.start_time)}${vibe ? ` · ${vibe.emoji} ${vibe.label}` : ""}</div>
           </div>
           <div class="list-row-meta" style="text-align:right; flex-shrink:0;">
@@ -113,6 +114,9 @@ async function renderFeedWorkouts(body) {
     `;
       }).join("");
 
+  wrap.querySelectorAll("[data-profile]").forEach(el => {
+    el.onclick = (e) => { e.stopPropagation(); openProfile(el.dataset.profile); };
+  });
   wrap.querySelectorAll(".feed-card[data-w]").forEach(el => {
     el.onclick = () => openWorkoutDetail(
       workouts.find(w => w.id === el.dataset.w),
