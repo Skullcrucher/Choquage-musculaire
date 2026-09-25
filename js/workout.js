@@ -3,7 +3,8 @@
 // ============================================================
 import * as db from "./db.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce, attachAutocomplete, fireRestEndNotification, esc } from "./utils.js";
-import { getExercises, getRoutines, getWorkouts, getAllSets, invalidate, peek } from "./cache.js";
+import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate } from "./cache.js";
+import { openExerciseDetail } from "./exercise-detail.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
 let restTimerInterval = null;
@@ -149,7 +150,7 @@ function renderExerciseList(el) {
   el.innerHTML = currentWorkout.exercises.map((ex, exIdx) => `
     <div class="exercise-block">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-        <h3 class="exercise-name">${esc(ex.exercise_title)}</h3>
+        <h3 class="exercise-name exercise-name-link" data-ex-detail="${exIdx}" role="button" tabindex="0">${esc(ex.exercise_title)}</h3>
         <button class="rest-chip" data-rest="${exIdx}" title="Temps de repos">⏱ ${fmtRest(ex.rest_timer_seconds || 90)}</button>
       </div>
       <div class="set-header">
@@ -159,6 +160,13 @@ function renderExerciseList(el) {
       <button class="add-set-btn" data-add-set="${exIdx}">＋ Ajouter une série</button>
     </div>
   `).join("") || `<div class="empty-state"><span class="num">＋</span>Ajoute un premier exercice pour commencer.</div>`;
+
+  el.querySelectorAll("[data-ex-detail]").forEach(h => {
+    h.onclick = () => {
+      const ex = currentWorkout.exercises[parseInt(h.dataset.exDetail, 10)];
+      openExerciseDetail(ex.exercise_title, ex.muscle_group);
+    };
+  });
 
   el.querySelectorAll("[data-rest]").forEach(btn => {
     btn.onclick = () => openRestPicker(parseInt(btn.dataset.rest, 10));
@@ -241,22 +249,8 @@ function setRowHtml(s, exIdx, sIdx) {
 
 // Dernières séries loggées pour un exercice (la séance la plus récente où
 // il a été fait), pour pré-remplir poids/reps plutôt que partir de zéro.
-// Utilise l'historique complet s'il est déjà en mémoire (onglet Stats
-// ouvert), sinon ne télécharge que les séries de cet exercice : charger
-// tout l'historique (~10 000 séries) prenait une quinzaine de secondes.
 async function getLastSetsForExercise(exerciseName) {
-  let relevant;
-  const allCached = peek("sets");
-  if (allCached) {
-    relevant = allCached.filter(s => s.exercise_title === exerciseName);
-  } else {
-    try {
-      relevant = await db.listSetsForExercise(exerciseName);
-    } catch (e) {
-      console.warn("[Skullcrusher] Requête par exercice impossible, repli sur l'historique complet :", e);
-      relevant = (await getAllSets()).filter(s => s.exercise_title === exerciseName);
-    }
-  }
+  let relevant = await getSetsForExercise(exerciseName);
   relevant = relevant.filter(s => s.workout_start_time);
   if (!relevant.length) return [];
   const latestTime = relevant.reduce((max, s) => (s.workout_start_time > max ? s.workout_start_time : max), relevant[0].workout_start_time);
