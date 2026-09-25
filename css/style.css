@@ -780,3 +780,7 @@ canvas { max-width: 100%; }
 .mw-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mw-bar { height: 8px; border-radius: 4px; background: var(--surface-raised); overflow: hidden; }
 .mw-bar > span { display: block; height: 100%; background: var(--amber); border-radius: 4px; }
+
+/* Attribution Spotify (logo à côté du contenu issu de Spotify) */
+.spotify-icon { width: 16px; height: 16px; vertical-align: -3px; flex-shrink: 0; }
+.spotify-attrib { display: inline-flex; align-items: center; gap: 6px; }

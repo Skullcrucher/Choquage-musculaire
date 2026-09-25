@@ -4,7 +4,10 @@
 import * as db from "./db.js";
 import { openModal, closeModal, esc, estimate1RM } from "./utils.js";
 import { getSetsForExercise } from "./cache.js";
-import { normalizePlaylistUrl, parseSongInput, songLabel } from "./music.js";
+import { normalizePlaylistUrl, parseSongInput, songLabel, SPOTIFY_ICON } from "./music.js";
+
+// Bande-son jointe à une séance : liens des morceaux uniquement (voir music.js).
+const MAX_SOUNDTRACK = 10;
 
 // Meilleure 1RM estimée d'une liste de séries, en ne gardant que les séries
 // de 15 reps ou moins (au-delà, la formule d'Epley s'emballe), sauf s'il
@@ -66,7 +69,7 @@ export async function openFinishDialog(workout, summary) {
         </div>
         <label>🎵 Le son qui t'a porté</label>
         <input id="fin-song" placeholder="Titre - Artiste, ou lien Spotify du morceau" value="${esc(nowPlaying ? `${nowPlaying.title} - ${nowPlaying.artist}` : "")}">
-        ${nowPlaying ? `<p class="muted" style="font-size:12px; margin:4px 0 0;">Pré-rempli avec le morceau en cours sur Spotify.</p>` : ""}
+        ${nowPlaying ? `<p class="muted spotify-attrib" style="font-size:12px; margin:4px 0 0;">${SPOTIFY_ICON} Pré-rempli avec le morceau en cours sur Spotify.</p>` : ""}
       ` : ""}
 
       <label>🎧 Playlist de la séance (facultatif)</label>
@@ -74,10 +77,10 @@ export async function openFinishDialog(workout, summary) {
 
       ${tracks.length ? `
         <label class="list-row" style="cursor:pointer; margin-top:10px;">
-          <span>🎶 Joindre la bande-son (${tracks.length} morceau${tracks.length > 1 ? "x" : ""} écouté${tracks.length > 1 ? "s" : ""})</span>
+          <span>🎶 Joindre la bande-son (${Math.min(tracks.length, MAX_SOUNDTRACK)} morceau${tracks.length > 1 ? "x" : ""} écouté${tracks.length > 1 ? "s" : ""})</span>
           <input type="checkbox" id="fin-tracks" checked style="width:auto;">
         </label>
-        <p class="muted" style="font-size:12px; margin:0;">${tracks.slice(0, 4).map(t => esc(songLabel(t))).join(" · ")}${tracks.length > 4 ? " …" : ""}</p>
+        <p class="muted spotify-attrib" style="font-size:12px; margin:0;">${SPOTIFY_ICON} ${tracks.slice(0, 4).map(t => esc(songLabel(t))).join(" · ")}${tracks.length > 4 ? " …" : ""}</p>
       ` : ""}
 
       <label class="list-row" style="cursor:pointer; margin-top:10px;">
@@ -99,15 +102,19 @@ export async function openFinishDialog(workout, summary) {
         const songInput = m.querySelector("#fin-song")?.value.trim() || "";
         let song = songInput ? parseSongInput(songInput) : null;
         if (songInput && !song) { err.textContent = "Morceau : écris « Titre - Artiste » ou colle un lien Spotify de titre."; return; }
-        if (song && nowPlaying && songInput === `${nowPlaying.title} - ${nowPlaying.artist}`) song = nowPlaying;
-        if (song && /[<>]/.test(song.title + song.artist)) { err.textContent = "Les caractères < et > ne sont pas autorisés."; return; }
+        // Morceau en cours accepté tel quel : on ne garde que son lien Spotify.
+        if (song && nowPlaying && songInput === `${nowPlaying.title} - ${nowPlaying.artist}`) song = { url: nowPlaying.url, source: "spotify" };
+        if (song && /[<>]/.test((song.title || "") + (song.artist || ""))) { err.textContent = "Les caractères < et > ne sont pas autorisés."; return; }
         const withTracks = !!m.querySelector("#fin-tracks")?.checked;
         closeModal();
         resolve({
           shared: m.querySelector("#fin-share").checked,
           records,
           record_song: records.length && song ? song : null,
-          soundtrack: (playlist || withTracks) ? { playlist_url: playlist, tracks: withTracks ? tracks : [] } : null
+          soundtrack: (playlist || withTracks) ? {
+            playlist_url: playlist,
+            tracks: withTracks ? tracks.slice(0, MAX_SOUNDTRACK).map(t => ({ url: t.url, source: "spotify" })) : []
+          } : null
         });
       };
     }, { onDismiss: () => resolve(null) });

@@ -5,7 +5,7 @@ import * as db from "./db.js";
 import { openModal, closeModal, fmtDateTime, fmtDuration, estimate1RM, toast, esc } from "./utils.js";
 import { getUser } from "./auth.js";
 import { invalidate } from "./cache.js";
-import { songHtml, bindSongLinks, spotifyEmbed } from "./music.js";
+import { songBlockHtml, bindSongLinks, spotifyEmbed, parseSpotify } from "./music.js";
 
 // Records, son du record, playlist (lecteur) et bande-son de la séance.
 function musicSectionHtml(w) {
@@ -16,10 +16,10 @@ function musicSectionHtml(w) {
   return `
     <div class="feed-music" style="margin-bottom:14px;">
       ${records.map(r => `<div>🏆 <b>${esc(r.exercise)}</b> — ${esc(r.kg)} kg × ${esc(r.reps)} <span class="muted">(1RM ${esc(r.one_rm)} kg, +${esc(Math.round((r.one_rm - r.prev_one_rm) * 10) / 10)} kg)</span></div>`).join("")}
-      ${records.length && w.record_song ? `<div>🎵 Porté par ${songHtml(w.record_song)}</div>` : ""}
+      ${records.length && w.record_song ? `<div>🎵 Porté par :</div>${songBlockHtml(w.record_song)}` : ""}
       ${playlist ? spotifyEmbed(playlist, 152) : ""}
       ${tracks.length ? `<div class="muted" style="margin-top:8px;">🎶 Bande-son de la séance</div>
-        <ol class="soundtrack-list">${tracks.map(t => `<li>${songHtml(t)}</li>`).join("")}</ol>` : ""}
+        ${tracks.map(t => parseSpotify(t.url) ? spotifyEmbed(t.url, 80) : "").join("")}` : ""}
     </div>`;
 }
 

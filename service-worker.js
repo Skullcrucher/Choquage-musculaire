@@ -4,6 +4,7 @@ const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
+  "./privacy.html",
   "./css/style.css",
   "./fonts/anton-latin-400-normal.woff2",
   "./fonts/inter-latin-400-normal.woff2",

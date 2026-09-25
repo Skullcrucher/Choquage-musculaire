@@ -59,21 +59,12 @@ export async function renderMusicWall(container) {
   if (!body.isConnected) return;
   const nameOf = (uid) => uid === myUid ? "Toi" : (profiles.find(p => p.uid === uid)?.display_name || "Quelqu'un");
 
-  // Artistes : profil (x3), son d'un record (x2), bande-son (x1 par séance).
+  // Artistes déclarés par les utilisateurs dans leur profil. Les écoutes
+  // récupérées via Spotify ne sont jamais agrégées en classement : la
+  // politique développeurs de Spotify interdit d'en tirer des statistiques.
   const artists = new Map();
-  const tracks = new Map();
-  profiles.forEach(p => bump(artists, normArtist(p.music?.artist_name), normArtist(p.music?.artist_name), 3));
-  workouts.forEach(w => {
-    if (w.record_song?.artist) w.record_song.artist.split(/,\s*/).forEach(a => bump(artists, normArtist(a), normArtist(a), 2));
-    const seenArtists = new Set();
-    (w.soundtrack?.tracks || []).forEach(t => {
-      (t.artist || "").split(/,\s*/).map(normArtist).filter(Boolean).forEach(a => seenArtists.add(a));
-      bump(tracks, t.url || `${t.title}|${t.artist}`, `${t.title}`, 1, { song: t });
-    });
-    seenArtists.forEach(a => bump(artists, a, a, 1));
-  });
+  profiles.forEach(p => bump(artists, normArtist(p.music?.artist_name), normArtist(p.music?.artist_name), 1));
   const topArtists = topCounts(artists);
-  const topTracks = topCounts(tracks).filter(t => t.count > 0);
   const recordSongs = workouts.filter(w => w.record_song && (w.records || []).length).slice(0, 10);
   const playlists = profiles.filter(p => parseSpotify(p.music?.playlist_url));
   const max = topArtists[0]?.count || 1;
@@ -81,6 +72,7 @@ export async function renderMusicWall(container) {
   body.innerHTML = `
     <div class="card">
       <div class="card-title">🔥 Artistes qui font soulever</div>
+      <p class="muted" style="margin:-4px 0 8px; font-size:12px;">D'après les artistes que chacun met en avant sur son profil.</p>
       ${topArtists.length ? topArtists.map((a, i) => `
         <div class="mw-bar-row">
           <span class="mw-rank">${i + 1}</span>
@@ -107,11 +99,6 @@ export async function renderMusicWall(container) {
         </div>`).join("") : `<p class="muted" style="margin:0;">Aucune playlist de salle partagée pour l'instant.</p>`}
     </div>
 
-    <div class="card">
-      <div class="card-title">🎶 Les plus écoutés en séance</div>
-      ${topTracks.length ? `<ol class="soundtrack-list">${topTracks.map(t => `<li>${songHtml(t.song)}${t.count > 1 ? ` <span class="muted">×${t.count}</span>` : ""}</li>`).join("")}</ol>`
-        : `<p class="muted" style="margin:0;">Connecte Spotify (Réglages) et partage tes séances : les morceaux écoutés pendant l'entraînement apparaîtront ici.</p>`}
-    </div>
   `;
   bindSongLinks(body);
   body.querySelectorAll("[data-profile]").forEach(el => el.onclick = () => openProfile(el.dataset.profile));
