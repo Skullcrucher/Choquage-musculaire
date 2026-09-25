@@ -86,7 +86,7 @@ function renderDetailChart(modalEl, sets) {
     type: "line",
     data: {
       labels: weeks,
-      datasets: [{ label: "1RM estimée (kg)", data: weeks.map(w => perWeek[w]), borderColor: "#FFB020", backgroundColor: "transparent", tension: 0.25 }]
+      datasets: [{ label: "1RM estimée (kg)", data: weeks.map(w => perWeek[w]), borderColor: "#E02424", backgroundColor: "transparent", tension: 0.25 }]
     },
     options: {
       responsive: true,

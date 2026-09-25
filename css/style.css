@@ -35,17 +35,20 @@
 }
 
 :root {
-  --bg: #101014;
-  --surface: #1C1C22;
-  --surface-raised: #26262E;
-  --border: #34343E;
-  --text: #F1EFEA;
-  --text-dim: #8B8D96;
-  --amber: #FFB020;
-  --amber-dim: #B37B16;
-  --blue: #4C8DFF;
+  /* Palette tirée de l'icône "main cornue" : noirs profonds + rouge sang.
+     (--amber garde son nom historique mais désigne la couleur d'accent.) */
+  --bg: #0B0B0C;
+  --surface: #161617;
+  --surface-raised: #202022;
+  --border: #303034;
+  --text: #EEEDEB;
+  --text-dim: #8D8D92;
+  --amber: #E02424;
+  --amber-dim: #9B0F0F;
+  --on-accent: #FFFFFF;
+  --blue: #B8B8BE;
   --green: #5FBE72;
-  --red: #E4573D;
+  --red: #FF5C5C;
   --radius: 6px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -83,8 +86,8 @@ button { font-family: inherit; }
   100% { transform: scale(1); opacity: 1; }
 }
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 6px 20px rgba(0,0,0,0.5), 0 0 0 0 rgba(255,176,32,0.35); }
-  50% { box-shadow: 0 6px 20px rgba(0,0,0,0.5), 0 0 0 9px rgba(255,176,32,0); }
+  0%, 100% { box-shadow: 0 6px 20px rgba(0,0,0,0.5), 0 0 0 0 rgba(224,36,36,0.35); }
+  50% { box-shadow: 0 6px 20px rgba(0,0,0,0.5), 0 0 0 9px rgba(224,36,36,0); }
 }
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(6px); }
@@ -188,7 +191,7 @@ button { font-family: inherit; }
 .btn:active { transform: scale(0.96); }
 .btn-primary {
   background: var(--amber);
-  color: #17110A;
+  color: var(--on-accent);
   border: none;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 14px 100%, 0 calc(100% - 14px));
 }
@@ -310,19 +313,21 @@ label {
   justify-content: center;
   width: 34px; height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(255,176,32,0.28), rgba(255,176,32,0.12));
-  border: 1.5px solid rgba(255,176,32,0.45);
+  background: linear-gradient(135deg, rgba(224,36,36,0.28), rgba(224,36,36,0.12));
+  border: 1.5px solid rgba(224,36,36,0.45);
   margin-top: -6px;
   margin-bottom: 1px;
-  box-shadow: 0 2px 10px rgba(255,176,32,0.25);
+  box-shadow: 0 2px 10px rgba(224,36,36,0.25);
 }
 .tab-btn.featured .tab-icon { width: 18px; height: 18px; }
+.tab-btn.featured .horns-icon { width: auto; height: 24px; filter: drop-shadow(0 0 1px rgba(255,255,255,0.75)); }
 .tab-btn.featured.active .tab-icon-badge {
   background: linear-gradient(135deg, var(--amber-bright, var(--amber)), var(--amber));
   border-color: var(--amber);
-  box-shadow: 0 3px 14px rgba(255,176,32,0.5);
+  box-shadow: 0 3px 14px rgba(224,36,36,0.5);
 }
-.tab-btn.featured.active .tab-icon { color: #17110A; }
+.tab-btn.featured.active .tab-icon { color: var(--on-accent); }
+.tab-btn.featured.active .horns-icon { filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.95)); }
 .tab-btn.featured.active::before { display: none; }
 
 /* ---------- Set row (workout logging) ---------- */
@@ -385,7 +390,7 @@ label {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  background: rgba(255,176,32,0.08);
+  background: rgba(224,36,36,0.08);
   border: 1.5px dashed var(--amber);
   border-radius: 10px;
   padding: 11px 0;
@@ -393,7 +398,7 @@ label {
   margin-top: 8px;
   transition: transform 0.1s, background 0.15s;
 }
-.add-set-btn:active { transform: scale(0.97); background: rgba(255,176,32,0.16); }
+.add-set-btn:active { transform: scale(0.97); background: rgba(224,36,36,0.16); }
 
 /* ---------- Rest timer ---------- */
 .rest-timer {
@@ -402,7 +407,7 @@ label {
   left: 16px; right: 16px;
   z-index: 25;
   background: var(--amber);
-  color: #17110A;
+  color: var(--on-accent);
   border-radius: var(--radius);
   padding: 12px 16px;
   display: flex;
@@ -416,7 +421,7 @@ label {
 .rest-timer button {
   background: rgba(0,0,0,0.18);
   border: none;
-  color: #17110A;
+  color: var(--on-accent);
   border-radius: 5px;
   padding: 6px 10px;
   font-size: 12px;
@@ -443,7 +448,7 @@ label {
   background: var(--surface-raised);
   position: relative;
 }
-.cal-day.has-workout { color: #17110A; background: var(--amber); font-weight: 700; }
+.cal-day.has-workout { color: var(--on-accent); background: var(--amber); font-weight: 700; }
 .cal-day.empty { background: transparent; }
 
 /* ---------- List rows ---------- */
@@ -488,7 +493,7 @@ label {
   text-align: center;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast-horns { width: 18px; height: 18px; color: var(--amber); flex-shrink: 0; }
+.toast-horns { height: 22px; width: auto; flex-shrink: 0; filter: drop-shadow(0 0 1px rgba(255,255,255,0.8)); }
 .toast { display: flex; align-items: center; gap: 8px; }
 
 /* ---------- Chip / tag selector ---------- */
@@ -505,7 +510,7 @@ label {
   transition: transform 0.1s;
 }
 .chip:active { transform: scale(0.93); }
-.chip.active { background: var(--amber); color: #17110A; border-color: var(--amber); }
+.chip.active { background: var(--amber); color: var(--on-accent); border-color: var(--amber); }
 
 /* ---------- Modal ---------- */
 .modal-backdrop {
@@ -566,9 +571,9 @@ canvas { max-width: 100%; }
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  background: rgba(255,176,32,0.12);
+  background: rgba(224,36,36,0.12);
   color: var(--amber);
-  border: 1px solid rgba(255,176,32,0.3);
+  border: 1px solid rgba(224,36,36,0.3);
   margin-right: 6px;
   margin-bottom: 6px;
 }
@@ -586,10 +591,12 @@ canvas { max-width: 100%; }
   font-weight: 700;
   transition: transform 0.1s, background 0.15s, color 0.15s, border-color 0.15s;
 }
-.props-btn svg { width: 16px; height: 16px; }
+/* La main est noire : un liseré clair la détache des fonds sombres. */
+.props-horns { height: 22px; width: auto; filter: grayscale(1) brightness(1.8) drop-shadow(0 0 1px rgba(255,255,255,0.5)); opacity: 0.75; transition: filter 0.15s, opacity 0.15s; }
+.props-btn.reacted .props-horns { filter: drop-shadow(0 0 1px rgba(255,255,255,0.9)); opacity: 1; }
 .props-btn:active { transform: scale(0.92); }
 .props-btn.reacted {
-  background: rgba(255,176,32,0.15);
+  background: rgba(224,36,36,0.15);
   border-color: var(--amber);
   color: var(--amber);
 }
@@ -638,7 +645,7 @@ canvas { max-width: 100%; }
   background: var(--text-dim);
   transition: transform 0.15s, background 0.15s;
 }
-.switch input:checked + .switch-track { background: rgba(255,176,32,0.25); border-color: var(--amber); }
+.switch input:checked + .switch-track { background: rgba(224,36,36,0.25); border-color: var(--amber); }
 .switch input:checked + .switch-track::before { transform: translateX(19px); background: var(--amber); }
 
 /* Reduced motion */
@@ -676,7 +683,7 @@ canvas { max-width: 100%; }
   transition: transform 0.1s;
 }
 .vote-btn:active { transform: scale(0.92); }
-.vote-btn.voted { border-color: var(--amber); color: var(--amber); background: rgba(255,176,32,0.12); }
+.vote-btn.voted { border-color: var(--amber); color: var(--amber); background: rgba(224,36,36,0.12); }
 .vote-btn:disabled { opacity: 0.6; cursor: default; }
 .req-dot {
   display: inline-block;
@@ -708,3 +715,4 @@ canvas { max-width: 100%; }
 .exercise-name-link { cursor: pointer; }
 .exercise-name-link::after { content: " ›"; color: var(--amber); font-weight: 700; }
 .exercise-name-link:active { opacity: 0.6; }
+.title-horns { height: 0.95em; width: auto; vertical-align: -0.1em; margin-left: 4px; filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.8)); }
