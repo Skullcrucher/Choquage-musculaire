@@ -458,7 +458,7 @@ async function finishWorkout() {
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
   localStorage.removeItem(LS_REST_KEY);
-  invalidate("workouts");
+  invalidate("workouts", "sets");
   clearInterval(restTimerInterval);
   if (restTimerEnd) cancelRestPush();
   restTimerEnd = null;
@@ -476,7 +476,7 @@ async function cancelWorkout() {
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
   localStorage.removeItem(LS_REST_KEY);
-  invalidate("workouts");
+  invalidate("workouts", "sets");
   clearInterval(restTimerInterval);
   if (restTimerEnd) cancelRestPush();
   restTimerEnd = null;
