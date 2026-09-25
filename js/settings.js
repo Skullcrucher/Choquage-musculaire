@@ -65,11 +65,27 @@ export async function renderReglages(container) {
       <button class="btn btn-secondary" id="signout-btn" style="margin-top:10px;">Se déconnecter</button>
     </div>
 
-    <div class="card" id="spotify-card" style="display:none;">
+    <div class="card" id="spotify-card">
       <div class="card-title">🎧 Spotify</div>
       <p class="muted" style="margin-top:0;">Connecte ton compte pour proposer automatiquement le morceau en cours comme « son du record » et joindre la bande-son de tes séances (morceaux écoutés pendant l'entraînement). <a href="privacy.html" style="color:var(--text);">Données utilisées</a></p>
       <p class="muted" id="spotify-status" style="font-size:13px;"></p>
       <button class="btn btn-secondary btn-sm" id="spotify-btn"></button>
+      <details id="spotify-own" style="margin-top:12px;">
+        <summary style="cursor:pointer; font-weight:600;">Utiliser ma propre app Spotify</summary>
+        <p class="muted" style="font-size:13px;">L'app Spotify partagée est limitée par Spotify à quelques comptes. Avec ta propre app (gratuite, 5 minutes, <b>compte Spotify Premium requis</b>), tu te connectes sans attendre personne :</p>
+        <ol class="muted" style="font-size:13px; padding-left:20px; line-height:1.5;">
+          <li>Ouvre <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener" style="color:var(--text);">developer.spotify.com/dashboard</a>, connecte-toi, puis <b>Create app</b>.</li>
+          <li>Nom et description au choix. Dans <b>Redirect URIs</b>, colle exactement :
+            <div style="display:flex; gap:6px; margin:6px 0;"><input id="spotify-redirect" readonly style="font-size:12px;"><button class="btn btn-secondary btn-sm" id="spotify-copy" style="width:auto;">Copier</button></div></li>
+          <li>Coche <b>Web API</b>, accepte les conditions, <b>Save</b>.</li>
+          <li>Dans <b>Settings</b>, copie le <b>Client ID</b> et colle-le ici :</li>
+        </ol>
+        <div style="display:flex; gap:6px;">
+          <input id="spotify-client-id" placeholder="Client ID (32 caractères)" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button class="btn btn-primary btn-sm" id="spotify-client-save" style="width:auto;">OK</button>
+        </div>
+        <p class="muted" id="spotify-client-info" style="font-size:12px; margin:6px 0 0;"></p>
+      </details>
     </div>
 
     <div class="card">
@@ -443,20 +459,38 @@ function openSpotifyConsent(onAccept) {
   });
 }
 
-// Connexion Spotify (facultative, visible seulement si configurée).
+// Connexion Spotify (facultative) : app partagée, ou sa propre app Spotify.
 async function setupSpotifyCard(container) {
   let sp;
   try { sp = await import("./spotify-connect.js"); } catch (_) { return; }
-  if (!sp.spotifyConfigured()) return;
   const card = container.querySelector("#spotify-card");
+  if (!card) return;
   const status = container.querySelector("#spotify-status");
   const btn = container.querySelector("#spotify-btn");
-  if (!card) return;
-  card.style.display = "";
-  const connected = await sp.isSpotifyConnected();
+  const own = container.querySelector("#spotify-own");
+  const idInput = container.querySelector("#spotify-client-id");
+  const idInfo = container.querySelector("#spotify-client-info");
+  container.querySelector("#spotify-redirect").value = sp.redirectUri();
+  container.querySelector("#spotify-copy").onclick = async () => {
+    try { await navigator.clipboard.writeText(sp.redirectUri()); toast("Adresse copiée"); }
+    catch (_) { container.querySelector("#spotify-redirect").select(); }
+  };
+
+  const [connected, settings] = await Promise.all([sp.isSpotifyConnected(), sp.getClientSettings()]);
   if (!btn.isConnected) return;
-  status.textContent = connected ? "✅ Compte Spotify connecté." : "Non connecté. Sur iPhone, lance la connexion depuis Safari (pas depuis l'icône) : elle marchera ensuite aussi dans l'app installée.";
+  idInput.value = settings.own;
+  idInfo.textContent = settings.own
+    ? "✅ Ta propre app Spotify est utilisée. Vide le champ puis OK pour revenir à l'app partagée."
+    : settings.clientId ? "Pour l'instant, l'app Spotify partagée est utilisée." : "";
+  if (!settings.clientId) own.open = true;
+
+  status.textContent = connected
+    ? `✅ Compte Spotify connecté (${settings.own ? "ta propre app" : "app partagée"}).`
+    : !settings.clientId
+      ? "Pour connecter Spotify, crée ta propre app Spotify ci-dessous."
+      : "Non connecté. Sur iPhone, lance la connexion depuis Safari (pas depuis l'icône) : elle marchera ensuite aussi dans l'app installée.";
   btn.textContent = connected ? "Déconnecter Spotify" : "Connecter Spotify";
+  btn.disabled = !connected && !settings.clientId;
   btn.onclick = async () => {
     if (connected) {
       if (!confirm("Déconnecter Spotify ? Les bandes-son et les sons de record venus de Spotify seront effacés de tes séances.")) return;
@@ -468,10 +502,22 @@ async function setupSpotifyCard(container) {
         console.error("[Skullcrusher] Déconnexion Spotify", e);
         toast("Déconnexion impossible, réessaie");
       }
-      btn.disabled = false;
       setupSpotifyCard(container);
     } else {
-      openSpotifyConsent(() => sp.connectSpotify());
+      openSpotifyConsent(() => sp.connectSpotify().catch(e => toast(e.message, 4000)));
+    }
+  };
+
+  container.querySelector("#spotify-client-save").onclick = async () => {
+    const value = idInput.value.trim();
+    try {
+      await sp.setOwnClientId(value);
+      // Le jeton actuel appartient à l'ancienne app : il faut se reconnecter.
+      if (connected && value !== settings.own) await sp.forgetToken();
+      toast(value ? "Client ID enregistré — tu peux connecter Spotify" : "Retour à l'app Spotify partagée", 3500);
+      setupSpotifyCard(container);
+    } catch (e) {
+      idInfo.textContent = e.message;
     }
   };
 }

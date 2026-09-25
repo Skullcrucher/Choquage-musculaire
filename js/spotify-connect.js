@@ -1,6 +1,14 @@
 // ============================================================
 // CONNEXION SPOTIFY (facultative) — OAuth "PKCE", sans serveur
 //
+// Deux façons de se connecter :
+//   - l'app Spotify partagée (SPOTIFY_CLIENT_ID, spotify-config.js) : en
+//     mode développement, Spotify la limite à 5 comptes ajoutés à la main
+//     par son propriétaire ;
+//   - sa propre app Spotify : chacun crée la sienne sur le tableau de bord
+//     développeurs de Spotify et saisit son Client ID dans Réglages. Il en
+//     est propriétaire, donc aucune liste à tenir par l'administrateur.
+//
 // Sert à deux choses : proposer le morceau en cours comme "son du record",
 // et enregistrer les morceaux écoutés pendant la séance (bande-son).
 // Le jeton de rafraîchissement est rangé dans user_private/{uid} (lisible
@@ -14,13 +22,29 @@ import { SPOTIFY_CLIENT_ID } from "./spotify-config.js";
 const SCOPES = "user-read-currently-playing user-read-recently-played";
 const LS_VERIFIER = "skullcrusher_spotify_verifier";
 const LS_STATE = "skullcrusher_spotify_state";
+const LS_CLIENT = "skullcrusher_spotify_client";
 let access = null; // { token, expiresAt }
 
-export function spotifyConfigured() {
-  return !!SPOTIFY_CLIENT_ID;
+export const SHARED_CLIENT_ID = SPOTIFY_CLIENT_ID;
+
+export function isValidClientId(id) {
+  return /^[0-9a-f]{32}$/i.test(String(id || "").trim());
 }
 
-function redirectUri() {
+// Client ID propre à l'utilisateur (s'il en a saisi un), sinon celui de l'app partagée.
+export async function getClientSettings() {
+  const priv = await db.getPrivateData().catch(() => null);
+  const own = isValidClientId(priv?.spotify_client_id) ? priv.spotify_client_id : "";
+  return { own, clientId: own || SHARED_CLIENT_ID || "" };
+}
+
+export async function setOwnClientId(id) {
+  const value = String(id || "").trim();
+  if (value && !isValidClientId(value)) throw new Error("Client ID invalide : 32 caractères (chiffres et lettres a à f).");
+  await db.setPrivateData({ spotify_client_id: value || null });
+}
+
+export function redirectUri() {
   return new URL("./", location.href).href;
 }
 
@@ -29,33 +53,39 @@ function b64url(bytes) {
 }
 
 export async function connectSpotify() {
+  const { clientId } = await getClientSettings();
+  if (!clientId) throw new Error("Aucune app Spotify configurée : saisis le Client ID de ta propre app Spotify.");
+  localStorage.setItem(LS_CLIENT, clientId);
   const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
   const state = b64url(crypto.getRandomValues(new Uint8Array(12)));
   const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
   localStorage.setItem(LS_VERIFIER, verifier);
   localStorage.setItem(LS_STATE, state);
   const params = new URLSearchParams({
-    client_id: SPOTIFY_CLIENT_ID, response_type: "code", redirect_uri: redirectUri(),
+    client_id: clientId, response_type: "code", redirect_uri: redirectUri(),
     code_challenge_method: "S256", code_challenge: challenge, scope: SCOPES, state
   });
   location.href = `https://accounts.spotify.com/authorize?${params}`;
 }
 
-async function tokenRequest(body) {
+async function tokenRequest(clientId, body) {
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ client_id: SPOTIFY_CLIENT_ID, ...body })
+    body: new URLSearchParams({ client_id: clientId, ...body })
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error_description || data.error || `Spotify ${res.status}`);
   return data;
 }
 
-async function saveTokens(data, previousRefresh = null) {
+// Le jeton est lié à l'app Spotify qui l'a délivré : on garde son Client ID avec.
+async function saveTokens(clientId, data, previousRefresh = null) {
   access = { token: data.access_token, expiresAt: Date.now() + (data.expires_in - 60) * 1000 };
   const refresh = data.refresh_token || previousRefresh;
-  if (refresh && refresh !== previousRefresh) await db.setPrivateData({ spotify_refresh_token: refresh, spotify_connected_at: new Date().toISOString() });
+  if (refresh && refresh !== previousRefresh) {
+    await db.setPrivateData({ spotify_refresh_token: refresh, spotify_token_client_id: clientId, spotify_connected_at: new Date().toISOString() });
+  }
 }
 
 // Retour de Spotify (?code=...&state=...) : à appeler une fois connecté à
@@ -68,14 +98,19 @@ export async function handleSpotifyRedirect() {
   if (!code && !error) return null;
   url.searchParams.delete("code"); url.searchParams.delete("state"); url.searchParams.delete("error");
   history.replaceState(null, "", url.pathname + (url.search ? url.search : "") + url.hash);
-  if (error) return "Connexion Spotify annulée.";
+  if (error) {
+    return error === "access_denied"
+      ? "Connexion Spotify refusée. Si l'app Spotify partagée ne t'est pas ouverte, utilise ta propre app Spotify (Réglages → 🎧 Spotify)."
+      : `Connexion Spotify impossible (${error}).`;
+  }
   const verifier = localStorage.getItem(LS_VERIFIER);
   if (!verifier || state !== localStorage.getItem(LS_STATE)) {
     return "Connexion Spotify impossible ici : relance « Connecter Spotify » depuis cette même fenêtre (sur iPhone, depuis Safari).";
   }
-  localStorage.removeItem(LS_VERIFIER); localStorage.removeItem(LS_STATE);
+  const clientId = localStorage.getItem(LS_CLIENT) || (await getClientSettings()).clientId;
+  localStorage.removeItem(LS_VERIFIER); localStorage.removeItem(LS_STATE); localStorage.removeItem(LS_CLIENT);
   try {
-    await saveTokens(await tokenRequest({ grant_type: "authorization_code", code, redirect_uri: redirectUri(), code_verifier: verifier }));
+    await saveTokens(clientId, await tokenRequest(clientId, { grant_type: "authorization_code", code, redirect_uri: redirectUri(), code_verifier: verifier }));
     return "Spotify connecté 🎧";
   } catch (e) {
     console.error("[Skullcrusher] Échange du code Spotify", e);
@@ -84,8 +119,14 @@ export async function handleSpotifyRedirect() {
 }
 
 export async function isSpotifyConnected() {
-  if (!spotifyConfigured()) return false;
   try { return !!(await db.getPrivateData())?.spotify_refresh_token; } catch (_) { return false; }
+}
+
+// Changement d'app Spotify : l'ancien jeton ne vaut plus, on l'oublie
+// (sans toucher aux séances).
+export async function forgetToken() {
+  access = null;
+  await db.setPrivateData({ spotify_refresh_token: null, spotify_token_client_id: null });
 }
 
 // Déconnexion : jeton + données Spotify stockées dans les séances effacés.
@@ -96,10 +137,12 @@ export async function disconnectSpotify() {
 
 async function getAccessToken() {
   if (access && access.expiresAt > Date.now()) return access.token;
-  const refresh = (await db.getPrivateData())?.spotify_refresh_token;
+  const priv = await db.getPrivateData();
+  const refresh = priv?.spotify_refresh_token;
   if (!refresh) return null;
+  const clientId = priv.spotify_token_client_id || SHARED_CLIENT_ID;
   try {
-    await saveTokens(await tokenRequest({ grant_type: "refresh_token", refresh_token: refresh }), refresh);
+    await saveTokens(clientId, await tokenRequest(clientId, { grant_type: "refresh_token", refresh_token: refresh }), refresh);
     return access.token;
   } catch (e) {
     console.warn("[Skullcrusher] Jeton Spotify expiré ou révoqué :", e);
@@ -128,7 +171,6 @@ function toSong(track) {
 
 // Morceau en cours d'écoute, ou null.
 export async function getNowPlaying() {
-  if (!spotifyConfigured()) return null;
   try {
     const data = await api("/me/player/currently-playing");
     return data?.item && data.currently_playing_type === "track" ? toSong(data.item) : null;
@@ -140,7 +182,6 @@ export async function getNowPlaying() {
 
 // Morceaux écoutés depuis sinceMs (bande-son de la séance), sans doublons.
 export async function getTracksSince(sinceMs) {
-  if (!spotifyConfigured()) return [];
   try {
     const data = await api(`/me/player/recently-played?limit=50&after=${Math.floor(sinceMs)}`);
     const seen = new Set();
