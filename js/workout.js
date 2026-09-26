@@ -49,7 +49,10 @@ export async function renderSeance(container) {
 }
 
 async function renderStartScreen(container) {
-  const [routines, workouts] = await Promise.all([getRoutines(), getWorkouts()]);
+  const [routines, workouts, planCard] = await Promise.all([
+    getRoutines(), getWorkouts(),
+    import("./plans.js").then(m => m.todayPlanCard()).catch(e => { console.warn("[Skullcrusher] Plan indisponible", e); return null; })
+  ]);
   const weekCount = countThisWeek(workouts);
   container.innerHTML = `
     <h1 class="section-title">${t("Séance")}</h1>
@@ -58,6 +61,7 @@ async function renderStartScreen(container) {
       <span class="num" style="font-size:56px; color:var(--amber); display:block; line-height:1;">${weekCount}</span>
       <div class="muted">${weekCount > 1 ? t("séances bouclées") : t("séance bouclée")}</div>
     </div>
+    ${planCard ? planCard.html : ""}
     <button class="btn btn-primary" id="start-empty">+ ${t("Démarrer une séance vide")}</button>
     <div style="height:18px"></div>
     ${routines.length ? `<h3 class="muted" style="margin-bottom:8px; text-transform:none; font-family:'Inter',sans-serif; font-weight:600; font-size:14px;">${t("Depuis une routine")}</h3>` : ""}
@@ -70,6 +74,8 @@ async function renderStartScreen(container) {
     ${routines.length === 0 ? `<p class="muted">${t("Pas encore de routine — crée-en une dans l'onglet Routines, ou démarre une séance vide.")}</p>` : ""}
   `;
   container.querySelector("#start-empty").onclick = (e) => startWorkout(null, null, e.currentTarget);
+  const planBtn = container.querySelector("#plan-start");
+  if (planBtn && planCard?.routine) planBtn.onclick = (e) => startWorkout(planCard.routine.id, planCard.routine, e.currentTarget, { plan_id: planCard.plan.id, plan_week: planCard.week });
   container.querySelectorAll("[data-start-routine]").forEach(el => {
     el.onclick = (e) => startWorkout(el.dataset.startRoutine, routines.find(r => r.id === el.dataset.startRoutine), e.currentTarget);
   });
@@ -82,7 +88,7 @@ function withTimeout(promise, ms, label) {
   ]);
 }
 
-async function startWorkout(routineId, routine = null, triggerEl = null) {
+async function startWorkout(routineId, routine = null, triggerEl = null, planInfo = null) {
   if (triggerEl) {
     if (triggerEl.dataset.busy) return; // évite le double-tap
     triggerEl.dataset.busy = "1";
@@ -91,7 +97,9 @@ async function startWorkout(routineId, routine = null, triggerEl = null) {
   try {
     const now = new Date();
     const title = routine ? routine.name : t("Séance du {date}", { date: now.toLocaleDateString(locale()) });
-    const id = await withTimeout(db.createWorkout({ title, start_time: now.toISOString() }), 15000, t("Création de la séance"));
+    // Routine et plan d'origine : suivi du plan d'entraînement.
+    const extra = { routine_id: routine?.id || null, ...(planInfo || {}) };
+    const id = await withTimeout(db.createWorkout({ title, start_time: now.toISOString(), extra }), 15000, t("Création de la séance"));
 
     const routineExercises = routine?.exercises || [];
     await db.loadRestPrefs().catch(() => null);
@@ -269,7 +277,8 @@ function renderExerciseList(el) {
         exercise_title: ex.exercise_title, set_index: set.set_index, set_type: set.set_type,
         weight_kg: set.weight_kg, reps: set.reps, superset_id: null, exercise_notes: "",
         distance_km: null, duration_seconds: null, rpe: null,
-        workout_start_time: currentWorkout.start_time, logged_at: set.logged_at
+        workout_start_time: currentWorkout.start_time, logged_at: set.logged_at,
+        exercise_index: Math.max(0, currentWorkout.exercises.indexOf(ex))
       };
       if (set.id) await db.updateSet(currentWorkout.id, set.id, payload);
       else {

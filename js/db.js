@@ -483,11 +483,11 @@ export async function removeFriendship(friendship) {
 }
 
 // ==================== SÉANCES (workouts) ====================
-export async function createWorkout({ title, start_time, end_time = null, notes = "" }) {
+export async function createWorkout({ title, start_time, end_time = null, notes = "", extra = {} }) {
   const u = auth.currentUser;
   if (!u) throw new Error(t("Non connecté"));
   const ref = await addDoc(collection(dbase, "workouts"), {
-    title, start_time, end_time, notes, created_manually: true, shared: false,
+    ...extra, title, start_time, end_time, notes, created_manually: true, shared: false,
     owner_uid: u.uid, owner_name: u.displayName || "", owner_photo: u.photoURL || null
   });
   return ref.id;
@@ -553,6 +553,23 @@ export async function leaveWorkout(workoutId) {
 }
 
 // ==================== SÉRIES (sets) ====================
+// Modification d'une séance terminée, en une seule écriture groupée :
+// champs de la séance + séries modifiées, ajoutées et supprimées.
+export async function saveWorkoutEdit(workoutId, { patch, updates = [], creates = [], deletes = [] }) {
+  const uid = requireUid();
+  const ops = [
+    ...deletes.map(id => (b) => b.delete(doc(dbase, "workouts", workoutId, "sets", id))),
+    ...updates.map(({ id, data }) => (b) => b.update(doc(dbase, "workouts", workoutId, "sets", id), data)),
+    ...creates.map(data => (b) => b.set(doc(collection(dbase, "workouts", workoutId, "sets")), { ...data, owner_uid: uid })),
+    (b) => b.update(doc(dbase, "workouts", workoutId), patch)
+  ];
+  for (let i = 0; i < ops.length; i += 450) {
+    const batch = writeBatch(dbase);
+    ops.slice(i, i + 450).forEach(op => op(batch));
+    await batch.commit();
+  }
+}
+
 export async function addSet(workoutId, setData) {
   const ref = await addDoc(collection(dbase, "workouts", workoutId, "sets"), {
     ...setData, owner_uid: requireUid()

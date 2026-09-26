@@ -9,13 +9,14 @@ import { guessMuscleGroup } from "./muscles.js";
 import { normalizePlaylistUrl } from "./music.js";
 import { t } from "./i18n.js";
 
-let routinesMode = "mine"; // "mine" | "discover"
+let routinesMode = "mine"; // "mine" | "discover" | "plans"
 
 export async function renderRoutines(container) {
   container.innerHTML = `
     <div class="chip-row" id="routine-mode-chips" style="margin-bottom:14px;">
       <div class="chip ${routinesMode === "mine" ? "active" : ""}" data-rmode="mine">${t("Mes routines")}</div>
       <div class="chip ${routinesMode === "discover" ? "active" : ""}" data-rmode="discover">🔎 ${t("Découvrir")}</div>
+      <div class="chip ${routinesMode === "plans" ? "active" : ""}" data-rmode="plans">📅 ${t("Plans")}</div>
     </div>
     <div id="routines-content"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>
   `;
@@ -33,6 +34,7 @@ async function drawRoutines(container) {
   const content = container.querySelector("#routines-content");
   if (!content) return;
   if (routinesMode === "discover") await renderDiscover(content, () => renderMyRoutines(content));
+  else if (routinesMode === "plans") await (await import("./plans.js")).renderPlans(content);
   else await renderMyRoutines(content);
 }
 
