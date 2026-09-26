@@ -5,7 +5,7 @@ import * as db from "./db.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce, fireRestEndNotification, esc } from "./utils.js";
 import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
-import { parseMusicLink, openSpotifyPlayer, providerName } from "./music.js";
+import { parseMusicLink, openSpotifyPlayer, providerName, providerIcon } from "./music.js";
 import { t, tn, locale } from "./i18n.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
@@ -182,7 +182,7 @@ async function renderWorkoutMusic(el) {
       <span>🎧 ${esc(label)}</span>
       <span style="display:flex; gap:6px;">
         <button class="btn btn-sm btn-secondary" id="wm-listen" style="width:auto;">${t("Écouter ici")}</button>
-        <a class="btn btn-sm btn-primary" style="width:auto;" href="${link.url}" target="_blank" rel="noopener">${t("Ouvrir {service}", { service: providerName(link) })}</a>
+        <a class="btn btn-sm btn-primary" style="width:auto;" href="${link.url}" target="_blank" rel="noopener">${providerIcon(link)} ${t("Ouvrir {service}", { service: providerName(link) })}</a>
       </span>
     </div>`;
   el.querySelector("#wm-listen").onclick = () => openSpotifyPlayer(link.url, label);

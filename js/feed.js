@@ -7,7 +7,7 @@ import { getUser } from "./auth.js";
 import { openWorkoutDetail, partnersHtml } from "./workout-detail.js";
 import { renderFriends, countIncomingRequests } from "./friends.js";
 import { openProfile } from "./profile.js";
-import { songHtml, bindSongLinks, parseMusicLink } from "./music.js";
+import { songHtml, bindSongLinks, parseMusicLink, providerIcon } from "./music.js";
 import { t, tn } from "./i18n.js";
 
 // Records, "son du record", playlist et bande-son d'une séance partagée.
@@ -22,7 +22,7 @@ export function workoutMusicHtml(w) {
       ${top ? `<div>🏆 <b>${t("Record")}</b> : ${esc(top.exercise)} — ${esc(top.kg)} kg × ${esc(top.reps)}${records.length > 1 ? ` <span class="muted">(${tn(records.length - 1, "+{n} autre", "+{n} autres")})</span>` : ""}</div>` : ""}
       ${top && w.record_song ? `<div>🎵 ${t("Porté par")} ${songHtml(w.record_song)}</div>` : ""}
       ${playlist || nbTracks ? `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
-        ${playlist ? `<span class="song-link" data-playlist-url="${esc(playlist.url)}" data-playlist-title="${t("Playlist de la séance")}">🎧 ${t("Playlist de la séance")}</span>` : ""}
+        ${playlist ? `<span class="song-link" data-playlist-url="${esc(playlist.url)}" data-playlist-title="${t("Playlist de la séance")}">${providerIcon(playlist)} ${t("Playlist de la séance")}</span>` : ""}
         ${nbTracks ? `<span class="muted">🎶 ${tn(nbTracks, "{n} morceau écouté", "{n} morceaux écoutés")}</span>` : ""}
       </div>` : ""}
     </div>`;

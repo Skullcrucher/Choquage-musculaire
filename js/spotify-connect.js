@@ -196,3 +196,15 @@ export async function getTracksSince(sinceMs) {
     return [];
   }
 }
+
+// Recherche d'artistes (profil) : null si Spotify n'est pas connecté.
+export async function searchArtists(query) {
+  const data = await api(`/search?type=artist&limit=8&q=${encodeURIComponent(query)}`);
+  if (!data) return null;
+  return (data.artists?.items || []).map(a => ({
+    name: String(a.name || "").slice(0, 60),
+    url: a.external_urls?.spotify || `https://open.spotify.com/artist/${a.id}`,
+    image: (a.images || []).slice(-1)[0]?.url || "",
+    sub: (a.genres || []).slice(0, 2).join(", ")
+  }));
+}

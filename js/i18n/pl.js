@@ -811,5 +811,11 @@ export default {
   "Tu n'as encore jamais fait cet exercice.": "Nie robiłeś jeszcze tego ćwiczenia.",
   "Vidéos": "Filmy",
   "iPhone : Réglages → Notifications → Skullcrusher → Autoriser les notifications. Puis reviens ici.": "iPhone: Ustawienia → Powiadomienia → Skullcrusher → Zezwalaj na powiadomienia. Potem wróć tutaj.",
-  "{n} autres : affine la recherche.": "Jeszcze {n}: zawęź wyszukiwanie."
+  "{n} autres : affine la recherche.": "Jeszcze {n}: zawęź wyszukiwanie.",
+
+  // Recherche d'artiste
+  "Rechercher un artiste…": "Szukaj wykonawcy…",
+  "Recherche…": "Wyszukiwanie…",
+  "{n} fans": "{n} fanów",
+  "Utiliser « {name} » tel quel": "Użyj „{name}” bez zmian"
 };

@@ -802,5 +802,11 @@ export default {
   "Tu n'as encore jamais fait cet exercice.": "You've never done this exercise yet.",
   "Vidéos": "Videos",
   "iPhone : Réglages → Notifications → Skullcrusher → Autoriser les notifications. Puis reviens ici.": "iPhone: Settings → Notifications → Skullcrusher → Allow Notifications. Then come back here.",
-  "{n} autres : affine la recherche.": "{n} more: refine your search."
+  "{n} autres : affine la recherche.": "{n} more: refine your search.",
+
+  // Recherche d'artiste
+  "Rechercher un artiste…": "Search for an artist…",
+  "Recherche…": "Searching…",
+  "{n} fans": "{n} fans",
+  "Utiliser « {name} » tel quel": "Use \"{name}\" as is"
 };
