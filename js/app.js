@@ -25,8 +25,53 @@ let activeTab = localStorage.getItem("skullcrusher_last_tab") || "seance";
 if (!TABS[activeTab]) activeTab = "seance";
 let renderToken = 0;
 
+// ---------- Bouton « retour » (Android) ----------
+// Une entrée d'historique « garde » est ajoutée au-dessus de la page. Le
+// retour la consomme : on ferme d'abord la fenêtre ouverte, sinon on revient
+// sur l'onglet Feed, et on remet la garde. Depuis le Feed, sans fenêtre
+// ouverte, on ne la remet pas : le retour suivant quitte l'application.
+let backGuard = false;
+let ignoreNextPop = false;
+function armBackGuard() {
+  if (backGuard) return;
+  backGuard = true;
+  history.pushState({ skullcrusher: "guard" }, "");
+}
+// Sur le Feed sans fenêtre ouverte, la garde est retirée sans bruit pour
+// que le premier retour quitte directement l'app.
+function disarmIfIdleOnFeed() {
+  setTimeout(() => {
+    if (!backGuard || activeTab !== "feed" || document.querySelector(".modal-backdrop")) return;
+    ignoreNextPop = true;
+    backGuard = false;
+    history.back();
+  }, 0);
+}
+window.addEventListener("sc:modal-open", armBackGuard);
+window.addEventListener("sc:modal-close", disarmIfIdleOnFeed);
+window.addEventListener("popstate", () => {
+  if (ignoreNextPop) { ignoreNextPop = false; return; }
+  backGuard = false;
+  const backdrop = [...document.querySelectorAll(".modal-backdrop")].pop();
+  if (backdrop) {
+    // Même effet qu'un appui à côté de la fenêtre (annule proprement).
+    backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    armBackGuard();
+    return;
+  }
+  const dock = document.getElementById("spotify-dock");
+  if (dock && !dock.classList.contains("mini")) {
+    dock.querySelector("#sp-toggle")?.click(); // lecteur agrandi : on le réduit
+    if (activeTab !== "feed") armBackGuard();
+    return;
+  }
+  if (activeTab !== "feed") switchTab("feed");
+  // Déjà sur le Feed : pas de garde, le prochain retour quitte l'app.
+});
+
 async function switchTab(tab) {
   activeTab = tab;
+  if (tab !== "feed") armBackGuard(); else disarmIfIdleOnFeed();
   const myToken = ++renderToken;
   localStorage.setItem("skullcrusher_last_tab", tab);
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));

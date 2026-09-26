@@ -777,5 +777,29 @@ export default {
   "Titre - Artiste, ou lien du morceau (Spotify, Apple Music, Deezer)": "Tit - Artis, ouswa lien sante la (Spotify, Apple Music, Deezer)",
   "Ton profil musical (facultatif)": "To profil lamizik (si to anvi)",
   "Écoute sur {service}": "Ekout lor {service}",
-  "Écouter sur {service}": "Ekout lor {service}"
+  "Écouter sur {service}": "Ekout lor {service}",
+
+  // Choix d'exercice, notifications refusées
+  "Ajouter « {name} »": "Azout « {name} »",
+  "Ajouter à la séance": "Azout dan seans la",
+  "Ajouté : {name}": "Azoute: {name}",
+  "Android (Chrome) : touche l'icône à gauche de l'adresse → Autorisations → Notifications → Autoriser. Puis reviens ici.": "Android (Chrome): tous ikon agos adres la → Otorizasion → Notifikasion → Otorize. Apre retourn isi.",
+  "Android : appui long sur l'icône Skullcrusher → Infos sur l'appli → Notifications → Autoriser. Puis reviens ici.": "Android: pez lontan lor ikon Skullcrusher → Info app → Notifikasion → Otorize. Apre retourn isi.",
+  "Aperçu": "Apersi",
+  "Aucun exercice trouvé.": "Pa trouv okenn lexersis.",
+  "Créer « {name} »": "Kree « {name} »",
+  "Demande fermée sans réponse : réessaie et choisis « Autoriser ».": "Demann ferme san repons: reesey ek swazir « Otorize ».",
+  "Dernière fois : {kg} kg × {reps} ({date}) · meilleure 1RM estimée : {rm} kg": "Dernie fwa: {kg} kg × {reps} ({date}) · meyer 1RM estime: {rm} kg",
+  "Notifications autorisées ✅": "Notifikasion otorize ✅",
+  "Notifications bloquées sur cet appareil.": "Notifikasion bloke lor sa aparey-la.",
+  "Ordinateur : clique sur l'icône à gauche de l'adresse → Notifications → Autoriser, puis reviens ici.": "Ordinater: klik ikon agos adres la → Notifikasion → Otorize, apre retourn isi.",
+  "Pas dans la liste ? Crée-le :": "Pa dan lalis? Kree li:",
+  "Rechercher (français ou anglais)…": "Rode (franse ouswa angle)…",
+  "Redemander l'autorisation": "Redimann otorizasion",
+  "Récents": "Resan",
+  "Ton appareil bloque encore la demande : suis les étapes ci-dessus.": "To aparey pe ankor bloke demann la: swiv bann etap anler.",
+  "Tu n'as encore jamais fait cet exercice.": "To pa ankor zame fer sa lexersis-la.",
+  "Vidéos": "Video",
+  "iPhone : Réglages → Notifications → Skullcrusher → Autoriser les notifications. Puis reviens ici.": "iPhone: Réglages → Notifications → Skullcrusher → Otoriz notifikasion. Apre retourn isi.",
+  "{n} autres : affine la recherche.": "{n} lot: presiz to rod."
 };
