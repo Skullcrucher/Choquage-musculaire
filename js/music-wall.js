@@ -6,7 +6,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { esc } from "./utils.js";
-import { songHtml, bindSongLinks, parseMusicLink, providerIcon } from "./music.js";
+import { songHtml, bindSongLinks, parseMusicLink, providerIcon, providerName } from "./music.js";
 import { openProfile } from "./profile.js";
 import { t } from "./i18n.js";
 
@@ -96,7 +96,7 @@ export async function renderMusicWall(container) {
       ${playlists.length ? playlists.map(p => `
         <div class="list-row" style="cursor:default;">
           <span class="list-row-title profile-link" data-profile="${esc(p.uid)}">${esc(p.uid === myUid ? t("Toi") : p.display_name || t("Utilisateur"))}</span>
-          <button class="btn btn-sm btn-secondary" style="width:auto;" data-playlist-url="${esc(parseMusicLink(p.music.playlist_url).url)}" data-playlist-title="${esc(t("Playlist de {name}", { name: p.display_name || t("salle") }))}">${providerIcon(parseMusicLink(p.music.playlist_url))} ${t("Écouter")}</button>
+          <button class="btn btn-sm btn-secondary" style="width:auto;" data-playlist-url="${esc(parseMusicLink(p.music.playlist_url).url)}" data-playlist-title="${esc(t("Playlist de {name}", { name: p.display_name || t("salle") }))}">${providerIcon(parseMusicLink(p.music.playlist_url))} ${t("Écouter sur {service}", { service: providerName(parseMusicLink(p.music.playlist_url)) })}</button>
         </div>`).join("") : `<p class="muted" style="margin:0;">${t("Aucune playlist de salle partagée pour l'instant.")}</p>`}
     </div>
 

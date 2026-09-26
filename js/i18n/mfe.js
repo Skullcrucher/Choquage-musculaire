@@ -801,5 +801,11 @@ export default {
   "Tu n'as encore jamais fait cet exercice.": "To pa ankor zame fer sa lexersis-la.",
   "Vidéos": "Video",
   "iPhone : Réglages → Notifications → Skullcrusher → Autoriser les notifications. Puis reviens ici.": "iPhone: Réglages → Notifications → Skullcrusher → Otoriz notifikasion. Apre retourn isi.",
-  "{n} autres : affine la recherche.": "{n} lot: presiz to rod."
+  "{n} autres : affine la recherche.": "{n} lot: presiz to rod.",
+
+  // Recherche d'artiste
+  "Rechercher un artiste…": "Rod enn artis…",
+  "Recherche…": "Pe rode…",
+  "{n} fans": "{n} fan",
+  "Utiliser « {name} » tel quel": "Servi « {name} » kouma li ete"
 };

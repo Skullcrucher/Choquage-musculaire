@@ -10,7 +10,7 @@
 import * as db from "./db.js";
 import { openModal, closeModal, toast, esc, safeImageUrl, attachAutocomplete, estimate1RM } from "./utils.js";
 import { getExercises, getWorkouts, getSetsForExercise } from "./cache.js";
-import { parseMusicLink, musicEmbed, PROVIDERS, providerIcon, providerName, shortLinkHint, getMyProvider, setMyProvider, openOnMyService } from "./music.js";
+import { parseMusicLink, musicEmbed, PROVIDERS, providerIcon, providerName, shortLinkHint, getMyProvider, setMyProvider, openOnMyService, searchArtists } from "./music.js";
 import { t } from "./i18n.js";
 
 const MAX_HIGHLIGHTS = 3;
@@ -198,13 +198,13 @@ export async function openProfile(uid) {
       ${service ? `<p class="muted spotify-attrib" style="margin:0 0 8px;">${providerIcon(service)} ${t("Écoute sur {service}", { service: providerName(service) })}</p>` : ""}
       ${music.artist_name || artist ? `<div class="list-row" style="cursor:default;">
         <div><div class="list-row-sub">${t("Artiste pour se chauffer")}</div><div class="list-row-title">${esc(music.artist_name || t("Voir l'artiste"))}</div></div>
-        <span style="display:flex; gap:6px;">
-          ${artist ? `<a class="btn btn-sm btn-secondary" style="width:auto;" href="${artist.url}" target="_blank" rel="noopener">${providerIcon(artist)} ${t("Écouter")}</a>` : ""}
-          ${mine && (!artist || artist.provider !== mine) && (music.artist_name || artist) ? `<button class="btn btn-sm btn-secondary" style="width:auto;" id="pf-artist-mine" title="${t("Chercher sur {service}", { service: providerName(mine) })}">${providerIcon(mine)} 🔎</button>` : ""}
+        <span style="display:flex; gap:6px; flex-direction:column; align-items:flex-end;">
+          ${artist ? `<a class="service-btn" href="${artist.url}" target="_blank" rel="noopener">${providerIcon(artist)} ${t("Écouter sur {service}", { service: providerName(artist) })}</a>` : ""}
+          ${mine && (!artist || artist.provider !== mine) && (music.artist_name || artist) ? `<button class="service-btn" id="pf-artist-mine">${providerIcon(mine)} ${t("Chercher sur {service}", { service: providerName(mine) })}</button>` : ""}
         </span>
       </div>` : ""}
       ${playlist ? musicEmbed(playlist) : ""}
-      ${spotifyProfile ? `<a class="btn btn-secondary btn-sm" style="margin-top:10px;" href="${spotifyProfile.url}" target="_blank" rel="noopener">${providerIcon(spotifyProfile)} ${t("Profil {service}", { service: providerName(spotifyProfile) })}</a>` : ""}` : ""}
+      ${spotifyProfile ? `<a class="service-btn" style="margin-top:10px;" href="${spotifyProfile.url}" target="_blank" rel="noopener">${providerIcon(spotifyProfile)} ${t("Profil {service}", { service: providerName(spotifyProfile) })}</a>` : ""}` : ""}
 
     ${!highlights.length && !hasMusic && !st && !profile.bio && !chips.length
       ? `<p class="muted" style="margin-top:14px;">${isMe ? t("Ton profil est encore vide : ajoute tes exercices phares et ta musique de salle.") : t("Ce profil n'a encore rien mis en avant.")}</p>` : ""}
@@ -220,6 +220,57 @@ export async function openProfile(uid) {
     const edit = modalEl.querySelector("#pf-edit");
     if (edit) edit.onclick = () => { closeModal(); openProfileEditor(() => openProfile(uid)); };
   });
+}
+
+// ---------- Artiste préféré : recherche sur le service choisi ----------
+function setupArtistSearch(m) {
+  const nameEl = m.querySelector("#pf-artist-name");
+  const urlEl = m.querySelector("#pf-artist-url");
+  const picked = m.querySelector("#pf-artist-picked");
+  const input = m.querySelector("#pf-artist-search");
+  const results = m.querySelector("#pf-artist-results");
+  const providerSel = m.querySelector("#pf-provider");
+  const showPicked = () => {
+    const link = parseMusicLink(urlEl.value);
+    picked.innerHTML = nameEl.value ? `
+      <div class="artist-picked">
+        ${link ? providerIcon(link) : "🎤"} <b>${esc(nameEl.value)}</b>
+        ${link ? `<span class="muted" style="font-size:12px;">${esc(providerName(link))}</span>` : ""}
+        <button type="button" class="icon-btn" id="pf-artist-clear" title="${t("Retirer")}">✕</button>
+      </div>` : "";
+    input.style.display = nameEl.value ? "none" : "";
+    const clear = picked.querySelector("#pf-artist-clear");
+    if (clear) clear.onclick = () => { nameEl.value = ""; urlEl.value = ""; showPicked(); input.style.display = ""; input.focus(); };
+  };
+  let timer = null, seq = 0;
+  const run = async () => {
+    const q = input.value.trim();
+    const mySeq = ++seq;
+    if (q.length < 2) { results.innerHTML = ""; return; }
+    results.innerHTML = `<p class="muted" style="font-size:13px; margin:6px 0;">${t("Recherche…")}</p>`;
+    let rows = [];
+    try { rows = await searchArtists(q, providerSel.value); } catch (_) { rows = []; }
+    if (mySeq !== seq) return;
+    results.innerHTML = rows.map((r, i) => `
+      <div class="artist-row" data-i="${i}">
+        ${r.image ? `<img src="${esc(r.image)}" alt="" loading="lazy">` : `<span class="artist-noimg">🎤</span>`}
+        <span style="min-width:0; flex:1;"><b>${esc(r.name)}</b>${r.sub ? `<br><span class="muted" style="font-size:12px;">${esc(r.sub)}</span>` : ""}</span>
+        <span class="artist-src">${providerIcon(r.provider)}</span>
+      </div>`).join("") + (/[<>]/.test(q) ? "" : `
+      <div class="artist-row artist-manual" data-manual="1">
+        <span class="artist-noimg">✍️</span><span>${t("Utiliser « {name} » tel quel", { name: esc(q.slice(0, 60)) })}</span>
+      </div>`);
+    results.querySelectorAll("[data-i]").forEach(el => el.onclick = () => {
+      const r = rows[+el.dataset.i];
+      nameEl.value = r.name; urlEl.value = r.url || "";
+      input.value = ""; results.innerHTML = ""; showPicked();
+    });
+    const manual = results.querySelector("[data-manual]");
+    if (manual) manual.onclick = () => { nameEl.value = q.slice(0, 60); urlEl.value = ""; input.value = ""; results.innerHTML = ""; showPicked(); };
+  };
+  input.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(run, 350); });
+  providerSel.addEventListener("change", () => { if (input.value.trim().length >= 2) run(); });
+  showPicked();
 }
 
 // ---------- Édition ----------
@@ -266,8 +317,11 @@ export async function openProfileEditor(onSaved = () => {}) {
     <label>${t("Playlist de salle")}</label>
     <input id="pf-playlist" value="${esc(music.playlist_url || "")}" placeholder="${t("Lien de playlist (Spotify, Apple Music, Deezer)")}" inputmode="url">
     <label>${t("Artiste pour se chauffer")}</label>
-    <input id="pf-artist-name" maxlength="60" value="${esc(music.artist_name || "")}" placeholder="${t("ex : Metallica")}">
-    <input id="pf-artist-url" value="${esc(music.artist_url || "")}" placeholder="${t("Lien de l'artiste (facultatif)")}" inputmode="url" style="margin-top:6px;">
+    <input type="hidden" id="pf-artist-name" value="${esc(music.artist_name || "")}">
+    <input type="hidden" id="pf-artist-url" value="${esc(music.artist_url || "")}">
+    <div id="pf-artist-picked"></div>
+    <div style="position:relative;"><input id="pf-artist-search" placeholder="${t("Rechercher un artiste…")}" autocomplete="off"></div>
+    <div id="pf-artist-results" class="artist-results"></div>
     <label>${t("Ton profil musical (facultatif)")}</label>
     <input id="pf-spotify" value="${esc(music.spotify_profile_url || "")}" placeholder="${t("Lien de ton profil Spotify, Apple Music ou Deezer")}" inputmode="url">
     <p id="pf-error" style="color:var(--red); min-height:1em;"></p>
@@ -278,6 +332,7 @@ export async function openProfileEditor(onSaved = () => {}) {
     </div>
   `, (modalEl) => {
     modalEl.querySelectorAll(".pf-hl").forEach(inp => attachAutocomplete(inp, names, () => {}));
+    setupArtistSearch(modalEl);
     modalEl.querySelector("#pf-cancel").onclick = closeModal;
     modalEl.querySelector("#pf-save").onclick = async () => {
       const val = (id) => modalEl.querySelector(id).value.trim();
