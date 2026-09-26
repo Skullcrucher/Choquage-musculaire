@@ -751,5 +751,8 @@ export default {
   "Reps dans la fourchette avec beaucoup de marge (RPE {rpe}) : la charge est peut-être trop légère.": "Rep dan lafourset avek boukou marz (RPE {rpe}): sarz la kapav tro leze.",
   "Semaine {w} : {done}/{planned} séance(s) faite(s). Décaler le plan d'une semaine pour refaire cette semaine ?": "Semenn {w}: {done}/{planned} seans fer. Pous plan la enn semenn pou refer sa semenn-la?",
   "Utilise de préférence les noms exacts de la bibliothèque (liste ci-dessus) : ton historique, tes stats et le pré-remplissage suivent. Sinon, l'app retrouve les noms proches et te demande de confirmer.": "Prefer servi nom exak bibliotek la (lalis anler): to istorik, to stat ek pre-ranplisaz swiv. Sinon app-la rod bann nom ki pros ek dimann twa konfirme.",
-  "{sets} séries à {reps}+ reps (objectif {hi}) avec de la marge (RPE {rpe}) : double saut.": "{sets} seri a {reps}+ rep (lobzektif {hi}) avek marz (RPE {rpe}): dib so."
+  "{sets} séries à {reps}+ reps (objectif {hi}) avec de la marge (RPE {rpe}) : double saut.": "{sets} seri a {reps}+ rep (lobzektif {hi}) avek marz (RPE {rpe}): dib so.",
+
+  // Recherche bilingue
+  "Utiliser « {name} » de ta bibliothèque ? (Annuler = créer « {typed} »)": "Servi « {name} » ki dan to bibliotek? (Anile = kree « {typed} »)"
 };

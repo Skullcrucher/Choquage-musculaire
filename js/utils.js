@@ -6,7 +6,7 @@ import { t, locale } from "./i18n.js";
 // Version affichée dans Réglages → À propos. À incrémenter avec
 // CACHE_NAME dans service-worker.js à chaque mise en ligne, pour voir d'un
 // coup d'œil si le téléphone utilise bien la dernière version.
-export const APP_VERSION = "57";
+export const APP_VERSION = "58";
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
@@ -179,6 +179,8 @@ export async function fireRestEndNotification() {
 // ---------- Autocomplete léger ----------
 // Remplace <datalist>, peu fiable sur Safari iOS. Affiche une liste
 // filtrée (préfixe d'abord, puis sous-chaîne) sous le champ, au tap.
+// Autocomplétion des noms d'exercices. Recherche bilingue : un terme
+// anglais (« bench press ») trouve l'exercice français (voir exercise-search.js).
 export function attachAutocomplete(inputEl, items, onSelect) {
   const wrap = document.createElement("div");
   wrap.className = "autocomplete-list";
@@ -186,23 +188,32 @@ export function attachAutocomplete(inputEl, items, onSelect) {
   if (getComputedStyle(parent).position === "static") parent.style.position = "relative";
   parent.appendChild(wrap);
   inputEl.setAttribute("autocomplete", "off");
+  let search = null;
+  import("./exercise-search.js").then(m => { search = m; m.loadAliases().then(() => { if (document.activeElement === inputEl) render(inputEl.value); }); }).catch(() => null);
 
   function render(filter) {
     const q = filter.trim().toLowerCase();
     if (!q) { wrap.innerHTML = ""; wrap.classList.remove("show"); return; }
-    const starts = items.filter(i => i.toLowerCase().startsWith(q));
-    const rest = items.filter(i => !i.toLowerCase().startsWith(q) && i.toLowerCase().includes(q));
-    const matches = [...starts, ...rest].slice(0, 8);
+    let matches;
+    if (search) matches = search.searchExercises(q, items, 8);
+    else {
+      const starts = items.filter(i => i.toLowerCase().startsWith(q));
+      const rest = items.filter(i => !i.toLowerCase().startsWith(q) && i.toLowerCase().includes(q));
+      matches = [...starts, ...rest].slice(0, 8).map(name => ({ name }));
+    }
     if (!matches.length) { wrap.innerHTML = ""; wrap.classList.remove("show"); return; }
-    wrap.innerHTML = matches.map(m => `<div class="autocomplete-item">${esc(m)}</div>`).join("");
+    wrap.innerHTML = matches.map(m => `<div class="autocomplete-item" data-name="${esc(m.name)}">${esc(m.name)}${m.via ? ` <span class="autocomplete-via" title="${esc(filter.trim())}">EN</span>` : ""}</div>`).join("");
     wrap.classList.add("show");
     wrap.querySelectorAll(".autocomplete-item").forEach(el => {
       el.onmousedown = (e) => e.preventDefault(); // évite que le blur ferme avant le clic
       el.onclick = () => {
-        inputEl.value = el.textContent;
+        inputEl.value = el.dataset.name;
         wrap.innerHTML = "";
         wrap.classList.remove("show");
-        onSelect(el.textContent);
+        inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+        wrap.innerHTML = "";
+        wrap.classList.remove("show");
+        onSelect(el.dataset.name);
       };
     });
   }

@@ -752,5 +752,8 @@ export default {
   "Reps dans la fourchette avec beaucoup de marge (RPE {rpe}) : la charge est peut-être trop légère.": "Reps in range with plenty left in the tank (RPE {rpe}): the load may be too light.",
   "Semaine {w} : {done}/{planned} séance(s) faite(s). Décaler le plan d'une semaine pour refaire cette semaine ?": "Week {w}: {done}/{planned} workout(s) done. Push the plan back a week to redo this week?",
   "Utilise de préférence les noms exacts de la bibliothèque (liste ci-dessus) : ton historique, tes stats et le pré-remplissage suivent. Sinon, l'app retrouve les noms proches et te demande de confirmer.": "Preferably use the exact library names (list above): your history, stats and pre-filling follow. Otherwise the app finds close names and asks you to confirm.",
-  "{sets} séries à {reps}+ reps (objectif {hi}) avec de la marge (RPE {rpe}) : double saut.": "{sets} sets at {reps}+ reps (target {hi}) with room to spare (RPE {rpe}): double jump."
+  "{sets} séries à {reps}+ reps (objectif {hi}) avec de la marge (RPE {rpe}) : double saut.": "{sets} sets at {reps}+ reps (target {hi}) with room to spare (RPE {rpe}): double jump.",
+
+  // Recherche bilingue
+  "Utiliser « {name} » de ta bibliothèque ? (Annuler = créer « {typed} »)": "Use \"{name}\" from your library? (Cancel = create \"{typed}\")"
 };
