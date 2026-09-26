@@ -821,3 +821,29 @@ canvas { max-width: 100%; }
 /* Attribution Spotify (logo à côté du contenu issu de Spotify) */
 .spotify-icon { width: 16px; height: 16px; vertical-align: -3px; flex-shrink: 0; }
 .spotify-attrib { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- Lecteur Spotify ancré (reste actif en changeant d'onglet) ---------- */
+#spotify-dock {
+  position: fixed;
+  left: 8px; right: 8px;
+  bottom: calc(68px + var(--safe-bottom));
+  z-index: 24;
+  background: var(--surface);
+  border: 1px solid var(--border, rgba(255,255,255,0.12));
+  border-radius: var(--radius);
+  padding: 6px 8px 8px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.55);
+  max-width: 560px;
+  margin: 0 auto;
+}
+#spotify-dock .spotify-embed { margin-top: 4px; display: block; }
+.spotify-dock-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
+.spotify-dock-title { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 600; }
+.spotify-dock-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.spotify-dock-actions button, .spotify-dock-actions a {
+  background: var(--surface-raised); color: var(--text); border: none; border-radius: 6px;
+  width: 30px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; text-decoration: none; cursor: pointer;
+}
+body.has-spotify-dock #view { padding-bottom: calc(var(--dock-h, 0px) + 90px); }
+body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var(--safe-bottom)); }

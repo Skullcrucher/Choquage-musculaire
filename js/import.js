@@ -66,22 +66,9 @@ function parseHevyDate(str) {
   return null;
 }
 
-// Noms d'exercices en français (saisis à la main) ou en anglais (catalogue
-// Hevy, selon la langue de l'app au moment de l'export).
-export function guessMuscleGroup(exerciseTitle) {
-  const e = exerciseTitle.toLowerCase();
-  if (/(développé couché|chest press|écarté|écart|dips|dip machine|hexagonal|bench press|chest fly|cable fly|pec deck|hex press|push up|push-up|butterfly|cable crossover|incline press)/.test(e) && !/(épaule|shoulder)/.test(e)) return "Pectoraux";
-  if (/(rowing|tirage|rack pull|traction|row\b|pulldown|pull up|pull-up|chin up|chin-up|deadlift|pullover|back extension|shrug)/.test(e)) return "Dos";
-  if (/(épaule|militaire|latérale|frontale|oiseau|shoulder|overhead press|military|lateral raise|front raise|face pull|rear delt|arnold|y raise)/.test(e)) return "Épaules";
-  if (/curl/.test(e) && !/(leg curl|wrist curl|hamstring)/.test(e)) return "Biceps";
-  if (/(triceps|tricep|skullcrusher|skull crusher|pushdown|kickback)/.test(e)) return "Triceps";
-  if (/(hip thrust|fessier|glute|abduct)/.test(e)) return "Fessiers";
-  if (/(jambe|cuisse|squat|fente|ischio|roumain|rdl|leg press|leg extension|leg curl|lunge|calf|hamstring|adduct|step up)/.test(e)) return "Jambes";
-  if (/(abdo|crunch|gainage|planche|plank|sit up|sit-up|leg raise|russian twist|ab wheel|heel tap|side bend|scissors)/.test(e)) return "Abdominaux";
-  if (/(wrist|forearm|avant-bras|farmer)/.test(e)) return "Avant-bras";
-  if (/(course|vélo|rameur|elliptique|tapis|running|cycling|rowing machine|treadmill|elliptical|stair|jump rope)/.test(e)) return "Cardio";
-  return "Autre";
-}
+// Groupe musculaire deviné d'après le nom : voir muscles.js.
+export { guessMuscleGroup } from "./muscles.js";
+import { guessMuscleGroup } from "./muscles.js";
 
 function num(v) {
   if (v === undefined || v === null || v === "") return null;
