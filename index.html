@@ -76,15 +76,25 @@
 (function () {
   var errors = [];
   function note(msg) { if (msg && errors.length < 5) errors.push(String(msg).slice(0, 300)); }
+  // Fichiers de versions différentes (cache du navigateur ou du CDN après
+  // une mise à jour) : réparation automatique, une fois par session.
+  var MISMATCH = /does not provide an export named|Importing a module script failed|Failed to fetch dynamically imported module|error loading dynamically imported module|doesn't provide an export named/i;
+  function autoRepair(msg) {
+    if (!MISMATCH.test(String(msg || ""))) return;
+    try { if (sessionStorage.getItem("skullcrusher_autorepair")) return; sessionStorage.setItem("skullcrusher_autorepair", "1"); } catch (_) { return; }
+    repair();
+  }
   window.addEventListener("error", function (e) {
     if (e.target && e.target !== window && e.target.src) note("Chargement impossible : " + e.target.src);
-    else note(e.message + (e.filename ? " (" + e.filename.split("/").pop() + ":" + e.lineno + ")" : ""));
+    else { note(e.message + (e.filename ? " (" + e.filename.split("/").pop() + ":" + e.lineno + ")" : "")); autoRepair(e.message); }
   }, true);
-  window.addEventListener("unhandledrejection", function (e) { note(e.reason && (e.reason.message || e.reason)); });
+  window.addEventListener("unhandledrejection", function (e) { var m = e.reason && (e.reason.message || e.reason); note(m); autoRepair(m); });
   window.__skullBootError = note;
 
   function repair() {
-    var done = function () { location.reload(); };
+    // Rechargement avec une adresse neuve : contourne aussi le cache HTTP
+    // de la page elle-même.
+    var done = function () { location.replace(location.pathname + "?refresh=" + Date.now()); };
     try {
       var tasks = [];
       if (navigator.serviceWorker) tasks.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
@@ -127,6 +137,54 @@
   }, 12000);
 })();
 </script>
-<script type="module" src="js/app.js"></script>
+<!-- version:start (généré par tools/stamp-version.mjs) -->
+<script type="importmap">
+{
+ "imports": {
+  "./js/app.js": "./js/app.js?v=63",
+  "./js/auth.js": "./js/auth.js?v=63",
+  "./js/cache.js": "./js/cache.js?v=63",
+  "./js/calories.js": "./js/calories.js?v=63",
+  "./js/challenges.js": "./js/challenges.js?v=63",
+  "./js/db.js": "./js/db.js?v=63",
+  "./js/exercise-detail.js": "./js/exercise-detail.js?v=63",
+  "./js/exercise-guides.js": "./js/exercise-guides.js?v=63",
+  "./js/exercise-match.js": "./js/exercise-match.js?v=63",
+  "./js/exercise-picker.js": "./js/exercise-picker.js?v=63",
+  "./js/exercise-search.js": "./js/exercise-search.js?v=63",
+  "./js/exercises-seed.js": "./js/exercises-seed.js?v=63",
+  "./js/feed.js": "./js/feed.js?v=63",
+  "./js/finish.js": "./js/finish.js?v=63",
+  "./js/firebase-config.js": "./js/firebase-config.js?v=63",
+  "./js/friends.js": "./js/friends.js?v=63",
+  "./js/history.js": "./js/history.js?v=63",
+  "./js/i18n.js": "./js/i18n.js?v=63",
+  "./js/i18n/en.js": "./js/i18n/en.js?v=63",
+  "./js/i18n/mfe.js": "./js/i18n/mfe.js?v=63",
+  "./js/i18n/pl.js": "./js/i18n/pl.js?v=63",
+  "./js/import.js": "./js/import.js?v=63",
+  "./js/muscles.js": "./js/muscles.js?v=63",
+  "./js/music-wall.js": "./js/music-wall.js?v=63",
+  "./js/music.js": "./js/music.js?v=63",
+  "./js/plan-import.js": "./js/plan-import.js?v=63",
+  "./js/plans.js": "./js/plans.js?v=63",
+  "./js/profile.js": "./js/profile.js?v=63",
+  "./js/progression.js": "./js/progression.js?v=63",
+  "./js/routine-discover.js": "./js/routine-discover.js?v=63",
+  "./js/routines.js": "./js/routines.js?v=63",
+  "./js/settings.js": "./js/settings.js?v=63",
+  "./js/spotify-config.js": "./js/spotify-config.js?v=63",
+  "./js/spotify-connect.js": "./js/spotify-connect.js?v=63",
+  "./js/stats.js": "./js/stats.js?v=63",
+  "./js/timer-sync-config.js": "./js/timer-sync-config.js?v=63",
+  "./js/timer-sync.js": "./js/timer-sync.js?v=63",
+  "./js/utils.js": "./js/utils.js?v=63",
+  "./js/workout-detail.js": "./js/workout-detail.js?v=63",
+  "./js/workout.js": "./js/workout.js?v=63"
+ }
+}
+</script>
+<script type="module" src="js/app.js?v=63"></script>
+<!-- version:end -->
 </body>
 </html>
