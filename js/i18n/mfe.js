@@ -196,7 +196,6 @@ export default {
 
   // Défis
   "Défis entre amis": "Defi ant kamarad",
-  "Chaque semaine, un classement entre toi et tes amis : tonnage, nombre de séances ou de séries. Le vainqueur de la semaine choisit la <b>playlist de la semaine</b> pour tout le monde.": "Sak semenn, enn klasman ant twa ek to bann kamarad: tonaz, kantite seans ouswa seri. Ganian semenn-la swazir <b>playlist semenn-la</b> pou tou dimounn.",
   "En participant, seuls tes totaux de la semaine sont visibles par tes amis — tes séances restent privées.": "Kan to partisipe, zis to total semenn-la ki to bann kamarad trouve — to bann seans res prive.",
   "Participer aux défis": "Partisip dan defi",
   "Inscription impossible, réessaie": "Pa kapav inskrir, reesey",
@@ -559,5 +558,17 @@ export default {
   // Divers
   "C'est reparti pour la série suivante.": "Anou al pou prosenn seri.",
   "Lecture du fichier impossible": "Pa kapav lir fisie la",
-  "Image invalide": "Zimaz pa bon"
+  "Image invalide": "Zimaz pa bon",
+  // Séance : réorganiser / supprimer ; défis équilibrés
+  "Chaque semaine, un classement entre toi et tes amis. Le score récompense la régularité et ta progression par rapport à toi-même : débutant ou confirmé, tout le monde peut gagner. Le vainqueur de la semaine choisit la <b>playlist de la semaine</b> pour tout le monde.": "Sak semenn, enn klasman ant twa ek to bann kamarad. Skor la rekonpans regilarite ek to progresion par rapor a towmem : debitan ou ekspert, tou dimounn kapav gagne. Ganian lasemenn swazir <b>playlist lasemenn</b> pou tou dimounn.",
+  "20 pts par séance (4 max) + jusqu'à 20 pts si tu dépasses ta moyenne de tonnage des 4 dernières semaines (+1 pt par 5 %). Le score désigne le vainqueur.": "20 pts par seans (4 maximum) + ziska 20 pts si to depas to mwayenn tonaz dan 4 dernie semenn (+1 pt par 5 %). Skor la desid ki ganian.",
+  "Score": "Skor",
+  "Temps de repos": "Letan repo",
+  "Monter": "Mont anlao",
+  "Descendre": "Desann anba",
+  "Retirer l'exercice": "Tir egzersis la",
+  "Supprimer la série": "Efas seri la",
+  "Supprimer la série {n} ?": "Efas seri {n} ?",
+  "Suppression impossible, réessaie": "Pa finn kapav efase, reseye",
+  "Retirer {exercise} et ses séries de la séance ?": "Tir {exercise} ek so bann seri dan seans la ?"
 };

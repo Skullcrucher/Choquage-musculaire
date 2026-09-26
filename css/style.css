@@ -176,8 +176,8 @@ button { font-family: inherit; }
   gap: 6px;
   border: none;
   border-radius: var(--radius);
-  padding: 14px 18px;
-  font-size: 15px;
+  padding: 11px 16px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   background: var(--surface-raised);
@@ -206,9 +206,14 @@ button { font-family: inherit; }
   border: 1px solid var(--red);
 }
 .btn-sm {
-  padding: 9px 12px;
+  padding: 7px 11px;
   font-size: 12px;
   width: auto;
+}
+/* Bouton secondaire discret (ex. « Ajouter un exercice » pendant la séance). */
+.btn-compact {
+  padding: 8px 12px;
+  font-size: 13px;
 }
 .btn:disabled {
   opacity: 0.4;
@@ -333,7 +338,7 @@ label {
 /* ---------- Set row (workout logging) ---------- */
 .exercise-block { margin-bottom: 14px; }
 .exercise-name {
-  font-size: 19px;
+  font-size: 17px;
   margin: 0 0 2px;
   text-transform: none;
   font-family: 'Inter', sans-serif;
@@ -341,8 +346,8 @@ label {
 }
 .set-header, .set-row {
   display: grid;
-  grid-template-columns: 30px 1fr 1fr 64px 34px;
-  gap: 8px;
+  grid-template-columns: 24px 1fr 1fr 52px 32px 22px;
+  gap: 6px;
   align-items: center;
   padding: 6px 0;
 }
@@ -386,16 +391,16 @@ label {
   gap: 6px;
   width: 100%;
   color: var(--amber);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   background: rgba(224,36,36,0.08);
   border: 1.5px dashed var(--amber);
-  border-radius: 10px;
-  padding: 11px 0;
+  border-radius: 8px;
+  padding: 6px 0;
   cursor: pointer;
-  margin-top: 8px;
+  margin-top: 6px;
   transition: transform 0.1s, background 0.15s;
 }
 .add-set-btn:active { transform: scale(0.97); background: rgba(224,36,36,0.16); }
@@ -700,16 +705,48 @@ canvas { max-width: 100%; }
 /* Temps de repos d'un exercice, réglable pendant la séance */
 .rest-chip {
   flex-shrink: 0;
-  padding: 6px 11px;
+  padding: 4px 9px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface-raised);
   color: var(--amber);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
 }
 .rest-chip:active { transform: scale(0.94); }
+
+/* En-tête d'exercice : nom + repos + réorganiser / retirer */
+.exercise-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.exercise-head .exercise-name { min-width: 0; overflow-wrap: anywhere; }
+.exercise-tools { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.ex-tool {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text-dim);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.ex-tool:active { transform: scale(0.9); }
+.ex-tool:disabled { opacity: 0.3; cursor: default; transform: none; }
+.ex-tool-danger { color: var(--red); }
+/* Supprimer une série */
+.set-del {
+  width: 22px; height: 22px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.set-del:active { color: var(--red); transform: scale(0.85); }
 
 /* Nom d'exercice cliquable pendant la séance -> fiche de l'exercice */
 .exercise-name-link { cursor: pointer; }
