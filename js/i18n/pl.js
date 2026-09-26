@@ -206,7 +206,6 @@ export default {
 
   // Défis
   "Défis entre amis": "Wyzwania ze znajomymi",
-  "Chaque semaine, un classement entre toi et tes amis : tonnage, nombre de séances ou de séries. Le vainqueur de la semaine choisit la <b>playlist de la semaine</b> pour tout le monde.": "Co tydzień ranking między tobą a znajomymi: tonaż, liczba treningów lub serii. Zwycięzca tygodnia wybiera <b>playlistę tygodnia</b> dla wszystkich.",
   "En participant, seuls tes totaux de la semaine sont visibles par tes amis — tes séances restent privées.": "Biorąc udział, pokazujesz znajomym tylko swoje tygodniowe sumy — treningi pozostają prywatne.",
   "Participer aux défis": "Dołącz do wyzwań",
   "Inscription impossible, réessaie": "Nie udało się dołączyć, spróbuj ponownie",
@@ -608,5 +607,18 @@ export default {
   "Remplis les 4 champs pour activer l'estimation.": "Wypełnij 4 pola, aby włączyć szacowanie.",
   "Valeur hors limites : vérifie l'année, la taille et le poids.": "Wartość poza zakresem: sprawdź rok, wzrost i wagę.",
   "Séance trop courte pour une estimation.": "Trening zbyt krótki, by go oszacować.",
-  "Données enregistrées": "Dane zapisane"
+  "Données enregistrées": "Dane zapisane",
+
+  // Séance : réorganiser / supprimer ; défis équilibrés
+  "Chaque semaine, un classement entre toi et tes amis. Le score récompense la régularité et ta progression par rapport à toi-même : débutant ou confirmé, tout le monde peut gagner. Le vainqueur de la semaine choisit la <b>playlist de la semaine</b> pour tout le monde.": "Co tydzień ranking między tobą a twoimi znajomymi. Wynik nagradza regularność i twoje postępy względem samego siebie: początkujący czy zaawansowany, każdy może wygrać. Zwycięzca tygodnia wybiera <b>playlistę tygodnia</b> dla wszystkich.",
+  "20 pts par séance (4 max) + jusqu'à 20 pts si tu dépasses ta moyenne de tonnage des 4 dernières semaines (+1 pt par 5 %). Le score désigne le vainqueur.": "20 pkt za trening (maks. 4) + do 20 pkt, jeśli przebijesz swój średni tonaż z ostatnich 4 tygodni (+1 pkt za każde 5 %). Wynik decyduje o zwycięzcy.",
+  "Score": "Wynik",
+  "Temps de repos": "Czas odpoczynku",
+  "Monter": "Przesuń w górę",
+  "Descendre": "Przesuń w dół",
+  "Retirer l'exercice": "Usuń ćwiczenie",
+  "Supprimer la série": "Usuń serię",
+  "Supprimer la série {n} ?": "Usunąć serię {n}?",
+  "Suppression impossible, réessaie": "Nie udało się usunąć, spróbuj ponownie",
+  "Retirer {exercise} et ses séries de la séance ?": "Usunąć {exercise} i jego serie z treningu?"
 };
