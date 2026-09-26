@@ -847,3 +847,32 @@ canvas { max-width: 100%; }
 }
 body.has-spotify-dock #view { padding-bottom: calc(var(--dock-h, 0px) + 90px); }
 body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var(--safe-bottom)); }
+
+/* ---------- Plans d'entraînement ---------- */
+.plan-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.plan-day {
+  background: var(--surface-raised); border-radius: 8px; padding: 6px 2px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0;
+  border: 1px solid transparent;
+}
+.plan-day.today { border-color: var(--amber); }
+.plan-day.done { background: rgba(46, 160, 67, 0.18); }
+.plan-day.missed { opacity: 0.55; }
+.plan-day.off { opacity: 0.3; }
+.plan-dow { font-size: 11px; color: var(--text-dim); text-transform: uppercase; }
+.plan-mark { font-size: 14px; line-height: 1; min-height: 14px; }
+.plan-day.done .plan-mark { color: #3fb950; }
+.plan-day .plan-mark { color: var(--amber); }
+.plan-rname { font-size: 10px; line-height: 1.15; text-align: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; }
+.plan-active { border: 1px solid var(--amber); }
+.plan-days-edit { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; margin-top: 8px; }
+.plan-day-edit { display: flex; flex-direction: column; gap: 2px; margin: 0; font-size: 12px; }
+.plan-day-edit select { padding: 8px; font-size: 13px; }
+
+/* ---------- Détail de séance : onglets Gym / Musique, édition ---------- */
+.detail-tabs { display: flex; gap: 6px; margin: 4px 0 12px; }
+.detail-tabs .chip { flex: 1; text-align: center; justify-content: center; }
+.edit-set-row { display: grid; grid-template-columns: 18px 1.5fr 1fr 1fr 30px; gap: 5px; align-items: center; margin-bottom: 6px; }
+.edit-set-row input, .edit-set-row select { padding: 8px 6px; font-size: 14px; min-width: 0; }
+.edit-set-row .muted { font-size: 12px; text-align: center; }
+.icon-btn { background: var(--surface-raised); color: var(--text); border: none; border-radius: 6px; height: 32px; width: 30px; cursor: pointer; }
