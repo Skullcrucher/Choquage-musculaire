@@ -827,6 +827,33 @@ export async function toggleProps(workoutId) {
   return !already;
 }
 
+// Recalcule les muscles affichés (muscle_summary) de ses séances à partir
+// de leurs séries et du groupe actuel de chaque exercice. Renvoie le nombre
+// de séances modifiées.
+export async function recomputeMuscleSummaries(groupOf, onProgress = () => {}) {
+  const uid = requireUid();
+  const sets = await listAllSets(50000, onProgress);
+  const byWorkout = new Map();
+  sets.slice().sort((a, b) => (a.set_index || 0) - (b.set_index || 0)).forEach(st => {
+    if (st.weight_kg == null && st.reps == null) return;
+    if (!byWorkout.has(st.workout_id)) byWorkout.set(st.workout_id, []);
+    const list = byWorkout.get(st.workout_id);
+    const g = groupOf.get(st.exercise_title) || "Autre";
+    if (!list.includes(g)) list.push(g);
+  });
+  const snap = await getDocs(query(collection(dbase, "workouts"), where("owner_uid", "==", uid)));
+  const changed = snap.docs.filter(d => {
+    const next = byWorkout.get(d.id);
+    return next && JSON.stringify([...(d.data().muscle_summary || [])].sort()) !== JSON.stringify([...next].sort());
+  });
+  for (let i = 0; i < changed.length; i += 400) {
+    const batch = writeBatch(dbase);
+    changed.slice(i, i + 400).forEach(d => batch.update(d.ref, { muscle_summary: byWorkout.get(d.id) }));
+    await batch.commit();
+  }
+  return changed.length;
+}
+
 // ==================== RESET — vider ses séances avant un réimport propre ====================
 // Supprime toutes les séances (et leurs séries) appartenant à l'utilisateur
 // connecté. Action destructrice, confirmée côté interface.

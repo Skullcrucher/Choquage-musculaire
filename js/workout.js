@@ -7,6 +7,7 @@ import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate 
 import { openExerciseDetail } from "./exercise-detail.js";
 import { parseSpotify, openSpotifyPlayer } from "./music.js";
 import { t, tn, locale } from "./i18n.js";
+import { guessMuscleGroup } from "./muscles.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
 let restTimerInterval = null;
@@ -445,6 +446,16 @@ async function openAddExerciseModal() {
     <div style="height:16px"></div>
     <button class="btn btn-primary" id="confirm-add-ex">${t("Ajouter")}</button>
   `);
+  // Nouvel exercice : groupe deviné d'après le nom, tant qu'on ne l'a pas choisi.
+  const groupSel = modal.querySelector("#ex-group");
+  let groupTouched = false;
+  groupSel.addEventListener("change", () => { groupTouched = true; });
+  modal.querySelector("#ex-name").addEventListener("input", (e) => {
+    const name = e.target.value.trim().toLowerCase();
+    const known = exercises.find(x => x.name.toLowerCase() === name);
+    if (known) groupSel.value = known.muscle_group;
+    else if (!groupTouched) groupSel.value = guessMuscleGroup(name);
+  });
   attachAutocomplete(modal.querySelector("#ex-name"), names, (picked) => {
     const ex = exercises.find(e => e.name === picked);
     if (ex) modal.querySelector("#ex-group").value = ex.muscle_group;

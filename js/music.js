@@ -3,7 +3,7 @@
 // Partagé par le profil, la fin de séance, le feed, les routines, le mur
 // musical et les défis.
 // ============================================================
-import { openModal, closeModal, esc } from "./utils.js";
+import { closeModal, esc } from "./utils.js";
 import { t } from "./i18n.js";
 
 // N'accepte que des liens open.spotify.com et reconstruit l'URL à partir du
@@ -36,16 +36,50 @@ export function spotifyEmbed(linkOrUrl, height = 152) {
     allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" title="Lecteur Spotify"></iframe>`;
 }
 
-// Ouvre le lecteur dans une fenêtre (ex. playlist d'une séance du feed).
+// Lecteur Spotify ancré au-dessus de la barre d'onglets (hors des
+// fenêtres modales) : on peut le réduire, l'agrandir et changer d'onglet
+// sans couper la musique. Réduire/agrandir ne fait que changer la hauteur
+// de l'iframe, qui n'est jamais rechargée ; seul ✕ arrête la lecture.
+const PLAYER_FULL = 352, PLAYER_MINI = 80;
 export function openSpotifyPlayer(url, title = t("Écouter")) {
   const link = parseSpotify(url);
-  if (!link) return;
-  openModal(`
-    <h3 style="margin-bottom:6px;">${esc(title)}</h3>
-    ${spotifyEmbed(link, link.type === "track" ? 152 : 380)}
-    <a class="btn btn-secondary btn-sm" style="margin-top:10px;" href="${link.url}" target="_blank" rel="noopener">${t("Ouvrir dans Spotify")}</a>
-    <button class="btn btn-secondary" id="sp-close" style="margin-top:10px;">${t("Fermer")}</button>
-  `, (m) => { m.querySelector("#sp-close").onclick = closeModal; });
+  if (!link || link.type === "user") return;
+  closeModal();
+  let dock = document.getElementById("spotify-dock");
+  if (!dock) {
+    dock = document.createElement("div");
+    dock.id = "spotify-dock";
+    document.body.appendChild(dock);
+  }
+  dock.innerHTML = `
+    <div class="spotify-dock-bar">
+      <span class="spotify-dock-title">${SPOTIFY_ICON} ${esc(title)}</span>
+      <span class="spotify-dock-actions">
+        <a href="${esc(link.url)}" target="_blank" rel="noopener" title="${t("Ouvrir dans Spotify")}">↗</a>
+        <button id="sp-toggle" title="${t("Réduire")}">▾</button>
+        <button id="sp-close" title="${t("Fermer le lecteur")}">✕</button>
+      </span>
+    </div>
+    ${spotifyEmbed(link, link.type === "track" ? 152 : PLAYER_FULL).replace('loading="lazy"', "")}`;
+  const iframe = dock.querySelector("iframe");
+  const fullHeight = link.type === "track" ? 152 : PLAYER_FULL;
+  const toggle = dock.querySelector("#sp-toggle");
+  const setMini = (mini) => {
+    iframe.height = mini ? PLAYER_MINI : fullHeight;
+    dock.classList.toggle("mini", mini);
+    toggle.textContent = mini ? "▴" : "▾";
+    toggle.title = mini ? t("Agrandir") : t("Réduire");
+    // Le minuteur de repos et le bas de page se placent au-dessus du lecteur.
+    document.body.style.setProperty("--dock-h", dock.offsetHeight + "px");
+  };
+  toggle.onclick = () => setMini(!dock.classList.contains("mini"));
+  dock.querySelector("#sp-close").onclick = () => {
+    dock.remove();
+    document.body.classList.remove("has-spotify-dock");
+    document.body.style.removeProperty("--dock-h");
+  };
+  document.body.classList.add("has-spotify-dock");
+  setMini(false);
 }
 
 // Logo Spotify (icône officielle, vert Spotify) : les consignes de marque

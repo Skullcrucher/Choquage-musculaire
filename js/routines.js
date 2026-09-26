@@ -5,7 +5,7 @@ import * as db from "./db.js";
 import { toast, openModal, closeModal, attachAutocomplete, esc } from "./utils.js";
 import { getExercises, getRoutines, invalidate } from "./cache.js";
 import { renderDiscover } from "./routine-discover.js";
-import { guessMuscleGroup } from "./import.js";
+import { guessMuscleGroup } from "./muscles.js";
 import { normalizePlaylistUrl } from "./music.js";
 import { t } from "./i18n.js";
 
@@ -48,6 +48,10 @@ async function renderMyRoutines(content) {
   if (!content.isConnected) return;
   content.innerHTML = `
     <button class="btn btn-primary" id="new-routine">+ ${t("Nouvelle routine")}</button>
+    <div class="btn-row" style="margin-top:8px;">
+      <button class="btn btn-secondary btn-sm" id="import-plan">📥 ${t("Importer un plan")}</button>
+      ${routines.length ? `<button class="btn btn-secondary btn-sm" id="export-plan">📤 ${t("Exporter en CSV")}</button>` : ""}
+    </div>
     <div style="height:14px"></div>
     ${routines.length === 0 ? `<div class="empty-state"><span class="num">▤</span>${t("Pas encore de routine.")}<br><span class="muted">${t("Crée la tienne ou pioche dans l'onglet Découvrir.")}</span></div>` : ""}
     ${routines.map(r => `
@@ -74,6 +78,9 @@ async function renderMyRoutines(content) {
   `;
   const refresh = () => renderMyRoutines(content);
   content.querySelector("#new-routine").onclick = () => openRoutineEditor(null, refresh);
+  content.querySelector("#import-plan").onclick = async () => (await import("./plan-import.js")).openPlanImport(refresh);
+  const exportBtn = content.querySelector("#export-plan");
+  if (exportBtn) exportBtn.onclick = async () => (await import("./plan-import.js")).exportPlan();
   content.querySelectorAll("[data-edit]").forEach(b => {
     b.onclick = (e) => { e.stopPropagation(); openRoutineEditor(routines.find(r => r.id === b.dataset.edit), refresh); };
   });

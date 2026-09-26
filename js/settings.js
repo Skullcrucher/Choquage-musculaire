@@ -168,6 +168,7 @@ export async function renderReglages(container) {
       <div class="card-title">${t("Bibliothèque d'exercices")}</div>
       <p class="muted" style="margin-top:0;">${t("Complète ta bibliothèque avec {n} exercices standards (barre, haltère, machine, poulie, poids du corps) — les exercices déjà présents ne sont pas dupliqués.", { n: EXERCISE_SEED.length })}</p>
       <button class="btn btn-secondary" id="load-seed">${t("Charger la bibliothèque standard")}</button>
+      <button class="btn btn-secondary" id="check-muscles" style="margin-top:8px;">🔎 ${t("Vérifier les groupes musculaires")}</button>
       <p class="muted" style="margin:10px 0 0; font-size:13px;">${t("Bibliothèque commune à tous les utilisateurs : tu peux modifier les exercices que tu as ajoutés, pas ceux des autres.")}</p>
       <div style="height:12px"></div>
       <div id="exercise-lib"></div>
@@ -377,8 +378,75 @@ export async function renderReglages(container) {
   container.querySelector("#export-csv").onclick = exportCsv;
   container.querySelector("#force-update").onclick = forceUpdate;
   container.querySelector("#load-seed").onclick = () => loadSeedLibrary(container);
+  container.querySelector("#check-muscles").onclick = () => checkMuscleGroups(container);
 
   await renderExerciseLib(container);
+}
+
+// Compare le groupe de chaque exercice à celui proposé (liste standard,
+// fiche d'exercice, nom), corrige ceux qu'on peut modifier, puis recalcule
+// les muscles affichés sur ses séances passées.
+async function checkMuscleGroups(container) {
+  const btn = container.querySelector("#check-muscles");
+  btn.disabled = true;
+  btn.textContent = t("Vérification…");
+  let exercises, suggestions;
+  try {
+    const { suggestMuscleGroup } = await import("./muscles.js");
+    invalidate("exercises"); // bibliothèque à jour (d'autres ont pu ajouter des exercices)
+    exercises = await getExercises();
+    suggestions = await Promise.all(exercises.map(ex => suggestMuscleGroup(ex.name)));
+  } catch (err) {
+    console.error("[Skullcrusher] Vérification des groupes", err);
+    toast(t("Action impossible, réessaie"));
+    btn.disabled = false; btn.textContent = "🔎 " + t("Vérifier les groupes musculaires");
+    return;
+  }
+  btn.disabled = false; btn.textContent = "🔎 " + t("Vérifier les groupes musculaires");
+  const wrong = exercises.map((ex, i) => ({ ex, to: suggestions[i] })).filter(x => x.to && x.to !== x.ex.muscle_group);
+  const fixable = wrong.filter(x => db.canEditExercise(x.ex));
+  const locked = wrong.length - fixable.length;
+  openModal(`
+    <h3>🔎 ${t("Groupes musculaires")}</h3>
+    ${fixable.length ? `
+      <p class="muted" style="margin-top:0;">${t("Groupes qui semblent faux (décoche ceux à garder) :")}</p>
+      <div style="max-height:45vh; overflow:auto;">
+        ${fixable.map((x, i) => `
+          <label class="list-row" style="cursor:pointer;">
+            <span><b>${esc(x.ex.name)}</b><br><span class="muted">${esc(t(x.ex.muscle_group || "Autre"))} → <b style="color:var(--text);">${esc(t(x.to))}</b></span></span>
+            <input type="checkbox" data-fix="${i}" checked style="width:auto;">
+          </label>`).join("")}
+      </div>` : `<p class="muted" style="margin-top:0;">${t("Aucun groupe à corriger parmi les exercices que tu peux modifier.")}</p>`}
+    ${locked ? `<p class="muted" style="font-size:12px;">${t("{n} autre(s) exercice(s) semble(nt) mal classé(s) mais appartien(nen)t à d'autres utilisateurs : seul l'administrateur peut les corriger.", { n: locked })}</p>` : ""}
+    <p class="muted" style="font-size:13px;">${t("Les muscles affichés sur tes séances passées (feed, historique) seront recalculés.")}</p>
+    <p class="muted" id="fix-progress" style="font-size:13px; min-height:1em;"></p>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="fix-cancel">${t("Fermer")}</button>
+      <button class="btn btn-primary" id="fix-ok">${fixable.length ? t("Corriger") : t("Recalculer mes séances")}</button>
+    </div>
+  `, (m) => {
+    m.querySelector("#fix-cancel").onclick = closeModal;
+    m.querySelector("#fix-ok").onclick = async (e) => {
+      e.target.disabled = true;
+      const progress = m.querySelector("#fix-progress");
+      try {
+        const chosen = [...m.querySelectorAll("[data-fix]:checked")].map(c => fixable[+c.dataset.fix]);
+        for (const x of chosen) await db.updateExercise(x.ex.id, { muscle_group: x.to });
+        invalidate("exercises");
+        const groupOf = new Map((await getExercises()).map(ex => [ex.name, ex.muscle_group]));
+        const updated = await db.recomputeMuscleSummaries(groupOf, (n) => { progress.textContent = t("Lecture de tes séries… {n}", { n }); });
+        invalidate("workouts");
+        invalidateStatsCache();
+        closeModal();
+        toast(t("{fixed} exercice(s) corrigé(s), {updated} séance(s) mise(s) à jour", { fixed: chosen.length, updated }), 3500);
+        renderExerciseLib(container);
+      } catch (err) {
+        console.error("[Skullcrusher] Correction des groupes", err);
+        progress.textContent = t("Action impossible, réessaie");
+        e.target.disabled = false;
+      }
+    };
+  });
 }
 
 async function loadSeedLibrary(container) {
