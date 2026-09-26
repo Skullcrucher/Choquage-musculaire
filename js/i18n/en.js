@@ -808,5 +808,29 @@ export default {
   "Rechercher un artiste…": "Search for an artist…",
   "Recherche…": "Searching…",
   "{n} fans": "{n} fans",
-  "Utiliser « {name} » tel quel": "Use \"{name}\" as is"
+  "Utiliser « {name} » tel quel": "Use \"{name}\" as is",
+
+  // Signalements
+  "Aucun signalement en attente.": "No pending reports.",
+  "Classer": "Dismiss",
+  "Contenu inapproprié": "Inappropriate content",
+  "Envoi impossible, réessaie.": "Couldn't send, try again.",
+  "Envoyer le signalement": "Send report",
+  "Faux profil / usurpation": "Fake profile / impersonation",
+  "Harcèlement ou insultes": "Harassment or insults",
+  "Le signalement est envoyé à l'administrateur de l'app, qui le verra seul. La personne signalée n'est pas prévenue.": "The report is sent to the app administrator, who alone will see it. The reported person is not notified.",
+  "Motif": "Reason",
+  "Profil vidé": "Profile cleared",
+  "Précisions (facultatif)": "Details (optional)",
+  "Qu'est-ce qui pose problème ?": "What's the problem?",
+  "Signalement classé": "Report dismissed",
+  "Signalement envoyé. Merci !": "Report sent. Thank you!",
+  "Signalements indisponibles (règles Firebase à mettre à jour ?).": "Reports unavailable (Firebase rules need updating?).",
+  "Signalements": "Reports",
+  "Signaler ce profil": "Report this profile",
+  "Signaler {name}": "Report {name}",
+  "Spam ou publicité": "Spam or advertising",
+  "Tu as déjà signalé ce profil : l'administrateur va l'examiner.": "You've already reported this profile: the administrator will review it.",
+  "Vider le profil public de {name} (bio, photo, salle, exercices phares, musique) ? Son pseudo et ses séances ne sont pas touchés.": "Clear {name}'s public profile (bio, photo, gym, highlight lifts, music)? Their username and workouts are not affected.",
+  "Vider le profil": "Clear profile"
 };

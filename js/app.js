@@ -26,52 +26,75 @@ if (!TABS[activeTab]) activeTab = "seance";
 let renderToken = 0;
 
 // ---------- Bouton « retour » (Android) ----------
-// Une entrée d'historique « garde » est ajoutée au-dessus de la page. Le
-// retour la consomme : on ferme d'abord la fenêtre ouverte, sinon on revient
-// sur l'onglet Feed, et on remet la garde. Depuis le Feed, sans fenêtre
-// ouverte, on ne la remet pas : le retour suivant quitte l'application.
-let backGuard = false;
-let ignoreNextPop = false;
-function armBackGuard() {
-  if (backGuard) return;
-  backGuard = true;
-  history.pushState({ skullcrusher: "guard" }, "");
-}
-// Sur le Feed sans fenêtre ouverte, la garde est retirée sans bruit pour
-// que le premier retour quitte directement l'app.
-function disarmIfIdleOnFeed() {
-  setTimeout(() => {
-    if (!backGuard || activeTab !== "feed" || document.querySelector(".modal-backdrop")) return;
-    ignoreNextPop = true;
-    backGuard = false;
-    history.back();
-  }, 0);
-}
-window.addEventListener("sc:modal-open", armBackGuard);
-window.addEventListener("sc:modal-close", disarmIfIdleOnFeed);
-window.addEventListener("popstate", () => {
-  if (ignoreNextPop) { ignoreNextPop = false; return; }
-  backGuard = false;
+// Le retour ferme d'abord la fenêtre ouverte (ou réduit le lecteur agrandi),
+// sinon ramène sur l'onglet Feed ; depuis le Feed, il quitte l'application.
+//
+// Chrome sur Android ignore les entrées d'historique ajoutées sans action de
+// l'utilisateur : on utilise donc CloseWatcher, l'API prévue pour le bouton
+// retour (Chrome 120+). Une seule « veille » active à la fois, recréée après
+// chaque retour tant qu'il reste quelque chose à fermer. Sans CloseWatcher
+// (Firefox, Safari…), repli sur une entrée d'historique « garde ».
+const dockExpanded = () => { const d = document.getElementById("spotify-dock"); return !!d && !d.classList.contains("mini"); };
+const needsBackIntercept = () => activeTab !== "feed" || !!document.querySelector(".modal-backdrop") || dockExpanded();
+
+function handleBack() {
   const backdrop = [...document.querySelectorAll(".modal-backdrop")].pop();
   if (backdrop) {
     // Même effet qu'un appui à côté de la fenêtre (annule proprement).
     backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    armBackGuard();
     return;
   }
-  const dock = document.getElementById("spotify-dock");
-  if (dock && !dock.classList.contains("mini")) {
-    dock.querySelector("#sp-toggle")?.click(); // lecteur agrandi : on le réduit
-    if (activeTab !== "feed") armBackGuard();
-    return;
-  }
+  if (dockExpanded()) { document.querySelector("#spotify-dock #sp-toggle")?.click(); return; }
   if (activeTab !== "feed") switchTab("feed");
-  // Déjà sur le Feed : pas de garde, le prochain retour quitte l'app.
-});
+}
+
+const hasCloseWatcher = typeof window.CloseWatcher === "function";
+let closeWatcher = null;
+let backGuard = false;
+let ignoreNextPop = false;
+
+function syncBackHandling() {
+  const need = needsBackIntercept();
+  if (hasCloseWatcher) {
+    if (need && !closeWatcher) {
+      try {
+        closeWatcher = new CloseWatcher();
+        closeWatcher.onclose = () => { closeWatcher = null; handleBack(); setTimeout(syncBackHandling, 0); };
+      } catch (_) { closeWatcher = null; }
+    } else if (!need && closeWatcher) {
+      const w = closeWatcher; closeWatcher = null; w.onclose = null; w.destroy();
+    }
+    return;
+  }
+  if (need && !backGuard) {
+    backGuard = true;
+    history.pushState({ skullcrusher: "guard" }, "");
+  } else if (!need && backGuard) {
+    // Sur le Feed sans fenêtre : la garde est retirée sans bruit pour que
+    // le premier retour quitte l'app.
+    backGuard = false;
+    ignoreNextPop = true;
+    history.back();
+  }
+}
+if (!hasCloseWatcher) {
+  window.addEventListener("popstate", () => {
+    if (ignoreNextPop) { ignoreNextPop = false; return; }
+    backGuard = false;
+    handleBack();
+    setTimeout(syncBackHandling, 0);
+  });
+}
+window.addEventListener("sc:modal-open", () => setTimeout(syncBackHandling, 0));
+window.addEventListener("sc:modal-close", () => setTimeout(syncBackHandling, 0));
+window.addEventListener("sc:dock-change", () => setTimeout(syncBackHandling, 0));
+// Chaque appui de l'utilisateur donne l'occasion de (re)poser la veille avec
+// une « activation utilisateur », ce que Chrome exige pour la respecter.
+document.addEventListener("pointerdown", () => setTimeout(syncBackHandling, 0), true);
 
 async function switchTab(tab) {
   activeTab = tab;
-  if (tab !== "feed") armBackGuard(); else disarmIfIdleOnFeed();
+  setTimeout(syncBackHandling, 0);
   const myToken = ++renderToken;
   localStorage.setItem("skullcrusher_last_tab", tab);
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
@@ -129,6 +152,8 @@ initAuth((user) => {
     if (!appStarted) {
       appStarted = true;
       switchTab(activeTab);
+      // Administrateur : pastille des signalements en attente.
+      import("./settings.js").then(m => m.checkReportsBadge()).catch(() => null);
       // Retour de la page de connexion Spotify (?code=...), s'il y en a un.
       if (/[?&](code|error)=/.test(location.search)) {
         import("./spotify-connect.js")

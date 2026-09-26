@@ -917,3 +917,10 @@ body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var
 .service-btn .spotify-icon { width: 20px; height: 20px; }
 .dock-links { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 #spotify-dock.mini .dock-links { display: none; }
+
+/* ---------- Signalements ---------- */
+.report-link { background: none; border: none; color: var(--text-dim); font-size: 13px; margin: 14px auto 0; display: block; cursor: pointer; text-decoration: underline; }
+.report-row { border-bottom: 1px solid var(--border); padding: 10px 0; }
+.report-row:last-child { border-bottom: none; }
+.tab-btn { position: relative; }
+.tab-badge { position: absolute; top: 2px; right: calc(50% - 20px); background: var(--red); color: #fff; font-size: 10px; font-weight: 700; border-radius: 999px; min-width: 16px; height: 16px; padding: 0 4px; display: flex; align-items: center; justify-content: center; }

@@ -807,5 +807,29 @@ export default {
   "Rechercher un artiste…": "Rod enn artis…",
   "Recherche…": "Pe rode…",
   "{n} fans": "{n} fan",
-  "Utiliser « {name} » tel quel": "Servi « {name} » kouma li ete"
+  "Utiliser « {name} » tel quel": "Servi « {name} » kouma li ete",
+
+  // Signalements
+  "Aucun signalement en attente.": "Pena okenn siyalman ki pe atann.",
+  "Classer": "Klase",
+  "Contenu inapproprié": "Kontni pa apropriye",
+  "Envoi impossible, réessaie.": "Pa finn kapav avoye, reesey.",
+  "Envoyer le signalement": "Avoy siyalman",
+  "Faux profil / usurpation": "Fo profil / izirpasion",
+  "Harcèlement ou insultes": "Arselman ouswa insilt",
+  "Le signalement est envoyé à l'administrateur de l'app, qui le verra seul. La personne signalée n'est pas prévenue.": "Siyalman la al ar administrater app-la, zis li ki trouv li. Dimounn ki siyale pa pou konn sa.",
+  "Motif": "Rezon",
+  "Profil vidé": "Profil vide",
+  "Précisions (facultatif)": "Detay (si to anvi)",
+  "Qu'est-ce qui pose problème ?": "Ki pe pos problem?",
+  "Signalement classé": "Siyalman klase",
+  "Signalement envoyé. Merci !": "Siyalman avoye. Mersi!",
+  "Signalements indisponibles (règles Firebase à mettre à jour ?).": "Siyalman pa disponib (bizin met azour reg Firebase?).",
+  "Signalements": "Siyalman",
+  "Signaler ce profil": "Siyal sa profil-la",
+  "Signaler {name}": "Siyal {name}",
+  "Spam ou publicité": "Spam ouswa piblisite",
+  "Tu as déjà signalé ce profil : l'administrateur va l'examiner.": "To finn deza siyal sa profil-la: administrater pou get li.",
+  "Vider le profil public de {name} (bio, photo, salle, exercices phares, musique) ? Son pseudo et ses séances ne sont pas touchés.": "Vid profil piblik {name} (bio, foto, lasal, lexersis vedet, lamizik)? So psedo ek so bann seans pa touse.",
+  "Vider le profil": "Vid profil la"
 };

@@ -233,6 +233,39 @@ export function isAdmin() {
   return auth.currentUser?.email === ADMIN_EMAIL;
 }
 
+// ==================== SIGNALEMENTS ====================
+// Un signalement par personne et par profil (id = signaleur_signalé) ; lus
+// et traités par l'administrateur seul (voir firestore.rules).
+export const REPORT_REASONS = ["inappropriate", "fake", "harassment", "spam", "other"];
+
+export async function reportProfile(targetUid, reason, comment = "") {
+  const uid = requireUid();
+  const target = await getProfile(targetUid).catch(() => null);
+  await setDoc(doc(dbase, "reports", `${uid}_${targetUid}`), {
+    reporter_uid: uid, reporter_name: await myPublicName(),
+    target_uid: targetUid, target_name: String(target?.display_name || "").slice(0, 30),
+    reason, comment: String(comment || "").slice(0, 300), status: "open",
+    created_at: new Date().toISOString()
+  });
+}
+
+export async function listReports(status = "open") {
+  const snap = await getDocs(query(collection(dbase, "reports"), where("status", "==", status), limit(200)));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+}
+
+export async function closeReport(id, action = "") {
+  await updateDoc(doc(dbase, "reports", id), { status: "done", action, handled_at: new Date().toISOString() });
+}
+
+// Modération : vide le contenu public d'un profil (pseudo gardé).
+export async function clearPublicProfile(targetUid) {
+  await updateDoc(doc(dbase, "profiles", targetUid), {
+    bio: "", photo_data_url: null, gym: "", highlights: [], music: {}, has_music: false,
+    moderated_at: new Date().toISOString()
+  });
+}
+
 // ==================== EXERCICES ====================
 // Bibliothèque commune : tout le monde la lit et peut y ajouter un
 // exercice, mais seul son créateur (created_by) ou l'administrateur peut
