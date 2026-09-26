@@ -5,7 +5,7 @@ import * as db from "./db.js";
 import { openModal, closeModal, fmtDateTime, fmtDuration, estimate1RM, toast, esc, attachAutocomplete } from "./utils.js";
 import { getUser } from "./auth.js";
 import { invalidate, getWorkouts, getExercises } from "./cache.js";
-import { songBlockHtml, bindSongLinks, spotifyEmbed, parseSpotify, normalizePlaylistUrl, parseSongInput, SPOTIFY_ICON } from "./music.js";
+import { songBlockHtml, bindSongLinks, spotifyEmbed, parseMusicLink, normalizePlaylistUrl, parseSongInput, SPOTIFY_ICON } from "./music.js";
 import { t } from "./i18n.js";
 import { getBody, workoutCalories, EFFORTS } from "./calories.js";
 import { guessMuscleGroup } from "./muscles.js";
@@ -34,7 +34,7 @@ function musicPaneHtml(w) {
     ${w.record_song ? `<div class="muted">🎵 ${t("Le son qui t'a porté")}${(w.records || []).length ? ` (${esc(w.records[0].exercise)})` : ""}</div>${songBlockHtml(w.record_song)}` : ""}
     ${playlist ? `<div class="muted" style="margin-top:10px;">🎧 ${t("Playlist de la séance")}</div>${spotifyEmbed(playlist, 152)}` : ""}
     ${tracks.length ? `<div class="muted" style="margin-top:10px;">🎶 ${t("Bande-son de la séance")}</div>
-      ${tracks.map(tr => parseSpotify(tr.url) ? spotifyEmbed(tr.url, 80) : "").join("")}` : ""}`;
+      ${tracks.map(tr => parseMusicLink(tr.url) ? spotifyEmbed(tr.url, 80) : "").join("")}` : ""}`;
 }
 
 // Texte du champ « son » pour un morceau enregistré.
@@ -149,9 +149,9 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
       ${isOwner ? `
         <div class="card" style="padding:12px; margin-top:12px;">
           <label style="margin-top:0;">🎧 ${t("Playlist de la séance (facultatif)")}</label>
-          <input id="mu-playlist" value="${esc(workout.soundtrack?.playlist_url || "")}" placeholder="https://open.spotify.com/playlist/…" inputmode="url">
+          <input id="mu-playlist" value="${esc(workout.soundtrack?.playlist_url || "")}" placeholder="${t("Lien de playlist (Spotify, Apple Music, Deezer)")}" inputmode="url">
           <label>🎵 ${t("Le son qui t'a porté")}</label>
-          <input id="mu-song" value="${esc(songInputValue(workout.record_song))}" placeholder="${t("Titre - Artiste, ou lien Spotify du morceau")}">
+          <input id="mu-song" value="${esc(songInputValue(workout.record_song))}" placeholder="${t("Titre - Artiste, ou lien du morceau (Spotify, Apple Music, Deezer)")}">
           ${(workout.soundtrack?.tracks || []).length ? `<p class="muted spotify-attrib" style="font-size:12px; margin:6px 0 0;">${SPOTIFY_ICON} ${t("La bande-son Spotify ({n} morceaux) est conservée.", { n: workout.soundtrack.tracks.length })}</p>` : ""}
           <p id="mu-error" style="color:var(--red); min-height:1em; margin:4px 0;"></p>
           <button class="btn btn-primary btn-sm" id="mu-save">${t("Enregistrer la musique")}</button>
@@ -184,12 +184,12 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
       const err = modalEl.querySelector("#mu-error");
       const rawPlaylist = modalEl.querySelector("#mu-playlist").value.trim();
       const playlist = normalizePlaylistUrl(rawPlaylist);
-      if (rawPlaylist && !playlist) { err.textContent = t("Lien de playlist Spotify invalide (open.spotify.com/playlist/…)."); return; }
+      if (rawPlaylist && !playlist) { err.textContent = t("Lien de playlist invalide : colle un lien Spotify, Apple Music ou Deezer."); return; }
       const songInput = modalEl.querySelector("#mu-song").value.trim();
       let song = workout.record_song || null;
       if (songInput !== songInputValue(workout.record_song)) {
         song = songInput ? parseSongInput(songInput) : null;
-        if (songInput && !song) { err.textContent = t("Morceau : écris « Titre - Artiste » ou colle un lien Spotify de titre."); return; }
+        if (songInput && !song) { err.textContent = t("Morceau : écris « Titre - Artiste » ou colle le lien d'un titre (Spotify, Apple Music, Deezer)."); return; }
         if (song && /[<>]/.test((song.title || "") + (song.artist || ""))) { err.textContent = t("Les caractères < et > ne sont pas autorisés."); return; }
       }
       const tracks = workout.soundtrack?.tracks || [];

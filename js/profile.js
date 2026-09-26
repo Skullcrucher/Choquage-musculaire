@@ -10,7 +10,7 @@
 import * as db from "./db.js";
 import { openModal, closeModal, toast, esc, safeImageUrl, attachAutocomplete, estimate1RM } from "./utils.js";
 import { getExercises, getWorkouts, getSetsForExercise } from "./cache.js";
-import { parseSpotify, spotifyEmbed } from "./music.js";
+import { parseMusicLink, musicEmbed, PROVIDERS, providerIcon, providerName, shortLinkHint, getMyProvider, setMyProvider, openOnMyService } from "./music.js";
 import { t } from "./i18n.js";
 
 const MAX_HIGHLIGHTS = 3;
@@ -168,11 +168,13 @@ export async function openProfile(uid) {
   ].filter(Boolean);
   const st = profile.show_stats ? profile.public_stats : null;
   const music = profile.music || {};
-  const playlist = parseSpotify(music.playlist_url);
-  const artist = parseSpotify(music.artist_url);
-  const spotifyProfile = parseSpotify(music.spotify_profile_url);
+  const playlist = parseMusicLink(music.playlist_url);
+  const artist = parseMusicLink(music.artist_url);
+  const spotifyProfile = parseMusicLink(music.spotify_profile_url);
+  const service = PROVIDERS[music.provider] ? music.provider : "";
+  const mine = await getMyProvider();
   const highlights = (profile.highlights || []).filter(h => h?.exercise);
-  const hasMusic = playlist || music.artist_name || artist || spotifyProfile;
+  const hasMusic = playlist || music.artist_name || artist || spotifyProfile || service;
 
   openModal(`
     <div style="display:flex; align-items:center; gap:14px;">
@@ -193,12 +195,16 @@ export async function openProfile(uid) {
     ${highlights.length ? `<div class="profile-section-title">🏆 ${t("Exercices phares")}</div>${highlights.map(highlightCard).join("")}` : ""}
 
     ${hasMusic ? `<div class="profile-section-title">🎧 ${t("Musique de salle")}</div>
+      ${service ? `<p class="muted spotify-attrib" style="margin:0 0 8px;">${providerIcon(service)} ${t("Écoute sur {service}", { service: providerName(service) })}</p>` : ""}
       ${music.artist_name || artist ? `<div class="list-row" style="cursor:default;">
         <div><div class="list-row-sub">${t("Artiste pour se chauffer")}</div><div class="list-row-title">${esc(music.artist_name || t("Voir l'artiste"))}</div></div>
-        ${artist ? `<a class="btn btn-sm btn-secondary" style="width:auto;" href="${artist.url}" target="_blank" rel="noopener">${t("Écouter")}</a>` : ""}
+        <span style="display:flex; gap:6px;">
+          ${artist ? `<a class="btn btn-sm btn-secondary" style="width:auto;" href="${artist.url}" target="_blank" rel="noopener">${providerIcon(artist)} ${t("Écouter")}</a>` : ""}
+          ${mine && (!artist || artist.provider !== mine) && (music.artist_name || artist) ? `<button class="btn btn-sm btn-secondary" style="width:auto;" id="pf-artist-mine" title="${t("Chercher sur {service}", { service: providerName(mine) })}">${providerIcon(mine)} 🔎</button>` : ""}
+        </span>
       </div>` : ""}
-      ${playlist ? spotifyEmbed(playlist) : ""}
-      ${spotifyProfile ? `<a class="btn btn-secondary btn-sm" style="margin-top:10px;" href="${spotifyProfile.url}" target="_blank" rel="noopener">${t("Profil Spotify")}</a>` : ""}` : ""}
+      ${playlist ? musicEmbed(playlist) : ""}
+      ${spotifyProfile ? `<a class="btn btn-secondary btn-sm" style="margin-top:10px;" href="${spotifyProfile.url}" target="_blank" rel="noopener">${providerIcon(spotifyProfile)} ${t("Profil {service}", { service: providerName(spotifyProfile) })}</a>` : ""}` : ""}
 
     ${!highlights.length && !hasMusic && !st && !profile.bio && !chips.length
       ? `<p class="muted" style="margin-top:14px;">${isMe ? t("Ton profil est encore vide : ajoute tes exercices phares et ta musique de salle.") : t("Ce profil n'a encore rien mis en avant.")}</p>` : ""}
@@ -209,6 +215,8 @@ export async function openProfile(uid) {
     </div>
   `, (modalEl) => {
     modalEl.querySelector("#pf-close").onclick = closeModal;
+    const artistMine = modalEl.querySelector("#pf-artist-mine");
+    if (artistMine) artistMine.onclick = () => openOnMyService(mine, artist && !music.artist_name ? { link: artist } : { text: music.artist_name, kind: "artist" });
     const edit = modalEl.querySelector("#pf-edit");
     if (edit) edit.onclick = () => { closeModal(); openProfileEditor(() => openProfile(uid)); };
   });
@@ -249,14 +257,19 @@ export async function openProfileEditor(onSaved = () => {}) {
     ${Array.from({ length: MAX_HIGHLIGHTS }, (_, i) => `<div style="position:relative; margin-bottom:8px;"><input class="pf-hl" data-i="${i}" value="${esc(hl[i] || "")}" placeholder="${t("Exercice {n}", { n: i + 1 })}"></div>`).join("")}
 
     <div class="profile-section-title">🎧 ${t("Musique de salle")}</div>
-    <p class="muted" style="margin-top:0; font-size:13px;">${t("Colle des liens Spotify (Partager → Copier le lien).")}</p>
+    <label style="margin-top:0;">${t("Mon service de musique")}</label>
+    <select id="pf-provider">
+      <option value="">—</option>
+      ${Object.entries(PROVIDERS).map(([k, pr]) => `<option value="${k}" ${music.provider === k ? "selected" : ""}>${esc(pr.name)}</option>`).join("")}
+    </select>
+    <p class="muted" style="margin:4px 0 0; font-size:13px;">${t("L'app s'adapte : les sons partagés par les autres peuvent être retrouvés sur ton service. Colle des liens Spotify, Apple Music ou Deezer (Partager → Copier le lien).")}</p>
     <label>${t("Playlist de salle")}</label>
-    <input id="pf-playlist" value="${esc(music.playlist_url || "")}" placeholder="https://open.spotify.com/playlist/…" inputmode="url">
+    <input id="pf-playlist" value="${esc(music.playlist_url || "")}" placeholder="${t("Lien de playlist (Spotify, Apple Music, Deezer)")}" inputmode="url">
     <label>${t("Artiste pour se chauffer")}</label>
     <input id="pf-artist-name" maxlength="60" value="${esc(music.artist_name || "")}" placeholder="${t("ex : Metallica")}">
-    <input id="pf-artist-url" value="${esc(music.artist_url || "")}" placeholder="${t("Lien Spotify de l'artiste (facultatif)")}" inputmode="url" style="margin-top:6px;">
-    <label>${t("Ton profil Spotify (facultatif)")}</label>
-    <input id="pf-spotify" value="${esc(music.spotify_profile_url || "")}" placeholder="https://open.spotify.com/user/…" inputmode="url">
+    <input id="pf-artist-url" value="${esc(music.artist_url || "")}" placeholder="${t("Lien de l'artiste (facultatif)")}" inputmode="url" style="margin-top:6px;">
+    <label>${t("Ton profil musical (facultatif)")}</label>
+    <input id="pf-spotify" value="${esc(music.spotify_profile_url || "")}" placeholder="${t("Lien de ton profil Spotify, Apple Music ou Deezer")}" inputmode="url">
     <p id="pf-error" style="color:var(--red); min-height:1em;"></p>
 
     <div class="btn-row">
@@ -273,12 +286,13 @@ export async function openProfileEditor(onSaved = () => {}) {
       const expected = { playlist_url: ["playlist", "album"], artist_url: ["artist"], spotify_profile_url: ["user"] };
       for (const [k, v] of Object.entries(links)) {
         if (!v) continue;
-        const parsed = parseSpotify(v);
+        const parsed = parseMusicLink(v);
         if (!parsed || !expected[k].includes(parsed.type)) {
-          err.textContent = k === "playlist_url" ? t("Lien de playlist Spotify invalide (open.spotify.com/playlist/…).")
-            : k === "artist_url" ? t("Lien d'artiste Spotify invalide (open.spotify.com/artist/…).")
-            : t("Lien de profil Spotify invalide (open.spotify.com/user/…).");
-          if (/spotify\.link/i.test(v)) err.textContent += " " + t("Les liens courts spotify.link ne marchent pas : ouvre-le, puis copie l'adresse open.spotify.com.");
+          err.textContent = k === "playlist_url" ? t("Lien de playlist invalide : colle un lien Spotify, Apple Music ou Deezer.")
+            : k === "artist_url" ? t("Lien d'artiste invalide : colle un lien d'artiste Spotify, Apple Music ou Deezer.")
+            : t("Lien de profil invalide : colle le lien de ton profil Spotify, Apple Music ou Deezer.");
+          const hint = shortLinkHint(v);
+          if (hint) err.textContent += " " + hint;
           return;
         }
         links[k] = parsed.url;
@@ -307,9 +321,10 @@ export async function openProfileEditor(onSaved = () => {}) {
           show_stats: showStats,
           public_stats: publicStats,
           highlights,
-          music: { ...links, artist_name: val("#pf-artist-name") },
+          music: { ...links, artist_name: val("#pf-artist-name"), provider: val("#pf-provider") },
           has_music: !!(links.playlist_url || links.artist_url || links.spotify_profile_url || val("#pf-artist-name"))
         });
+        setMyProvider(val("#pf-provider"));
         closeModal();
         toast(t("Profil mis à jour"));
         onSaved();

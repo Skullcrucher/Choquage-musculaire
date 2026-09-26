@@ -7,13 +7,13 @@ import { getUser } from "./auth.js";
 import { openWorkoutDetail, partnersHtml } from "./workout-detail.js";
 import { renderFriends, countIncomingRequests } from "./friends.js";
 import { openProfile } from "./profile.js";
-import { songHtml, bindSongLinks, parseSpotify } from "./music.js";
+import { songHtml, bindSongLinks, parseMusicLink } from "./music.js";
 import { t, tn } from "./i18n.js";
 
 // Records, "son du record", playlist et bande-son d'une séance partagée.
 export function workoutMusicHtml(w) {
   const records = Array.isArray(w.records) ? w.records : [];
-  const playlist = parseSpotify(w.soundtrack?.playlist_url);
+  const playlist = parseMusicLink(w.soundtrack?.playlist_url);
   const nbTracks = Array.isArray(w.soundtrack?.tracks) ? w.soundtrack.tracks.length : 0;
   if (!records.length && !playlist && !nbTracks) return "";
   const top = records[0];

@@ -190,7 +190,7 @@ async function openRoutineEditor(routine, onSaved) {
       <div><label>${t("Objectif")}</label><select id="r-goal">${options(db.ROUTINE_GOALS, state.goal)}</select></div>
     </div>
     <label>🎧 ${t("Playlist Spotify de la routine (facultatif)")}</label>
-    <input id="r-playlist" value="${esc(state.playlist_url)}" placeholder="https://open.spotify.com/playlist/…" inputmode="url">
+    <input id="r-playlist" value="${esc(state.playlist_url)}" placeholder="${t("Lien de playlist (Spotify, Apple Music, Deezer)")}" inputmode="url">
     <div id="r-exercises" style="margin-top:14px;"></div>
     <button class="btn btn-secondary btn-sm" id="r-add-ex" style="margin-top:6px;">+ ${t("Ajouter un exercice")}</button>
     <div style="height:16px"></div>
@@ -212,7 +212,7 @@ async function openRoutineEditor(routine, onSaved) {
       state.goal = modalEl.querySelector("#r-goal").value;
       const rawPlaylist = modalEl.querySelector("#r-playlist").value.trim();
       state.playlist_url = normalizePlaylistUrl(rawPlaylist);
-      if (rawPlaylist && !state.playlist_url) { toast(t("Lien de playlist Spotify invalide")); return; }
+      if (rawPlaylist && !state.playlist_url) { toast(t("Lien de playlist invalide : colle un lien Spotify, Apple Music ou Deezer.")); return; }
       if (!state.name) { toast(t("Donne un nom à la routine")); return; }
       if (/[<>]/.test(state.name + state.description)) { toast(t("Les caractères < et > ne sont pas autorisés.")); return; }
       state.exercises = state.exercises.filter(e => e.exercise_name.trim());

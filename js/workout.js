@@ -5,7 +5,7 @@ import * as db from "./db.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce, attachAutocomplete, fireRestEndNotification, esc } from "./utils.js";
 import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
-import { parseSpotify, openSpotifyPlayer } from "./music.js";
+import { parseMusicLink, openSpotifyPlayer, providerName } from "./music.js";
 import { t, tn, locale } from "./i18n.js";
 import { guessMuscleGroup } from "./muscles.js";
 
@@ -176,14 +176,14 @@ async function renderWorkoutMusic(el) {
     url = profile?.music?.playlist_url || "";
     label = t("Ma playlist de salle");
   }
-  const link = parseSpotify(url);
+  const link = parseMusicLink(url);
   if (!link || !el.isConnected) return;
   el.innerHTML = `
     <div class="workout-music">
       <span>🎧 ${esc(label)}</span>
       <span style="display:flex; gap:6px;">
         <button class="btn btn-sm btn-secondary" id="wm-listen" style="width:auto;">${t("Écouter ici")}</button>
-        <a class="btn btn-sm btn-primary" style="width:auto;" href="${link.url}" target="_blank" rel="noopener">${t("Ouvrir Spotify")}</a>
+        <a class="btn btn-sm btn-primary" style="width:auto;" href="${link.url}" target="_blank" rel="noopener">${t("Ouvrir {service}", { service: providerName(link) })}</a>
       </span>
     </div>`;
   el.querySelector("#wm-listen").onclick = () => openSpotifyPlayer(link.url, label);

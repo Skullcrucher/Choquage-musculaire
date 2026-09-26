@@ -755,5 +755,28 @@ export default {
   "{sets} séries à {reps}+ reps (objectif {hi}) avec de la marge (RPE {rpe}) : double saut.": "{sets} sets at {reps}+ reps (target {hi}) with room to spare (RPE {rpe}): double jump.",
 
   // Recherche bilingue
-  "Utiliser « {name} » de ta bibliothèque ? (Annuler = créer « {typed} »)": "Use \"{name}\" from your library? (Cancel = create \"{typed}\")"
+  "Utiliser « {name} » de ta bibliothèque ? (Annuler = créer « {typed} »)": "Use \"{name}\" from your library? (Cancel = create \"{typed}\")",
+
+  // Apple Music et Deezer
+  "Chercher sur {service}": "Find on {service}",
+  "Impossible de retrouver ce titre sur {service}.": "Couldn't find this track on {service}.",
+  "L'app s'adapte : les sons partagés par les autres peuvent être retrouvés sur ton service. Colle des liens Spotify, Apple Music ou Deezer (Partager → Copier le lien).": "The app adapts: songs shared by others can be found on your service. Paste Spotify, Apple Music or Deezer links (Share → Copy link).",
+  "Lecteur {service}": "{service} player",
+  "Les liens courts ne marchent pas : ouvre-le, puis copie l'adresse complète (open.spotify.com, music.apple.com ou deezer.com).": "Short links don't work: open it, then copy the full address (open.spotify.com, music.apple.com or deezer.com).",
+  "Lien d'artiste invalide : colle un lien d'artiste Spotify, Apple Music ou Deezer.": "Invalid artist link: paste a Spotify, Apple Music or Deezer artist link.",
+  "Lien de l'artiste (facultatif)": "Artist link (optional)",
+  "Lien de playlist (Spotify, Apple Music, Deezer)": "Playlist link (Spotify, Apple Music, Deezer)",
+  "Lien de playlist invalide : colle un lien Spotify, Apple Music ou Deezer.": "Invalid playlist link: paste a Spotify, Apple Music or Deezer link.",
+  "Lien de profil invalide : colle le lien de ton profil Spotify, Apple Music ou Deezer.": "Invalid profile link: paste your Spotify, Apple Music or Deezer profile link.",
+  "Lien de ton profil Spotify, Apple Music ou Deezer": "Link to your Spotify, Apple Music or Deezer profile",
+  "Mon service de musique": "My music service",
+  "Morceau : écris « Titre - Artiste » ou colle le lien d'un titre (Spotify, Apple Music, Deezer).": "Track: write \"Title - Artist\" or paste a track link (Spotify, Apple Music, Deezer).",
+  "Ouvrir dans {service}": "Open in {service}",
+  "Ouvrir {service}": "Open {service}",
+  "Profil {service}": "{service} profile",
+  "Sur Apple Music ou Deezer ? Choisis ton service dans ton profil (🏆 Exercices phares & 🎧 musique) : liens, lecteurs et recherche des sons partagés s'adaptent. La connexion automatique ci-dessous n'existe que pour Spotify.": "On Apple Music or Deezer? Choose your service in your profile (🏆 Highlight lifts & 🎧 music): links, players and finding shared songs adapt. The automatic connection below only exists for Spotify.",
+  "Titre - Artiste, ou lien du morceau (Spotify, Apple Music, Deezer)": "Title - Artist, or track link (Spotify, Apple Music, Deezer)",
+  "Ton profil musical (facultatif)": "Your music profile (optional)",
+  "Écoute sur {service}": "Listens on {service}",
+  "Écouter sur {service}": "Listen on {service}"
 };
