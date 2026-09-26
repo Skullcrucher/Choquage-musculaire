@@ -6,6 +6,13 @@
 //   - la majorité des séries reste SOUS le bas de la fourchette → proposer
 //     de la baisser légèrement ;
 //   - sinon, on garde la charge et on cherche à gagner des reps.
+// Avec le RPE (effort ressenti, 10 = échec) quand il est renseigné :
+//   - haut de fourchette atteint à RPE ≤ 7,5 → saut double (large marge) ;
+//   - haut atteint mais à l'échec (RPE 10) → proposé, non coché ;
+//   - reps dans la fourchette mais RPE ≤ 7 → charge trop légère, +1 pas
+//     proposé (non coché) ;
+//   - sous le bas de fourchette avec un RPE ≤ 8 → pas de baisse (ce n'était
+//     pas une question de force).
 // Les propositions s'affichent en fin de séance ; celles que l'utilisateur
 // coche mettent à jour la charge visée (target_kg) de l'exercice dans la
 // routine, donc dans toutes les semaines du plan qui l'utilisent. La
@@ -47,12 +54,19 @@ export function suggestProgressions(exercises) {
     const top = work.filter(s => s.weight_kg === weight);
     const targetSets = Math.max(1, ex.target_sets || 1);
     const current = ex.target_kg ?? weight;
+    const rpes = work.map(s => s.rpe).filter(v => v >= 1 && v <= 10);
+    const rpe = rpes.length ? Math.max(...rpes) : null;
+    const step = loadStep(ex.exercise_title, ex.muscle_group, weight);
+    const base = { exercise: ex.exercise_title, from: current, rpe, sets: work.length, lo, hi };
     if (work.length >= targetSets && work.every(s => s.reps >= hi) && weight >= current) {
-      const step = loadStep(ex.exercise_title, ex.muscle_group, weight);
-      out.push({ exercise: ex.exercise_title, direction: "up", from: current, to: round(weight + step, step >= 2.5 ? 0.5 : 0.5), reps: Math.min(...work.map(s => s.reps)), hi, sets: work.length, checked: true });
-    } else if (top.filter(s => s.reps < lo).length > top.length / 2 && weight >= current) {
+      if (rpe != null && rpe <= 7.5) out.push({ ...base, direction: "up", reason: "easy", to: round(weight + 2 * step, 0.5), reps: Math.min(...work.map(s => s.reps)), checked: true });
+      else if (rpe != null && rpe >= 10) out.push({ ...base, direction: "up", reason: "failure", to: round(weight + step, 0.5), reps: Math.min(...work.map(s => s.reps)), checked: false });
+      else out.push({ ...base, direction: "up", reason: "top", to: round(weight + step, 0.5), reps: Math.min(...work.map(s => s.reps)), checked: true });
+    } else if (rpe != null && rpe <= 7 && work.length >= targetSets && work.every(s => s.reps >= lo) && weight >= current) {
+      out.push({ ...base, direction: "up", reason: "light", to: round(weight + step, 0.5), reps: Math.min(...work.map(s => s.reps)), checked: false });
+    } else if (top.filter(s => s.reps < lo).length > top.length / 2 && weight >= current && !(rpe != null && rpe <= 8)) {
       const to = Math.max(0, Math.round(weight * 0.95 * 2) / 2);
-      if (to < weight) out.push({ exercise: ex.exercise_title, direction: "down", from: current, to, reps: Math.max(...top.map(s => s.reps)), lo, sets: top.length, checked: false });
+      if (to < weight) out.push({ ...base, direction: "down", reason: "low", to, reps: Math.max(...top.map(s => s.reps)), checked: false });
     }
   }
   return out;

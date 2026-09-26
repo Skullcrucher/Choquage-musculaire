@@ -263,7 +263,11 @@ export function openPlanImport(onDone) {
   openModal(`
     <h3>📥 ${t("Importer un plan d'entraînement")}</h3>
     <p class="muted" style="margin-top:0;">${t("Remplis le modèle dans Excel, Numbers ou Google Sheets (une ligne par exercice), enregistre-le en CSV puis importe-le. Routines, exercices, charges et calendrier sur plusieurs semaines : tout est créé et reste modifiable dans l'app.")}</p>
-    <a class="btn btn-secondary btn-sm" href="${PLAN_TEMPLATE_URL}" download>⬇️ ${t("Télécharger le modèle")}</a>
+    <div class="btn-row">
+      <a class="btn btn-secondary btn-sm" href="${PLAN_TEMPLATE_URL}" download>⬇️ ${t("Télécharger le modèle")}</a>
+      <button class="btn btn-secondary btn-sm" id="plan-names">📋 ${t("Noms des exercices")}</button>
+    </div>
+    <p class="muted" style="font-size:12px; margin:6px 0 0;">${t("Utilise de préférence les noms exacts de la bibliothèque (liste ci-dessus) : ton historique, tes stats et le pré-remplissage suivent. Sinon, l'app retrouve les noms proches et te demande de confirmer.")}</p>
     <details style="margin:10px 0;">
       <summary class="muted" style="cursor:pointer;">${t("Colonnes du fichier")}</summary>
       <ul class="muted" style="font-size:13px; padding-left:18px; line-height:1.5;">
@@ -299,13 +303,25 @@ export function openPlanImport(onDone) {
     const preview = m.querySelector("#plan-preview");
     const ok = m.querySelector("#plan-ok");
     m.querySelector("#plan-cancel").onclick = closeModal;
+    m.querySelector("#plan-names").onclick = async () => {
+      const lib = (await getExercises()).slice().sort((a, b) => a.name.localeCompare(b.name, "fr"));
+      downloadText("exercices-skullcrusher.csv", "\uFEFFexercice;groupe\r\n" + lib.map(e => `${e.name.includes(";") ? `"${e.name}"` : e.name};${e.muscle_group || ""}`).join("\r\n") + "\r\n");
+    };
     m.querySelector("#plan-file").onchange = async (e) => {
       const file = e.target.files[0];
       parsed = null; ok.disabled = true; preview.innerHTML = "";
       if (!file) return;
-      const res = parsePlanCsv(await file.text(), await getExercises());
+      invalidate("exercises"); // bibliothèque à jour pour la correspondance des noms
+      const library = await getExercises();
+      const res = parsePlanCsv(await file.text(), library);
       if (res.error) { preview.innerHTML = `<p style="color:var(--red);">${esc(res.error)}</p>`; return; }
       parsed = res;
+      // Noms d'exercices : correspondance avec la bibliothèque.
+      const { buildMatcher } = await import("./exercise-match.js");
+      const match = await buildMatcher(library);
+      const uniqueNames = [...new Set(res.routines.flatMap(r => r.exercises.map(x => x.exercise_name)))];
+      parsed.matches = uniqueNames.map(n => ({ input: n, ...match(n) })).filter(x => x.status !== "exact");
+      parsed.library = library;
       const pl = res.plan;
       const weeks = pl ? pl.blocks.reduce((n, b) => n + b.weeks, 0) : 0;
       preview.innerHTML = `
@@ -318,6 +334,21 @@ export function openPlanImport(onDone) {
           <div class="list-row-title">${esc(r.name)}</div>
           <div class="list-row-sub">${r.exercises.map(x => `${esc(x.exercise_name)} ${esc(x.target_sets)}×${esc(x.reps_target)}${x.target_kg != null ? ` @ ${esc(x.target_kg)} kg` : ""}`).join(" · ")}</div>
         </div>`).join("")}
+        ${parsed.matches.length ? `<div class="card" style="padding:10px; margin-top:8px;">
+          <div class="list-row-title">🔗 ${t("Noms d'exercices à vérifier")}</div>
+          <p class="muted" style="font-size:12px; margin:2px 0 6px;">${t("Associe chaque nom à un exercice de ta bibliothèque, ou crée un nouvel exercice.")}</p>
+          ${parsed.matches.map((x, i) => {
+            const opts = [...new Set([x.status !== "new" ? x.name : null, ...x.candidates].filter(Boolean))];
+            const pick = x.status === "same" || x.status === "auto" || x.preselect ? x.name : "";
+            return `<div style="margin-bottom:8px;">
+              <div style="font-size:13px;">${x.status === "new" && !x.candidates.length ? "➕" : pick ? "✅" : "❓"} « ${esc(x.input)} »</div>
+              <select data-match="${i}" style="font-size:13px; padding:8px;">
+                ${opts.map(o => `<option value="${esc(o)}" ${o === pick ? "selected" : ""}>→ ${esc(o)}</option>`).join("")}
+                <option value="" ${pick ? "" : "selected"}>${t("Nouvel exercice « {name} »", { name: esc(x.input) })}</option>
+              </select>
+            </div>`;
+          }).join("")}
+        </div>` : ""}
         ${res.warnings.length ? `<p class="muted" style="font-size:12px;">⚠️ ${res.warnings.slice(0, 6).map(esc).join("<br>")}${res.warnings.length > 6 ? "<br>…" : ""}</p>` : ""}`;
       m.querySelector("#plan-activate-row").style.display = pl ? "" : "none";
       ok.disabled = false;
@@ -328,7 +359,22 @@ export function openPlanImport(onDone) {
       if (!parsed) return;
       ok.disabled = true;
       const replace = m.querySelector("#plan-replace").checked;
+      // Applique les correspondances choisies (nom et groupe de la bibliothèque).
+      const chosen = new Map();
+      m.querySelectorAll("[data-match]").forEach(sel => { if (sel.value) chosen.set(parsed.matches[+sel.dataset.match].input, sel.value); });
+      parsed.routines.forEach(r => r.exercises.forEach(x => {
+        const to = chosen.get(x.exercise_name);
+        if (!to) return;
+        x.exercise_name = to;
+        x.muscle_group = parsed.library.find(e => e.name === to)?.muscle_group || x.muscle_group;
+      }));
       try {
+        // Nouveaux exercices : ajoutés à la bibliothèque avec leur groupe.
+        const known = new Set(parsed.library.map(e => e.name.toLowerCase()));
+        const fresh = new Map();
+        parsed.routines.forEach(r => r.exercises.forEach(x => { if (!known.has(x.exercise_name.toLowerCase())) fresh.set(x.exercise_name, x.muscle_group); }));
+        await Promise.all([...fresh].map(([n, g]) => db.upsertExercise(n, g).catch(e => console.warn("[Skullcrusher] Exercice non ajouté", n, e))));
+        if (fresh.size) invalidate("exercises");
         const mine = await getRoutines();
         const idByName = {};
         for (const r of parsed.routines) {

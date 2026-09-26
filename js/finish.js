@@ -62,6 +62,17 @@ async function partnerChoices(workout) {
   return { friends, preselected };
 }
 
+const fmtRpe = (v) => String(v).replace(".", ",");
+function progressionReason(p) {
+  switch (p.reason) {
+    case "easy": return t("{sets} séries à {reps}+ reps (objectif {hi}) avec de la marge (RPE {rpe}) : double saut.", { sets: p.sets, reps: p.reps, hi: p.hi, rpe: fmtRpe(p.rpe) });
+    case "failure": return t("Objectif atteint, mais à l'échec (RPE 10) : à toi de voir si tu es prêt.", {});
+    case "light": return t("Reps dans la fourchette avec beaucoup de marge (RPE {rpe}) : la charge est peut-être trop légère.", { rpe: fmtRpe(p.rpe) });
+    case "low": return t("Moins de {lo} reps sur la plupart des séries : alléger un peu aide à progresser.", { lo: p.lo });
+    default: return t("{sets} séries à {reps}+ reps (objectif {hi}) : tu peux charger plus.", { sets: p.sets, reps: p.reps, hi: p.hi }) + (p.rpe != null ? ` (RPE ${fmtRpe(p.rpe)})` : "");
+  }
+}
+
 // Charges à adapter dans la routine d'origine (double progression).
 async function progressionChoices(workout) {
   if (!workout.routine_id) return { routine: null, list: [] };
@@ -130,9 +141,7 @@ export async function openFinishDialog(workout, summary) {
             <label class="list-row" style="cursor:pointer; align-items:flex-start;">
               <span style="font-size:14px;">
                 ${p.direction === "up" ? "⬆️" : "⬇️"} <b>${esc(p.exercise)}</b> : ${esc(p.from)} → <b>${esc(p.to)} kg</b>
-                <br><span class="muted" style="font-size:12px;">${p.direction === "up"
-                  ? t("{sets} séries à {reps}+ reps (objectif {hi}) : tu peux charger plus.", { sets: p.sets, reps: p.reps, hi: p.hi })
-                  : t("Moins de {lo} reps sur la plupart des séries : alléger un peu aide à progresser.", { lo: p.lo })}</span>
+                <br><span class="muted" style="font-size:12px;">${progressionReason(p)}</span>
               </span>
               <input type="checkbox" data-prog="${i}" ${p.checked ? "checked" : ""} style="width:auto; margin-top:4px;">
             </label>`).join("")}

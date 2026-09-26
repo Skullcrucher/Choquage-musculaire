@@ -731,5 +731,25 @@ export default {
   "nom du plan et date de début (facultatifs, 1re ligne)": "nom plan la ek dat koumansman (si to anvi, 1ye lign)",
   "phase du plan et sa durée en semaines (vide = même bloc que la ligne du dessus)": "faz plan la ek so dire an semenn (vid = mem blok ki lign anler)",
   "{sets} séries à {reps}+ reps (objectif {hi}) : tu peux charger plus.": "{sets} seri a {reps}+ rep (lobzektif {hi}): to kapav met plis sarz.",
-  "« {routine} » est prévue dans le plan mais n'a aucun exercice : jour ignoré.": "« {routine} » prevwar dan plan la me li pena okenn lexersis: zour ignore."
+  "« {routine} » est prévue dans le plan mais n'a aucun exercice : jour ignoré.": "« {routine} » prevwar dan plan la me li pena okenn lexersis: zour ignore.",
+
+  // Correspondance des noms, décalage du plan, RPE
+  "10 = échec, 9 = encore 1 rep possible, 8 = encore 2…": "10 = ekek, 9 = ankor 1 rep posib, 8 = ankor 2…",
+  "Associe chaque nom à un exercice de ta bibliothèque, ou crée un nouvel exercice.": "Asosie sak nom avek enn lexersis dan to bibliotek, ouswa kree enn nouvo lexersis.",
+  "Demander le RPE après chaque série": "Dimann RPE apre sak seri",
+  "Décaler ce plan d'une semaine ? Toutes les semaines suivantes sont repoussées de 7 jours.": "Pous sa plan-la enn semenn? Tou bann semenn apre pou pous 7 zour.",
+  "Décaler d'une semaine": "Pous enn semenn",
+  "Effort ressenti de 6 à 10 (10 = échec) : affine les propositions de progression.": "Efor ki to santi depi 6 ziska 10 (10 = ekek): amelior bann propozision progresion.",
+  "Noms d'exercices à vérifier": "Nom lexersis pou verifye",
+  "Noms des exercices": "Nom bann lexersis",
+  "Non, continuer": "Non, kontinie",
+  "Nouvel exercice « {name} »": "Nouvo lexersis « {name} »",
+  "Objectif atteint, mais à l'échec (RPE 10) : à toi de voir si tu es prêt.": "Lobzektif atin, me ziska ekek (RPE 10): twa ki deside si to pare.",
+  "Passer": "Sote",
+  "Plan décalé d'une semaine": "Plan pouse enn semenn",
+  "RPE ?": "RPE?",
+  "Reps dans la fourchette avec beaucoup de marge (RPE {rpe}) : la charge est peut-être trop légère.": "Rep dan lafourset avek boukou marz (RPE {rpe}): sarz la kapav tro leze.",
+  "Semaine {w} : {done}/{planned} séance(s) faite(s). Décaler le plan d'une semaine pour refaire cette semaine ?": "Semenn {w}: {done}/{planned} seans fer. Pous plan la enn semenn pou refer sa semenn-la?",
+  "Utilise de préférence les noms exacts de la bibliothèque (liste ci-dessus) : ton historique, tes stats et le pré-remplissage suivent. Sinon, l'app retrouve les noms proches et te demande de confirmer.": "Prefer servi nom exak bibliotek la (lalis anler): to istorik, to stat ek pre-ranplisaz swiv. Sinon app-la rod bann nom ki pros ek dimann twa konfirme.",
+  "{sets} séries à {reps}+ reps (objectif {hi}) avec de la marge (RPE {rpe}) : double saut.": "{sets} seri a {reps}+ rep (lobzektif {hi}) avek marz (RPE {rpe}): dib so."
 };

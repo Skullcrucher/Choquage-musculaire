@@ -876,3 +876,11 @@ body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var
 .edit-set-row input, .edit-set-row select { padding: 8px 6px; font-size: 14px; min-width: 0; }
 .edit-set-row .muted { font-size: 12px; text-align: center; }
 .icon-btn { background: var(--surface-raised); color: var(--text); border: none; border-radius: 6px; height: 32px; width: 30px; cursor: pointer; }
+.plan-shift { background: rgba(224,36,36,0.10); border: 1px solid rgba(224,36,36,0.35); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 10px; font-size: 14px; }
+/* ---------- RPE ---------- */
+.set-index { cursor: pointer; line-height: 1; display: flex; flex-direction: column; align-items: center; }
+.rpe-tag { font-family: 'Inter', sans-serif; font-size: 9px; color: var(--text-dim); margin-top: 2px; }
+.rpe-picker { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 4px 0 8px 30px; font-size: 12px; }
+.rpe-picker button { background: var(--surface-raised); color: var(--text); border: 1px solid transparent; border-radius: 6px; min-width: 32px; height: 28px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.rpe-picker button.active { border-color: var(--amber); color: var(--amber); }
+.rpe-picker .rpe-skip { min-width: 28px; color: var(--text-dim); }

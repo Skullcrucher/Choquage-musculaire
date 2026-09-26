@@ -732,5 +732,25 @@ export default {
   "nom du plan et date de début (facultatifs, 1re ligne)": "plan name and start date (optional, first row)",
   "phase du plan et sa durée en semaines (vide = même bloc que la ligne du dessus)": "plan phase and its length in weeks (empty = same block as the row above)",
   "{sets} séries à {reps}+ reps (objectif {hi}) : tu peux charger plus.": "{sets} sets at {reps}+ reps (target {hi}): you can load more.",
-  "« {routine} » est prévue dans le plan mais n'a aucun exercice : jour ignoré.": "\"{routine}\" is scheduled in the plan but has no exercises: day skipped."
+  "« {routine} » est prévue dans le plan mais n'a aucun exercice : jour ignoré.": "\"{routine}\" is scheduled in the plan but has no exercises: day skipped.",
+
+  // Correspondance des noms, décalage du plan, RPE
+  "10 = échec, 9 = encore 1 rep possible, 8 = encore 2…": "10 = failure, 9 = 1 more rep possible, 8 = 2 more…",
+  "Associe chaque nom à un exercice de ta bibliothèque, ou crée un nouvel exercice.": "Match each name to an exercise in your library, or create a new exercise.",
+  "Demander le RPE après chaque série": "Ask for RPE after each set",
+  "Décaler ce plan d'une semaine ? Toutes les semaines suivantes sont repoussées de 7 jours.": "Push this plan back by a week? All following weeks move 7 days later.",
+  "Décaler d'une semaine": "Push back a week",
+  "Effort ressenti de 6 à 10 (10 = échec) : affine les propositions de progression.": "Perceived effort from 6 to 10 (10 = failure): refines progression suggestions.",
+  "Noms d'exercices à vérifier": "Exercise names to check",
+  "Noms des exercices": "Exercise names",
+  "Non, continuer": "No, carry on",
+  "Nouvel exercice « {name} »": "New exercise \"{name}\"",
+  "Objectif atteint, mais à l'échec (RPE 10) : à toi de voir si tu es prêt.": "Target reached, but to failure (RPE 10): your call whether you're ready.",
+  "Passer": "Skip",
+  "Plan décalé d'une semaine": "Plan pushed back a week",
+  "RPE ?": "RPE?",
+  "Reps dans la fourchette avec beaucoup de marge (RPE {rpe}) : la charge est peut-être trop légère.": "Reps in range with plenty left in the tank (RPE {rpe}): the load may be too light.",
+  "Semaine {w} : {done}/{planned} séance(s) faite(s). Décaler le plan d'une semaine pour refaire cette semaine ?": "Week {w}: {done}/{planned} workout(s) done. Push the plan back a week to redo this week?",
+  "Utilise de préférence les noms exacts de la bibliothèque (liste ci-dessus) : ton historique, tes stats et le pré-remplissage suivent. Sinon, l'app retrouve les noms proches et te demande de confirmer.": "Preferably use the exact library names (list above): your history, stats and pre-filling follow. Otherwise the app finds close names and asks you to confirm.",
+  "{sets} séries à {reps}+ reps (objectif {hi}) avec de la marge (RPE {rpe}) : double saut.": "{sets} sets at {reps}+ reps (target {hi}) with room to spare (RPE {rpe}): double jump."
 };

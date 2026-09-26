@@ -741,5 +741,25 @@ export default {
   "nom du plan et date de début (facultatifs, 1re ligne)": "nazwa programu i data startu (opcjonalnie, 1. wiersz)",
   "phase du plan et sa durée en semaines (vide = même bloc que la ligne du dessus)": "faza programu i jej długość w tygodniach (puste = ten sam blok co wiersz wyżej)",
   "{sets} séries à {reps}+ reps (objectif {hi}) : tu peux charger plus.": "{sets} serii po {reps}+ powt. (cel {hi}): możesz dołożyć ciężaru.",
-  "« {routine} » est prévue dans le plan mais n'a aucun exercice : jour ignoré.": "„{routine}” jest w programie, ale nie ma ćwiczeń: dzień pominięty."
+  "« {routine} » est prévue dans le plan mais n'a aucun exercice : jour ignoré.": "„{routine}” jest w programie, ale nie ma ćwiczeń: dzień pominięty.",
+
+  // Correspondance des noms, décalage du plan, RPE
+  "10 = échec, 9 = encore 1 rep possible, 8 = encore 2…": "10 = upadek, 9 = jeszcze 1 powt., 8 = jeszcze 2…",
+  "Associe chaque nom à un exercice de ta bibliothèque, ou crée un nouvel exercice.": "Przypisz każdą nazwę do ćwiczenia z biblioteki albo utwórz nowe ćwiczenie.",
+  "Demander le RPE après chaque série": "Pytaj o RPE po każdej serii",
+  "Décaler ce plan d'une semaine ? Toutes les semaines suivantes sont repoussées de 7 jours.": "Przesunąć program o tydzień? Wszystkie kolejne tygodnie przesuną się o 7 dni.",
+  "Décaler d'une semaine": "Przesuń o tydzień",
+  "Effort ressenti de 6 à 10 (10 = échec) : affine les propositions de progression.": "Odczuwany wysiłek od 6 do 10 (10 = upadek): lepsze propozycje progresji.",
+  "Noms d'exercices à vérifier": "Nazwy ćwiczeń do sprawdzenia",
+  "Noms des exercices": "Nazwy ćwiczeń",
+  "Non, continuer": "Nie, kontynuuj",
+  "Nouvel exercice « {name} »": "Nowe ćwiczenie „{name}”",
+  "Objectif atteint, mais à l'échec (RPE 10) : à toi de voir si tu es prêt.": "Cel osiągnięty, ale do upadku (RPE 10): sam zdecyduj, czy jesteś gotowy.",
+  "Passer": "Pomiń",
+  "Plan décalé d'une semaine": "Program przesunięty o tydzień",
+  "RPE ?": "RPE?",
+  "Reps dans la fourchette avec beaucoup de marge (RPE {rpe}) : la charge est peut-être trop légère.": "Powtórzenia w zakresie z dużym zapasem (RPE {rpe}): ciężar może być za lekki.",
+  "Semaine {w} : {done}/{planned} séance(s) faite(s). Décaler le plan d'une semaine pour refaire cette semaine ?": "Tydzień {w}: wykonano {done}/{planned} treningów. Przesunąć program o tydzień, aby powtórzyć ten tydzień?",
+  "Utilise de préférence les noms exacts de la bibliothèque (liste ci-dessus) : ton historique, tes stats et le pré-remplissage suivent. Sinon, l'app retrouve les noms proches et te demande de confirmer.": "Najlepiej używaj dokładnych nazw z biblioteki (lista powyżej): historia, statystyki i wstępne wypełnianie będą spójne. W przeciwnym razie aplikacja znajdzie podobne nazwy i poprosi o potwierdzenie.",
+  "{sets} séries à {reps}+ reps (objectif {hi}) avec de la marge (RPE {rpe}) : double saut.": "{sets} serii po {reps}+ powt. (cel {hi}) z zapasem (RPE {rpe}): podwójny skok."
 };

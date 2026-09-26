@@ -115,7 +115,7 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
           <div style="font-family:'Barlow Condensed',sans-serif; font-size:17px; margin-bottom:4px;">${esc(name)}</div>
           ${exSets.sort((a, b) => a.set_index - b.set_index).map(s => `
             <div class="muted" style="display:flex; justify-content:space-between; padding:3px 0;">
-              <span>${t("Série {n}", { n: esc(s.set_index) })} ${s.set_type !== "normal" ? "· " + esc(setTypeLabel(s.set_type)) : ""}</span>
+              <span>${t("Série {n}", { n: esc(s.set_index) })} ${s.set_type !== "normal" ? "· " + esc(setTypeLabel(s.set_type)) : ""}${s.rpe ? ` · RPE ${esc(String(s.rpe).replace(".", ","))}` : ""}</span>
               <span>${esc(s.weight_kg ?? "—")} kg × ${esc(s.reps ?? "—")}${s.weight_kg && s.reps ? ` (1RM ${estimate1RM(s.weight_kg, s.reps)} kg)` : ""}</span>
             </div>
           `).join("")}
