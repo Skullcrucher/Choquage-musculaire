@@ -127,6 +127,16 @@ export async function renderReglages(container) {
       </div>
       <p class="muted" id="notify-status" style="margin-top:6px;"></p>
       <button class="btn btn-secondary btn-sm" id="notify-test" style="display:none;">${t("Tester : notification dans 10 s")}</button>
+      <div class="list-row" style="cursor:default; margin-top:6px;">
+        <div>
+          <div class="list-row-title">${t("Demander le RPE après chaque série")}</div>
+          <div class="list-row-sub">${t("Effort ressenti de 6 à 10 (10 = échec) : affine les propositions de progression.")}</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="rpe-toggle" ${(() => { try { return localStorage.getItem("skullcrusher_ask_rpe") !== "0"; } catch (_) { return true; } })() ? "checked" : ""}>
+          <span class="switch-track"></span>
+        </label>
+      </div>
     </div>
 
     <div class="card">
@@ -241,6 +251,9 @@ export async function renderReglages(container) {
     if (btn.isConnected) { btn.disabled = false; btn.textContent = t("Supprimer toutes mes séances"); }
   };
 
+  container.querySelector("#rpe-toggle").onchange = (e) => {
+    try { localStorage.setItem("skullcrusher_ask_rpe", e.target.checked ? "1" : "0"); } catch (_) {}
+  };
   const notifyToggle = container.querySelector("#notify-toggle");
   const notifyStatus = container.querySelector("#notify-status");
   const notifyTest = container.querySelector("#notify-test");

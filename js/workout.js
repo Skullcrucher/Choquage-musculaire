@@ -75,6 +75,7 @@ async function renderStartScreen(container) {
   `;
   container.querySelector("#start-empty").onclick = (e) => startWorkout(null, null, e.currentTarget);
   const planBtn = container.querySelector("#plan-start");
+  if (planCard?.bind) planCard.bind(container, () => renderStartScreen(container));
   if (planBtn && planCard?.routine) planBtn.onclick = (e) => startWorkout(planCard.routine.id, planCard.routine, e.currentTarget, { plan_id: planCard.plan.id, plan_week: planCard.week });
   container.querySelectorAll("[data-start-routine]").forEach(el => {
     el.onclick = (e) => startWorkout(el.dataset.startRoutine, routines.find(r => r.id === el.dataset.startRoutine), e.currentTarget);
@@ -106,7 +107,7 @@ async function startWorkout(routineId, routine = null, triggerEl = null, planInf
     const lastSetsByExercise = await Promise.all(routineExercises.map(ex => getLastSetsForExercise(ex.exercise_name)));
 
     currentWorkout = {
-      id, title, start_time: now.toISOString(),
+      id, title, start_time: now.toISOString(), routine_id: routine?.id || null,
       playlist_url: routine?.playlist_url || "",
       exercises: routineExercises.map((ex, i) => {
         const lastSets = lastSetsByExercise[i];
@@ -114,16 +115,18 @@ async function startWorkout(routineId, routine = null, triggerEl = null, planInf
         const sets = lastSets.length
           ? Array.from({ length: targetCount }, (_, j) => ({
               id: null, set_index: j + 1, set_type: "normal",
-              weight_kg: lastSets[j]?.weight_kg ?? null, reps: lastSets[j]?.reps ?? null,
+              // Charge visée de la routine (progression acceptée) en priorité.
+              weight_kg: ex.target_kg ?? lastSets[j]?.weight_kg ?? null, reps: lastSets[j]?.reps ?? null,
               target_reps: ex.reps_target || "", done: false
             }))
           : Array.from({ length: targetCount }, (_, j) => ({
-              id: null, set_index: j + 1, set_type: "normal", weight_kg: null, reps: null,
+              id: null, set_index: j + 1, set_type: "normal", weight_kg: ex.target_kg ?? null, reps: null,
               target_reps: ex.reps_target || "", done: false
             }));
         return {
           exercise_title: ex.exercise_name,
           muscle_group: ex.muscle_group || "Autre",
+          reps_target: ex.reps_target || "", target_sets: ex.target_sets || 0, target_kg: ex.target_kg ?? null,
           rest_timer_seconds: restSecondsFor(ex.exercise_name, ex.rest_seconds),
           sets
         };
@@ -276,7 +279,7 @@ function renderExerciseList(el) {
       const payload = {
         exercise_title: ex.exercise_title, set_index: set.set_index, set_type: set.set_type,
         weight_kg: set.weight_kg, reps: set.reps, superset_id: null, exercise_notes: "",
-        distance_km: null, duration_seconds: null, rpe: null,
+        distance_km: null, duration_seconds: null, rpe: set.rpe ?? null,
         workout_start_time: currentWorkout.start_time, logged_at: set.logged_at,
         exercise_index: Math.max(0, currentWorkout.exercises.indexOf(ex))
       };
@@ -318,10 +321,45 @@ function renderExerciseList(el) {
       }
       if (set.done && set.weight_kg != null && set.reps != null) {
         startRestTimer(ex.rest_timer_seconds || 90, t("Prochaine série : {exercise}", { exercise: ex.exercise_title }));
+        if (askRpe() && set.set_type !== "warmup") showRpePicker(row, set, savePersist);
       }
+      if (!set.done) row.nextElementSibling?.classList.contains("rpe-picker") && row.nextElementSibling.remove();
       saveLocalState();
       check.classList.toggle("checked", set.done);
     };
+    // Toucher le numéro de la série : (re)donner son RPE.
+    row.querySelector(".set-index").onclick = () => showRpePicker(row, set, savePersist);
+  });
+}
+
+// ---------- RPE (effort ressenti, échelle de Borg modifiée) ----------
+// 10 = échec, 9 = encore 1 rep possible, 8 = encore 2, 7 = encore 3…
+const LS_ASK_RPE = "skullcrusher_ask_rpe";
+export function askRpe() {
+  try { return localStorage.getItem(LS_ASK_RPE) !== "0"; } catch (_) { return true; }
+}
+export function setAskRpe(on) {
+  try { localStorage.setItem(LS_ASK_RPE, on ? "1" : "0"); } catch (_) {}
+}
+const RPE_VALUES = [6, 7, 7.5, 8, 8.5, 9, 9.5, 10];
+
+function showRpePicker(row, set, savePersist) {
+  document.querySelectorAll(".rpe-picker").forEach(p => p.remove());
+  const picker = document.createElement("div");
+  picker.className = "rpe-picker";
+  picker.innerHTML = `
+    <span class="muted" title="${t("10 = échec, 9 = encore 1 rep possible, 8 = encore 2…")}">${t("RPE ?")}</span>
+    ${RPE_VALUES.map(v => `<button data-rpe="${v}" class="${set.rpe === v ? "active" : ""}">${String(v).replace(".", ",")}</button>`).join("")}
+    <button data-rpe="" class="rpe-skip" title="${t("Passer")}">✕</button>`;
+  row.after(picker);
+  picker.querySelectorAll("[data-rpe]").forEach(b => b.onclick = () => {
+    if (b.dataset.rpe) {
+      set.rpe = parseFloat(b.dataset.rpe);
+      row.querySelector(".set-index").innerHTML = `${set.set_index}<small class="rpe-tag">@${String(set.rpe).replace(".", ",")}</small>`;
+      savePersist();
+      saveLocalState();
+    }
+    picker.remove();
   });
 }
 
@@ -330,7 +368,7 @@ function setRowHtml(s, exIdx, sIdx) {
   const badgeLabel = t({ normal: "—", warmup: "échauf.", dropset: "drop", failure: "échec" }[s.set_type]);
   return `
     <div class="set-row" data-ex="${exIdx}" data-set="${sIdx}">
-      <div class="set-index">${s.set_index}</div>
+      <div class="set-index" title="${t("RPE ?")}">${s.set_index}${s.rpe ? `<small class="rpe-tag">@${String(s.rpe).replace(".", ",")}</small>` : ""}</div>
       <input class="input-kg" type="number" inputmode="decimal" step="0.5" placeholder="${s.target_reps ? "" : "kg"}" value="${s.weight_kg ?? ""}">
       <input class="input-reps" type="number" inputmode="numeric" placeholder="${s.target_reps || "reps"}" value="${s.reps ?? ""}">
       <div class="set-type-badge ${s.set_type}">${badgeLabel}</div>
@@ -619,6 +657,14 @@ async function finishWorkout() {
     watch_kcal: extra.watch_kcal || null,
     last_set_at: lastSetAt
   });
+  // Progression acceptée : nouvelles charges visées dans la routine.
+  if (extra.progressions?.length && extra.routine) {
+    try {
+      const { applyProgressions } = await import("./progression.js");
+      await applyProgressions(extra.routine, extra.progressions);
+      invalidate("routines");
+    } catch (e) { console.warn("[Skullcrusher] Progression non enregistrée :", e); }
+  }
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
   localStorage.removeItem(LS_REST_KEY);

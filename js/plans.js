@@ -31,7 +31,7 @@ export function getPlans() {
   }
   return plansPromise;
 }
-async function savePlans(plans, active) {
+export async function savePlans(plans, active) {
   await db.setPrivateData({ plans, active_plan_id: active || null });
   plansUid = db.getCurrentUser()?.uid || null;
   plansPromise = Promise.resolve({ plans, active: active || null });
@@ -42,11 +42,11 @@ function parseDay(s) {
   const [y, m, d] = String(s).split("-").map(Number);
   return new Date(y, (m || 1) - 1, d || 1);
 }
-function dayStr(date) {
+export function dayStr(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
-const dowOf = (date) => ((date.getDay() + 6) % 7) + 1;
-function mondayOf(date) {
+export const dowOf = (date) => ((date.getDay() + 6) % 7) + 1;
+export function mondayOf(date) {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   d.setDate(d.getDate() - (dowOf(d) - 1));
   return d;
@@ -108,6 +108,33 @@ function weekStripHtml(cells) {
 }
 
 // Carte « aujourd'hui » de l'écran Séance (null si pas de plan actif).
+// Semaine précédente du plan en grande partie manquée (moins de la moitié
+// des séances prévues) ? Renvoie { done, planned } ou null.
+function missedLastWeek(plan, pos, routines, workouts) {
+  if (pos.status !== "running" || pos.week < 2) return null;
+  if (plan.shift_declined_week === pos.week) return null;
+  const lastWeek = new Date(); lastWeek.setDate(lastWeek.getDate() - 7);
+  const cells = weekCells(plan, lastWeek, routines, workouts).filter(c => c.inPlan && c.routine);
+  const done = cells.filter(c => c.done).length;
+  return cells.length && done < cells.length / 2 ? { done, planned: cells.length } : null;
+}
+
+// Décale le plan de `weeks` semaines (date de début repoussée).
+export async function shiftPlan(planId, weeks = 1) {
+  const { plans, active } = await getPlans();
+  const list = plans.map(p => {
+    if (p.id !== planId) return p;
+    const d = parseDay(p.start_date); d.setDate(d.getDate() + 7 * weeks);
+    return { ...p, start_date: dayStr(d), shift_declined_week: null, shifted_weeks: (p.shifted_weeks || 0) + weeks };
+  });
+  await savePlans(list, active);
+}
+
+async function declineShift(planId, week) {
+  const { plans, active } = await getPlans();
+  await savePlans(plans.map(p => p.id === planId ? { ...p, shift_declined_week: week } : p), active);
+}
+
 export async function todayPlanCard() {
   const { plans, active } = await getPlans();
   const plan = plans.find(p => p.id === active);
@@ -121,7 +148,15 @@ export async function todayPlanCard() {
   else {
     routine = routines.find(r => r.id === pos.routineId) || null;
     const already = routine && doneOn(workouts, new Date(), routine);
+    const missed = missedLastWeek(plan, pos, routines, workouts);
     body = `
+      ${missed ? `<div class="plan-shift">
+        <div>⏸️ ${t("Semaine {w} : {done}/{planned} séance(s) faite(s). Décaler le plan d'une semaine pour refaire cette semaine ?", { w: pos.week - 1, done: missed.done, planned: missed.planned })}</div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn btn-sm btn-secondary" id="plan-shift-no">${t("Non, continuer")}</button>
+          <button class="btn btn-sm btn-primary" id="plan-shift-yes">${t("Décaler d'une semaine")}</button>
+        </div>
+      </div>` : ""}
       <div class="muted" style="font-size:13px; margin-bottom:6px;">${t("Semaine {w}/{total} · {block} (semaine {bw}/{bweeks})", { w: pos.week, total: pos.total, block: esc(pos.block.name || t("Bloc {n}", { n: pos.blockIndex + 1 })), bw: pos.blockWeek, bweeks: pos.block.weeks })}</div>
       ${weekStripHtml(weekCells(plan, new Date(), routines, workouts))}
       ${routine
@@ -131,7 +166,14 @@ export async function todayPlanCard() {
   }
   return {
     html: `<div class="card plan-card"><div class="card-title">📅 ${esc(plan.name)}</div>${body}</div>`,
-    routine, plan, week: pos.week
+    routine, plan, week: pos.week,
+    // Boutons « décaler » de la carte ; refresh() redessine l'écran.
+    bind(container, refresh) {
+      const yes = container.querySelector("#plan-shift-yes");
+      const no = container.querySelector("#plan-shift-no");
+      if (yes) yes.onclick = async () => { yes.disabled = true; await shiftPlan(plan.id, 1); toast(t("Plan décalé d'une semaine")); refresh(); };
+      if (no) no.onclick = async () => { no.disabled = true; await declineShift(plan.id, pos.week); refresh(); };
+    }
   };
 }
 
@@ -159,6 +201,7 @@ export async function renderPlans(content) {
         <div class="btn-row" style="margin-top:8px;">
           <button class="btn btn-sm btn-secondary" data-activate="${esc(p.id)}">${p.id === active ? t("Désactiver") : t("Activer")}</button>
           <button class="btn btn-sm btn-secondary" data-pedit="${esc(p.id)}">${t("Modifier")}</button>
+          ${pos.status !== "done" ? `<button class="btn btn-sm btn-secondary" data-pshift="${esc(p.id)}" title="${t("Décaler d'une semaine")}">⏭ +1 ${t("sem.")}</button>` : ""}
           <button class="btn btn-sm btn-danger" data-pdel="${esc(p.id)}">${t("Supprimer")}</button>
         </div>
       </div>`;
@@ -170,6 +213,12 @@ export async function renderPlans(content) {
     const id = b.dataset.activate;
     await savePlans(plans, active === id ? null : id);
     toast(active === id ? t("Plan désactivé") : t("Plan activé : il s'affiche dans l'onglet Séance"));
+    refresh();
+  });
+  content.querySelectorAll("[data-pshift]").forEach(b => b.onclick = async () => {
+    if (!confirm(t("Décaler ce plan d'une semaine ? Toutes les semaines suivantes sont repoussées de 7 jours."))) return;
+    await shiftPlan(b.dataset.pshift, 1);
+    toast(t("Plan décalé d'une semaine"));
     refresh();
   });
   content.querySelectorAll("[data-pdel]").forEach(b => b.onclick = async () => {
