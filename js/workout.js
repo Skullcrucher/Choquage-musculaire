@@ -263,11 +263,12 @@ function renderExerciseList(el) {
       // Série ou exercice supprimé entre-temps : rien à écrire.
       if (!currentWorkout || !currentWorkout.exercises.includes(ex) || !ex.sets.includes(set)) return;
       if (set.weight_kg == null && set.reps == null) return;
+      set.logged_at = set.logged_at || new Date().toISOString(); // durée réelle de séance (calories)
       const payload = {
         exercise_title: ex.exercise_title, set_index: set.set_index, set_type: set.set_type,
         weight_kg: set.weight_kg, reps: set.reps, superset_id: null, exercise_notes: "",
         distance_km: null, duration_seconds: null, rpe: null,
-        workout_start_time: currentWorkout.start_time
+        workout_start_time: currentWorkout.start_time, logged_at: set.logged_at
       };
       if (set.id) await db.updateSet(currentWorkout.id, set.id, payload);
       else {
@@ -569,13 +570,15 @@ async function finishWorkout() {
       .filter(ex => ex.sets.some(s => s.weight_kg != null || s.reps != null))
       .map(ex => ex.muscle_group || "Autre")
   )];
-  // Écran de fin : records, son du record, playlist, bande-son Spotify, partage.
+  const lastSetAt = currentWorkout.exercises.flatMap(ex => ex.sets.map(st => st.logged_at || "")).sort().pop() || null;
+  // Écran de fin : records, son du record, playlist, bande-son Spotify,
+  // amis présents, calories, partage.
   const finishBtn = document.getElementById("finish-workout");
   if (finishBtn) { finishBtn.disabled = true; finishBtn.textContent = t("Calcul des records…"); }
   let extra;
   try {
     const { openFinishDialog } = await import("./finish.js");
-    extra = await openFinishDialog(currentWorkout, { sets: loggedSets, tonnage: totalTonnage });
+    extra = await openFinishDialog(currentWorkout, { sets: loggedSets, tonnage: totalTonnage, lastSetAt });
   } catch (e) {
     console.error("[Skullcrusher] Écran de fin de séance indisponible", e);
     extra = { shared: loggedSets > 0 && confirm(t("Partager cette séance sur le feed ?")), records: [], record_song: null, soundtrack: null };
@@ -590,7 +593,11 @@ async function finishWorkout() {
     shared: loggedSets > 0 && extra.shared,
     records: extra.records || [],
     record_song: extra.record_song || null,
-    soundtrack: extra.soundtrack || null
+    soundtrack: extra.soundtrack || null,
+    partners: extra.partners || [],
+    effort: extra.effort || null,
+    watch_kcal: extra.watch_kcal || null,
+    last_set_at: lastSetAt
   });
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);

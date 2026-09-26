@@ -2,6 +2,7 @@
 // ONGLET HISTORIQUE — calendrier + liste des séances passées + routines
 // ============================================================
 import { fmtDateTime, fmtDuration, esc } from "./utils.js";
+import { getBody, workoutCalories } from "./calories.js";
 import { getWorkouts } from "./cache.js";
 import { openWorkoutDetail } from "./workout-detail.js";
 import { renderRoutines } from "./routines.js";
@@ -118,11 +119,16 @@ function renderList(container) {
       <div class="list-row" data-w="${w.id}">
         <div>
           <div class="list-row-title">${esc(w.title)}</div>
-          <div class="list-row-sub">${fmtDateTime(w.start_time)}</div>
+          <div class="list-row-sub">${fmtDateTime(w.start_time)}${(w.partners || []).length ? " · 🤝" : ""}</div>
         </div>
-        <div class="list-row-meta">${fmtDuration(w.start_time, w.end_time)}</div>
+        <div class="list-row-meta">${fmtDuration(w.start_time, w.end_time)}<div class="kcal-meta" data-kcal="${w.id}" style="font-size:11px;"></div></div>
       </div>
     `).join("");
+  // Calories (estimation ou montre), une fois les données corporelles lues.
+  getBody().then(body => wrap.querySelectorAll("[data-kcal]").forEach(el => {
+    const c = workoutCalories(list.find(w => w.id === el.dataset.kcal) || {}, body);
+    if (c) el.textContent = `🔥 ${c.source === "watch" ? "" : "≈"}${c.kcal} kcal`;
+  }));
   wrap.querySelectorAll("[data-w]").forEach(el => {
     el.onclick = () => openWorkoutDetail(
       list.find(w => w.id === el.dataset.w),

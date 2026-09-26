@@ -6,7 +6,7 @@ import {
   initializeFirestore,
   collection, doc, setDoc, getDoc, getDocs, deleteDoc,
   updateDoc, addDoc, query, orderBy, where, collectionGroup, limit,
-  writeBatch, deleteField, increment, startAfter
+  writeBatch, deleteField, increment, startAfter, arrayRemove, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
@@ -526,6 +526,30 @@ export async function listWorkouts(max = 200) {
 export async function getWorkout(id) {
   const snap = await getDoc(doc(dbase, "workouts", id));
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+// ==================== ENTRAÎNÉS ENSEMBLE ====================
+// Une séance peut citer des amis avec qui on s'est entraîné (champ
+// `partners`, liste d'uids). Les amis cités peuvent lire la séance (même
+// privée), la voir dans leur feed, et se retirer de la liste.
+export const MAX_PARTNERS = 10;
+
+export async function listPartnerWorkouts(max = 60) {
+  const snap = await getDocs(query(collection(dbase, "workouts"), where("partners", "array-contains", requireUid()), limit(max)));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => String(b.start_time).localeCompare(String(a.start_time)));
+}
+
+export async function setWorkoutPartners(workoutId, uids) {
+  const me = requireUid();
+  await updateDoc(doc(dbase, "workouts", workoutId), { partners: [...new Set(uids)].filter(u => u && u !== me).slice(0, MAX_PARTNERS) });
+}
+
+export async function addWorkoutPartner(workoutId, uid) {
+  await updateDoc(doc(dbase, "workouts", workoutId), { partners: arrayUnion(uid) });
+}
+
+export async function leaveWorkout(workoutId) {
+  await updateDoc(doc(dbase, "workouts", workoutId), { partners: arrayRemove(requireUid()) });
 }
 
 // ==================== SÉRIES (sets) ====================

@@ -12,7 +12,8 @@
 import { isoWeek, estimate1RM, esc } from "./utils.js";
 import { getExercises, getWorkouts, getSetsForPeriod, getSetsForExercise, invalidate, onAllSetsProgress } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
-import { t } from "./i18n.js";
+import { t, locale } from "./i18n.js";
+import { getBody, workoutCalories } from "./calories.js";
 
 let chartMuscle = null;
 let chartExercise = null;
@@ -82,6 +83,11 @@ export async function renderStats(container) {
   const muscleGroups = [...new Set(exercises.map(e => e.muscle_group))].sort();
   if (!state.exercise && exerciseNames.length) state.exercise = exerciseNames[0];
 
+  const body = await getBody();
+  const kcalSince = (days) => workouts
+    .filter(w => Date.parse(w.start_time) > Date.now() - days * 86400000)
+    .reduce((acc, w) => acc + (workoutCalories(w, body)?.kcal || 0), 0);
+  const kcal7 = kcalSince(7), kcal30 = kcalSince(30);
   const totalSets = workouts.reduce((acc, w) => acc + (w.total_sets || 0), 0);
   const totalTonnage = workouts.reduce((acc, w) => acc + (w.total_tonnage || 0), 0);
 
@@ -92,6 +98,7 @@ export async function renderStats(container) {
       <div class="stat-box"><span class="num">${Math.round(totalTonnage / 1000)}</span><span class="lbl">${t("tonnes soulevées")}</span></div>
       <div class="stat-box"><span class="num">${totalSets}</span><span class="lbl">${t("séries loggées")}</span></div>
     </div>
+    ${kcal30 ? `<p class="muted" style="margin:-4px 0 12px; font-size:13px;">🔥 ${t("≈ {week} kcal cette semaine · ≈ {month} kcal sur 30 jours (estimation)", { week: kcal7.toLocaleString(locale()), month: kcal30.toLocaleString(locale()) })}</p>` : ""}
 
     <div class="card">
       <div class="muted" style="margin-bottom:4px;">${t("Période")}</div>
