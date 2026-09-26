@@ -155,16 +155,30 @@ service cloud.firestore {
     // feed. Seul le propriétaire modifie/supprime — sauf les réactions 🤘
     // (`props`), que chacun peut poser ou retirer pour lui-même sur une
     // séance partagée.
+    //
+    // Entraînés ensemble : les amis cités dans `partners` lisent la séance
+    // (et ses séries), et peuvent seulement s'en retirer eux-mêmes.
     match /workouts/{workoutId} {
+      function validPartners(data) {
+        return data.get('partners', []) is list
+               && data.get('partners', []).size() <= 10
+               && !(request.auth.uid in data.get('partners', []));
+      }
       allow read: if isSignedIn() && (
                     resource.data.owner_uid == request.auth.uid ||
-                    resource.data.get('shared', false) == true
+                    resource.data.get('shared', false) == true ||
+                    request.auth.uid in resource.data.get('partners', [])
                   );
       allow create: if isSignedIn()
-                    && request.resource.data.owner_uid == request.auth.uid;
+                    && request.resource.data.owner_uid == request.auth.uid
+                    && validPartners(request.resource.data);
       allow update: if isSignedIn() && (
                       (resource.data.owner_uid == request.auth.uid &&
-                       request.resource.data.owner_uid == request.auth.uid) ||
+                       request.resource.data.owner_uid == request.auth.uid &&
+                       validPartners(request.resource.data)) ||
+                      (request.auth.uid in resource.data.get('partners', []) &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['partners']) &&
+                       request.resource.data.partners == resource.data.partners.removeAll([request.auth.uid])) ||
                       (resource.data.get('shared', false) == true &&
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['props']) &&
                        request.resource.data.get('props', {}).diff(resource.data.get('props', {})).affectedKeys().hasOnly([request.auth.uid]))
@@ -176,7 +190,8 @@ service cloud.firestore {
         allow read: if isSignedIn() && (
                       resource.data.owner_uid == request.auth.uid ||
                       workoutDoc(workoutId).owner_uid == request.auth.uid ||
-                      workoutDoc(workoutId).get('shared', false) == true
+                      workoutDoc(workoutId).get('shared', false) == true ||
+                      request.auth.uid in workoutDoc(workoutId).get('partners', [])
                     );
         allow create: if isSignedIn()
                       && request.resource.data.owner_uid == request.auth.uid;

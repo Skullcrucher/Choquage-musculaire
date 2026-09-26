@@ -6,6 +6,7 @@ import { openModal, closeModal, esc, estimate1RM } from "./utils.js";
 import { getSetsForExercise } from "./cache.js";
 import { normalizePlaylistUrl, parseSongInput, songLabel, SPOTIFY_ICON } from "./music.js";
 import { t, tn } from "./i18n.js";
+import { getBody, bodyComplete, autoEffort, estimateKcal, EFFORTS } from "./calories.js";
 
 // Bande-son jointe à une séance : liens des morceaux uniquement (voir music.js).
 const MAX_SOUNDTRACK = 10;
@@ -43,18 +44,41 @@ export async function computeRecords(workout) {
   return records.sort((a, b) => (b.one_rm - b.prev_one_rm) - (a.one_rm - a.prev_one_rm));
 }
 
+// Amis proposés comme partenaires : tous les amis, avec présélection de
+// ceux qui nous ont cité dans une séance commencée à moins de 12 h de la nôtre.
+async function partnerChoices(workout) {
+  const friendUids = await db.listFriendUids().catch(() => []);
+  if (!friendUids.length) return { friends: [], preselected: new Set() };
+  const [profiles, tagged] = await Promise.all([
+    db.getProfiles(friendUids).catch(() => ({})),
+    db.listPartnerWorkouts(30).catch(() => [])
+  ]);
+  const start = Date.parse(workout.start_time);
+  const preselected = new Set(tagged
+    .filter(w => Math.abs(Date.parse(w.start_time) - start) < 12 * 3600 * 1000 && friendUids.includes(w.owner_uid))
+    .map(w => w.owner_uid));
+  const friends = friendUids.map(uid => ({ uid, name: profiles[uid]?.display_name || t("Un ami") }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return { friends, preselected };
+}
+
 // Fenêtre de fin de séance. Résout avec les champs à enregistrer sur la
 // séance, ou null si l'utilisateur revient à sa séance.
 export async function openFinishDialog(workout, summary) {
-  const [records, spotify, profile] = await Promise.all([
+  const [records, spotify, profile, partners, body] = await Promise.all([
     computeRecords(workout).catch(() => []),
     import("./spotify-connect.js").then(async m => {
       if (!(await m.isSpotifyConnected())) return null;
       const [nowPlaying, tracks] = await Promise.all([m.getNowPlaying(), m.getTracksSince(new Date(workout.start_time).getTime())]);
       return { nowPlaying, tracks };
     }).catch(() => null),
-    db.getProfile(db.getCurrentUser()?.uid).catch(() => null)
+    db.getProfile(db.getCurrentUser()?.uid).catch(() => null),
+    partnerChoices(workout).catch(() => ({ friends: [], preselected: new Set() })),
+    getBody()
   ]);
+  const minutes = Math.min(300, Math.round(((summary.lastSetAt ? Math.min(Date.now(), Date.parse(summary.lastSetAt) + 10 * 60000) : Date.now()) - Date.parse(workout.start_time)) / 60000));
+  let effort = autoEffort(summary.sets, minutes);
+  const hasBody = bodyComplete(body);
   const defaultPlaylist = workout.playlist_url || profile?.music?.playlist_url || "";
   const nowPlaying = spotify?.nowPlaying;
   const tracks = spotify?.tracks || [];
@@ -84,6 +108,23 @@ export async function openFinishDialog(workout, summary) {
         <p class="muted spotify-attrib" style="font-size:12px; margin:0;">${SPOTIFY_ICON} ${tracks.slice(0, 4).map(tr => esc(songLabel(tr))).join(" · ")}${tracks.length > 4 ? " …" : ""}</p>
       ` : ""}
 
+      ${partners.friends.length ? `
+        <label>🤝 ${t("Entraîné avec")}</label>
+        <div class="chip-row" id="fin-partners" style="margin-bottom:0;">
+          ${partners.friends.map(f => `<div class="chip ${partners.preselected.has(f.uid) ? "active" : ""}" data-partner="${esc(f.uid)}">${esc(f.name)}</div>`).join("")}
+        </div>
+        ${partners.preselected.size ? `<p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Présélectionnés : ils t'ont cité dans leur séance.")}</p>` : ""}
+      ` : ""}
+
+      <label>🔥 ${t("Calories")}</label>
+      ${hasBody ? `
+        <div class="chip-row" id="fin-effort" style="margin-bottom:4px;">
+          ${Object.entries(EFFORTS).map(([k, e]) => `<div class="chip ${k === effort ? "active" : ""}" data-effort="${k}">${t(e.label)}</div>`).join("")}
+        </div>
+        <p class="muted" id="fin-kcal" style="margin:0 0 6px; font-size:13px;"></p>
+      ` : `<p class="muted" style="margin:0 0 6px; font-size:13px;">${t("Renseigne sexe, âge, taille et poids dans Réglages → 🔥 Calories pour une estimation.")}</p>`}
+      <input id="fin-watch" type="number" inputmode="numeric" min="0" max="5000" placeholder="${t("kcal de ta montre (facultatif)")}">
+
       <label class="list-row" style="cursor:pointer; margin-top:10px;">
         <span>${t("Partager sur le feed")}</span>
         <input type="checkbox" id="fin-share" style="width:auto;">
@@ -95,6 +136,20 @@ export async function openFinishDialog(workout, summary) {
       </div>
     `, (m) => {
       m.querySelector("#fin-back").onclick = () => { closeModal(); resolve(null); };
+      m.querySelectorAll("[data-partner]").forEach(c => c.onclick = () => c.classList.toggle("active"));
+      const kcalEl = m.querySelector("#fin-kcal");
+      const showKcal = () => {
+        if (!kcalEl) return;
+        const kcal = estimateKcal(body, effort, minutes);
+        if (kcal == null) { kcalEl.textContent = t("Séance trop courte pour une estimation."); return; }
+        kcalEl.textContent = t("≈ {kcal} kcal ({low}–{high}) pour {min} min d'effort {effort}", { kcal, low: Math.round(kcal * 0.75), high: Math.round(kcal * 1.25), min: minutes, effort: t(EFFORTS[effort].label).toLowerCase() });
+      };
+      showKcal();
+      m.querySelectorAll("[data-effort]").forEach(c => c.onclick = () => {
+        effort = c.dataset.effort;
+        m.querySelectorAll("[data-effort]").forEach(x => x.classList.toggle("active", x === c));
+        showKcal();
+      });
       m.querySelector("#fin-save").onclick = () => {
         const err = m.querySelector("#fin-error");
         const rawPlaylist = m.querySelector("#fin-playlist").value.trim();
@@ -107,9 +162,13 @@ export async function openFinishDialog(workout, summary) {
         if (song && nowPlaying && songInput === `${nowPlaying.title} - ${nowPlaying.artist}`) song = { url: nowPlaying.url, source: "spotify" };
         if (song && /[<>]/.test((song.title || "") + (song.artist || ""))) { err.textContent = t("Les caractères < et > ne sont pas autorisés."); return; }
         const withTracks = !!m.querySelector("#fin-tracks")?.checked;
+        const watch = parseInt(m.querySelector("#fin-watch").value, 10);
         closeModal();
         resolve({
           shared: m.querySelector("#fin-share").checked,
+          partners: [...m.querySelectorAll("[data-partner].active")].map(c => c.dataset.partner).slice(0, db.MAX_PARTNERS),
+          effort: hasBody ? effort : null,
+          watch_kcal: watch > 0 && watch <= 5000 ? watch : null,
           records,
           record_song: records.length && song ? song : null,
           soundtrack: (playlist || withTracks) ? {

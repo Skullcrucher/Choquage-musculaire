@@ -4,7 +4,7 @@
 import * as db from "./db.js";
 import { fmtDateTime, fmtDuration, esc, safeImageUrl } from "./utils.js";
 import { getUser } from "./auth.js";
-import { openWorkoutDetail } from "./workout-detail.js";
+import { openWorkoutDetail, partnersHtml } from "./workout-detail.js";
 import { renderFriends, countIncomingRequests } from "./friends.js";
 import { openProfile } from "./profile.js";
 import { songHtml, bindSongLinks, parseSpotify } from "./music.js";
@@ -99,9 +99,12 @@ async function drawFeedBody(container) {
 async function renderFeedWorkouts(body) {
   body.innerHTML = `<div id="feed-list"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>`;
   const wrap = body.querySelector("#feed-list");
-  const workouts = await db.listFeedWorkouts(60);
+  // Séances partagées + séances (même privées) où un ami m'a cité.
+  const [feed, tagged] = await Promise.all([db.listFeedWorkouts(60), db.listPartnerWorkouts(30).catch(() => [])]);
+  const byId = new Map([...feed, ...tagged].map(w => [w.id, w]));
+  const workouts = [...byId.values()].sort((a, b) => String(b.start_time).localeCompare(String(a.start_time)));
   const myUid = getUser()?.uid;
-  const profiles = await db.getProfiles(workouts.map(w => w.owner_uid));
+  const profiles = await db.getProfiles(workouts.flatMap(w => [w.owner_uid, ...(w.partners || [])]));
 
   wrap.innerHTML = workouts.length === 0
     ? `<div class="empty-state muted" style="padding:20px;">${t("Aucune séance partagée pour l'instant.")}</div>`
@@ -127,10 +130,11 @@ async function renderFeedWorkouts(body) {
             ${w.total_sets ? `<div style="font-size:11px;">${tn(w.total_sets, "{n} série", "{n} séries")}</div>` : ""}
           </div>
         </div>
+        ${(w.partners || []).length ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">🤝 ${t("Avec")} ${partnersHtml(w.partners, profiles, myUid)}${w.shared ? "" : ` · 🔒 ${t("visible par les partenaires")}`}</p>` : ""}
         ${muscles.length ? `<div class="chip-row" style="margin-top:10px; margin-bottom:0;">${muscles.map(m => `<span class="feed-muscle-badge">${MUSCLE_EMOJI[m] || "⚡"} ${esc(t(m))}</span>`).join("")}</div>` : ""}
         ${fun ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">🏋️ ${t("{kg} kg soulevés — ça pèse {comparison} !", { kg: w.total_tonnage, comparison: fun })}</p>` : ""}
         ${workoutMusicHtml(w)}
-        <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+        <div style="display:flex; justify-content:flex-end; margin-top:8px;${w.shared ? "" : " display:none;"}">
           <button class="props-btn ${iReacted ? "reacted" : ""}" data-props="${esc(w.id)}">
             <img class="props-horns" src="icons/horns.png" alt="🤘">
             <span>${propsCount > 0 ? propsCount : ""}</span>

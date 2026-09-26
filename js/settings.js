@@ -13,6 +13,7 @@ import { getUser, signOutUser } from "./auth.js";
 import { openProfile, openProfileEditor } from "./profile.js";
 import { t, tn, getLang } from "./i18n.js";
 import { langPickerHtml, bindLangPicker } from "./auth.js";
+import { getBody, saveBody, bodyComplete, restingKcalPerDay } from "./calories.js";
 
 // Module des notifications en arrière-plan, chargé à la demande : si un
 // bloqueur de contenu le refuse, les Réglages s'affichent quand même.
@@ -96,6 +97,24 @@ export async function renderReglages(container) {
       </details>
     </div>
 
+    <div class="card" id="body-card">
+      <div class="card-title">🔥 ${t("Calories")}</div>
+      <p class="muted" style="margin-top:0;">${t("Pour estimer les calories de tes séances. Ces données restent privées : personne d'autre ne les voit.")}</p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <div><label>${t("Sexe")}</label><select id="body-sex"><option value="">—</option><option value="m">${t("Homme")}</option><option value="f">${t("Femme")}</option></select></div>
+        <div><label>${t("Année de naissance")}</label><input id="body-year" type="number" inputmode="numeric" min="1920" max="2020" placeholder="1990"></div>
+        <div><label>${t("Taille (cm)")}</label><input id="body-height" type="number" inputmode="numeric" min="120" max="230" placeholder="178"></div>
+        <div><label>${t("Poids (kg)")}</label><input id="body-weight" type="number" inputmode="decimal" min="30" max="250" step="0.1" placeholder="80"></div>
+      </div>
+      <p class="muted" id="body-info" style="font-size:12px; margin:8px 0;"></p>
+      <button class="btn btn-secondary" id="body-save">${t("Enregistrer")}</button>
+      <details style="margin-top:10px;">
+        <summary class="muted" style="cursor:pointer;">${t("Comment c'est calculé ?")}</summary>
+        <p class="muted" style="font-size:13px;">${t("Calories = MET × métabolisme de repos × durée. Le métabolisme de repos vient de ton sexe, âge, taille et poids (formule de Harris-Benedict révisée). Le MET de la musculation vient du Compendium of Physical Activities : 3,5 (effort léger), 5 (modéré), 6 (intense) ; il couvre toute la séance, repos compris.")}</p>
+        <p class="muted" style="font-size:13px;">${t("La durée va du début à la fin de la séance, en s'arrêtant 10 min après ta dernière série. L'effort est proposé d'après le rythme de la séance (séries par heure) et se corrige en fin de séance. Précision : ±25 % environ. Si tu as une montre cardio, saisis ses calories en fin de séance : elles remplacent l'estimation.")}</p>
+      </details>
+    </div>
+
     <div class="card">
       <div class="card-title">${t("Minuteur de repos")}</div>
       <p class="muted" style="margin-top:0;">${t("Reçois une notification à la fin du repos, même si tu es passé sur une autre app (Spotify...) ou que l'écran est verrouillé. Sur iPhone, il faut utiliser l'app ajoutée à l'écran d'accueil. La durée par défaut se règle par exercice, dans la bibliothèque ci-dessous.")}</p>
@@ -157,6 +176,7 @@ export async function renderReglages(container) {
   bindLangPicker(container, "settings-lang");
 
   setupSpotifyCard(container);
+  setupBodyCard(container);
   container.querySelector("#view-public-profile").onclick = () => openProfile(getUser()?.uid);
   container.querySelector("#edit-public-profile").onclick = () => openProfileEditor(() => openProfile(getUser()?.uid));
 
@@ -468,6 +488,48 @@ function openSpotifyConsent(onAccept) {
 }
 
 // Connexion Spotify (facultative) : app partagée, ou sa propre app Spotify.
+async function setupBodyCard(container) {
+  const $ = (id) => container.querySelector(id);
+  const info = $("#body-info");
+  const showInfo = (b) => {
+    info.textContent = bodyComplete(b)
+      ? t("Métabolisme de repos : ≈ {kcal} kcal/jour.", { kcal: Math.round(restingKcalPerDay(b)) })
+      : t("Remplis les 4 champs pour activer l'estimation.");
+  };
+  const body = await getBody();
+  if (!$("#body-sex")?.isConnected) return;
+  if (body) {
+    $("#body-sex").value = body.sex || "";
+    $("#body-year").value = body.birth_year || "";
+    $("#body-height").value = body.height_cm || "";
+    $("#body-weight").value = body.weight_kg || "";
+  }
+  showInfo(body);
+  $("#body-save").onclick = async (e) => {
+    const b = {
+      sex: $("#body-sex").value || null,
+      birth_year: parseInt($("#body-year").value, 10) || null,
+      height_cm: parseInt($("#body-height").value, 10) || null,
+      weight_kg: parseFloat($("#body-weight").value) || null
+    };
+    const year = new Date().getFullYear();
+    if ((b.birth_year && (b.birth_year < 1920 || b.birth_year > year - 10)) || (b.height_cm && (b.height_cm < 120 || b.height_cm > 230)) || (b.weight_kg && (b.weight_kg < 30 || b.weight_kg > 250))) {
+      info.textContent = t("Valeur hors limites : vérifie l'année, la taille et le poids.");
+      return;
+    }
+    e.target.disabled = true;
+    try {
+      await saveBody(b);
+      showInfo(b);
+      toast(t("Données enregistrées"));
+    } catch (err) {
+      console.error("[Skullcrusher] Données corporelles", err);
+      toast(t("Enregistrement impossible, réessaie."));
+    }
+    e.target.disabled = false;
+  };
+}
+
 async function setupSpotifyCard(container) {
   let sp;
   try { sp = await import("./spotify-connect.js"); } catch (_) { return; }
