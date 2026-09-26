@@ -138,10 +138,12 @@ function renderActiveWorkout(container) {
     <p class="muted" style="margin-top:0;">${t("Débutée à {time}", { time: fmtDateTime(currentWorkout.start_time) })}</p>
     <div id="workout-music"></div>
     <div id="exercise-list"></div>
-    <button class="btn btn-secondary" id="add-exercise" style="margin-top:6px;">+ ${t("Ajouter un exercice")}</button>
-    <div style="height:14px"></div>
+    <button class="btn btn-secondary btn-compact" id="add-exercise" style="margin-top:6px;">+ ${t("Ajouter un exercice")}</button>
+    <div style="height:12px"></div>
     <button class="btn btn-primary" id="finish-workout">${t("Terminer la séance")}</button>
-    <button class="btn btn-danger" id="cancel-workout" style="margin-top:8px;">${t("Annuler la séance")}</button>
+    <div style="text-align:center; margin-top:10px;">
+      <button class="btn btn-danger btn-sm" id="cancel-workout">${t("Annuler la séance")}</button>
+    </div>
   `;
   renderExerciseList(container.querySelector("#exercise-list"));
   renderWorkoutMusic(container.querySelector("#workout-music"));
@@ -175,15 +177,27 @@ async function renderWorkoutMusic(el) {
   el.querySelector("#wm-listen").onclick = () => openSpotifyPlayer(link.url, label);
 }
 
+// Une série a-t-elle été saisie ou enregistrée (à confirmer avant suppression) ?
+const setHasData = (s) => !!s.id || s.weight_kg != null || s.reps != null;
+
+// Sauvegardes en cours par série (pas stockées dans l'état local sérialisé).
+const pendingSaves = new WeakMap();
+
 function renderExerciseList(el) {
+  const count = currentWorkout.exercises.length;
   el.innerHTML = currentWorkout.exercises.map((ex, exIdx) => `
     <div class="exercise-block">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <div class="exercise-head">
         <h3 class="exercise-name exercise-name-link" data-ex-detail="${exIdx}" role="button" tabindex="0">${esc(ex.exercise_title)}</h3>
-        <button class="rest-chip" data-rest="${exIdx}" title="Temps de repos">⏱ ${fmtRest(ex.rest_timer_seconds || 90)}</button>
+        <div class="exercise-tools">
+          <button class="rest-chip" data-rest="${exIdx}" title="${t("Temps de repos")}">⏱ ${fmtRest(ex.rest_timer_seconds || 90)}</button>
+          <button class="ex-tool" data-move-up="${exIdx}" title="${t("Monter")}" ${exIdx === 0 ? "disabled" : ""}>↑</button>
+          <button class="ex-tool" data-move-down="${exIdx}" title="${t("Descendre")}" ${exIdx === count - 1 ? "disabled" : ""}>↓</button>
+          <button class="ex-tool ex-tool-danger" data-remove-ex="${exIdx}" title="${t("Retirer l'exercice")}">✕</button>
+        </div>
       </div>
       <div class="set-header">
-        <div>#</div><div>kg</div><div>${t("reps")}</div><div>${t("type")}</div><div></div>
+        <div>#</div><div>kg</div><div>${t("reps")}</div><div>${t("type")}</div><div></div><div></div>
       </div>
       ${ex.sets.map((s, sIdx) => setRowHtml(s, exIdx, sIdx)).join("")}
       <button class="add-set-btn" data-add-set="${exIdx}">＋ ${t("Ajouter une série")}</button>
@@ -201,6 +215,27 @@ function renderExerciseList(el) {
     btn.onclick = () => openRestPicker(parseInt(btn.dataset.rest, 10));
   });
 
+  const moveExercise = (from, to) => {
+    const list = currentWorkout.exercises;
+    if (to < 0 || to >= list.length) return;
+    [list[from], list[to]] = [list[to], list[from]];
+    saveLocalState();
+    renderExerciseList(el);
+  };
+  el.querySelectorAll("[data-move-up]").forEach(btn => {
+    btn.onclick = () => { const i = parseInt(btn.dataset.moveUp, 10); moveExercise(i, i - 1); };
+  });
+  el.querySelectorAll("[data-move-down]").forEach(btn => {
+    btn.onclick = () => { const i = parseInt(btn.dataset.moveDown, 10); moveExercise(i, i + 1); };
+  });
+  el.querySelectorAll("[data-remove-ex]").forEach(btn => {
+    btn.onclick = () => removeExercise(parseInt(btn.dataset.removeEx, 10), el);
+  });
+  el.querySelectorAll("[data-del-set]").forEach(btn => {
+    const [exIdx, sIdx] = btn.dataset.delSet.split(":").map(n => parseInt(n, 10));
+    btn.onclick = () => deleteSetAt(exIdx, sIdx, el);
+  });
+
   el.querySelectorAll("[data-add-set]").forEach(btn => {
     btn.onclick = () => {
       const exIdx = parseInt(btn.dataset.addSet, 10);
@@ -214,16 +249,20 @@ function renderExerciseList(el) {
   el.querySelectorAll(".set-row").forEach(row => {
     const exIdx = parseInt(row.dataset.ex, 10);
     const sIdx = parseInt(row.dataset.set, 10);
-    const set = currentWorkout.exercises[exIdx].sets[sIdx];
+    // On garde l'objet exercice (pas son index) : l'ordre peut changer
+    // pendant qu'une sauvegarde différée est en attente.
+    const ex = currentWorkout.exercises[exIdx];
+    const set = ex.sets[sIdx];
 
     const kgInput = row.querySelector(".input-kg");
     const repsInput = row.querySelector(".input-reps");
     const badge = row.querySelector(".set-type-badge");
     const check = row.querySelector(".set-done-check");
 
-    const savePersist = async () => {
+    const doSave = async () => {
+      // Série ou exercice supprimé entre-temps : rien à écrire.
+      if (!currentWorkout || !currentWorkout.exercises.includes(ex) || !ex.sets.includes(set)) return;
       if (set.weight_kg == null && set.reps == null) return;
-      const ex = currentWorkout.exercises[exIdx];
       const payload = {
         exercise_title: ex.exercise_title, set_index: set.set_index, set_type: set.set_type,
         weight_kg: set.weight_kg, reps: set.reps, superset_id: null, exercise_notes: "",
@@ -231,8 +270,21 @@ function renderExerciseList(el) {
         workout_start_time: currentWorkout.start_time
       };
       if (set.id) await db.updateSet(currentWorkout.id, set.id, payload);
-      else set.id = await db.addSet(currentWorkout.id, payload);
+      else {
+        const workoutId = currentWorkout.id;
+        const newId = await db.addSet(workoutId, payload);
+        // Supprimée pendant l'écriture : on retire le document tout juste créé.
+        if (!currentWorkout || !ex.sets.includes(set)) { db.deleteSet(workoutId, newId).catch(() => null); return; }
+        set.id = newId;
+      }
       saveLocalState();
+    };
+    // Une seule écriture à la fois par série : évite de créer deux fois la
+    // même série si deux sauvegardes partent avant que la première ait un id.
+    const savePersist = () => {
+      const next = (pendingSaves.get(set) || Promise.resolve()).catch(() => null).then(doSave);
+      pendingSaves.set(set, next);
+      return next;
     };
     const persist = debounce(savePersist, 500);
 
@@ -254,7 +306,6 @@ function renderExerciseList(el) {
         await savePersist();
       }
       if (set.done && set.weight_kg != null && set.reps != null) {
-        const ex = currentWorkout.exercises[exIdx];
         startRestTimer(ex.rest_timer_seconds || 90, t("Prochaine série : {exercise}", { exercise: ex.exercise_title }));
       }
       saveLocalState();
@@ -273,8 +324,49 @@ function setRowHtml(s, exIdx, sIdx) {
       <input class="input-reps" type="number" inputmode="numeric" placeholder="${s.target_reps || "reps"}" value="${s.reps ?? ""}">
       <div class="set-type-badge ${s.set_type}">${badgeLabel}</div>
       <button class="set-done-check ${s.done ? "checked" : ""}">✓</button>
+      <button class="set-del" data-del-set="${exIdx}:${sIdx}" title="${t("Supprimer la série")}">✕</button>
     </div>
   `;
+}
+
+// Supprime une série de la séance (et de Firestore si elle y est déjà),
+// puis renumérote les suivantes.
+async function deleteSetAt(exIdx, sIdx, el) {
+  const ex = currentWorkout.exercises[exIdx];
+  const set = ex?.sets[sIdx];
+  if (!set) return;
+  if (setHasData(set) && !confirm(t("Supprimer la série {n} ?", { n: set.set_index }))) return;
+  await (pendingSaves.get(set) || Promise.resolve()).catch(() => null);
+  if (set.id) {
+    try { await db.deleteSet(currentWorkout.id, set.id); }
+    catch (e) { console.error("[Skullcrusher] Suppression série", e); toast(t("Suppression impossible, réessaie")); return; }
+  }
+  ex.sets.splice(ex.sets.indexOf(set), 1);
+  ex.sets.forEach((s, i) => {
+    if (s.set_index === i + 1) return;
+    s.set_index = i + 1;
+    if (s.id) db.updateSet(currentWorkout.id, s.id, { set_index: s.set_index }).catch(e => console.warn("[Skullcrusher] Renumérotation série", e));
+  });
+  saveLocalState();
+  renderExerciseList(el);
+}
+
+// Retire un exercice entier de la séance en cours, séries comprises.
+async function removeExercise(exIdx, el) {
+  const ex = currentWorkout.exercises[exIdx];
+  if (!ex) return;
+  if (ex.sets.some(setHasData) && !confirm(t("Retirer {exercise} et ses séries de la séance ?", { exercise: ex.exercise_title }))) return;
+  await Promise.all(ex.sets.map(s => (pendingSaves.get(s) || Promise.resolve()).catch(() => null)));
+  try {
+    await Promise.all(ex.sets.filter(s => s.id).map(s => db.deleteSet(currentWorkout.id, s.id)));
+  } catch (e) {
+    console.error("[Skullcrusher] Suppression exercice", e);
+    toast(t("Suppression impossible, réessaie"));
+    return;
+  }
+  currentWorkout.exercises.splice(currentWorkout.exercises.indexOf(ex), 1);
+  saveLocalState();
+  renderExerciseList(el);
 }
 
 // Dernières séries loggées pour un exercice (la séance la plus récente où

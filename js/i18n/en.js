@@ -197,7 +197,6 @@ export default {
 
   // Défis
   "Défis entre amis": "Friend challenges",
-  "Chaque semaine, un classement entre toi et tes amis : tonnage, nombre de séances ou de séries. Le vainqueur de la semaine choisit la <b>playlist de la semaine</b> pour tout le monde.": "Every week, a leaderboard between you and your friends: tonnage, number of workouts or sets. The winner of the week picks the <b>playlist of the week</b> for everyone.",
   "En participant, seuls tes totaux de la semaine sont visibles par tes amis — tes séances restent privées.": "When you take part, only your weekly totals are visible to your friends — your workouts stay private.",
   "Participer aux défis": "Join the challenges",
   "Inscription impossible, réessaie": "Could not join, try again",
@@ -560,5 +559,17 @@ export default {
   // Divers
   "C'est reparti pour la série suivante.": "Time for the next set.",
   "Lecture du fichier impossible": "Could not read the file",
-  "Image invalide": "Invalid image"
+  "Image invalide": "Invalid image",
+  // Séance : réorganiser / supprimer ; défis équilibrés
+  "Chaque semaine, un classement entre toi et tes amis. Le score récompense la régularité et ta progression par rapport à toi-même : débutant ou confirmé, tout le monde peut gagner. Le vainqueur de la semaine choisit la <b>playlist de la semaine</b> pour tout le monde.": "Every week, a leaderboard between you and your friends. The score rewards consistency and your progress compared to yourself: beginner or advanced, anyone can win. The winner of the week picks the <b>playlist of the week</b> for everyone.",
+  "20 pts par séance (4 max) + jusqu'à 20 pts si tu dépasses ta moyenne de tonnage des 4 dernières semaines (+1 pt par 5 %). Le score désigne le vainqueur.": "20 pts per workout (4 max) + up to 20 pts if you beat your average tonnage of the last 4 weeks (+1 pt per 5 %). The score decides the winner.",
+  "Score": "Score",
+  "Temps de repos": "Rest time",
+  "Monter": "Move up",
+  "Descendre": "Move down",
+  "Retirer l'exercice": "Remove exercise",
+  "Supprimer la série": "Delete set",
+  "Supprimer la série {n} ?": "Delete set {n}?",
+  "Suppression impossible, réessaie": "Could not delete, try again",
+  "Retirer {exercise} et ses séries de la séance ?": "Remove {exercise} and its sets from the workout?"
 };
