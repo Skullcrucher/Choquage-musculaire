@@ -761,5 +761,8 @@ export default {
   "Reps dans la fourchette avec beaucoup de marge (RPE {rpe}) : la charge est peut-être trop légère.": "Powtórzenia w zakresie z dużym zapasem (RPE {rpe}): ciężar może być za lekki.",
   "Semaine {w} : {done}/{planned} séance(s) faite(s). Décaler le plan d'une semaine pour refaire cette semaine ?": "Tydzień {w}: wykonano {done}/{planned} treningów. Przesunąć program o tydzień, aby powtórzyć ten tydzień?",
   "Utilise de préférence les noms exacts de la bibliothèque (liste ci-dessus) : ton historique, tes stats et le pré-remplissage suivent. Sinon, l'app retrouve les noms proches et te demande de confirmer.": "Najlepiej używaj dokładnych nazw z biblioteki (lista powyżej): historia, statystyki i wstępne wypełnianie będą spójne. W przeciwnym razie aplikacja znajdzie podobne nazwy i poprosi o potwierdzenie.",
-  "{sets} séries à {reps}+ reps (objectif {hi}) avec de la marge (RPE {rpe}) : double saut.": "{sets} serii po {reps}+ powt. (cel {hi}) z zapasem (RPE {rpe}): podwójny skok."
+  "{sets} séries à {reps}+ reps (objectif {hi}) avec de la marge (RPE {rpe}) : double saut.": "{sets} serii po {reps}+ powt. (cel {hi}) z zapasem (RPE {rpe}): podwójny skok.",
+
+  // Recherche bilingue
+  "Utiliser « {name} » de ta bibliothèque ? (Annuler = créer « {typed} »)": "Użyć „{name}” z twojej biblioteki? (Anuluj = utwórz „{typed}”)"
 };

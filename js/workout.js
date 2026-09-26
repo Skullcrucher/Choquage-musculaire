@@ -508,10 +508,24 @@ async function openAddExerciseModal() {
     if (ex) modal.querySelector("#ex-group").value = ex.muscle_group;
   });
   modal.querySelector("#confirm-add-ex").onclick = async () => {
-    const name = modal.querySelector("#ex-name").value.trim();
+    let name = modal.querySelector("#ex-name").value.trim();
     if (!name) return;
-    const group = modal.querySelector("#ex-group").value;
-    const existing = exercises.find(e => e.name.toLowerCase() === name.toLowerCase());
+    let group = modal.querySelector("#ex-group").value;
+    let existing = exercises.find(e => e.name.toLowerCase() === name.toLowerCase());
+    // Nom absent de la bibliothèque (souvent tapé en anglais) : proposer
+    // l'exercice correspondant plutôt que d'en créer un doublon.
+    if (!existing) {
+      try {
+        const { searchExercises, loadAliases } = await import("./exercise-search.js");
+        await loadAliases();
+        const best = searchExercises(name, names, 1)[0];
+        if (best && best.score >= 55 && confirm(t("Utiliser « {name} » de ta bibliothèque ? (Annuler = créer « {typed} »)", { name: best.name, typed: name }))) {
+          existing = exercises.find(e => e.name === best.name);
+          name = best.name;
+          group = existing.muscle_group;
+        }
+      } catch (_) { /* recherche indisponible : on crée l'exercice tel quel */ }
+    }
     const finalName = existing ? existing.name : name;
     // Ajout immédiat avec 3 séries vides ; l'historique (pré-remplissage) et
     // la création d'un nouvel exercice dans la bibliothèque se font en

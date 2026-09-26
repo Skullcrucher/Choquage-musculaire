@@ -884,3 +884,4 @@ body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var
 .rpe-picker button { background: var(--surface-raised); color: var(--text); border: 1px solid transparent; border-radius: 6px; min-width: 32px; height: 28px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .rpe-picker button.active { border-color: var(--amber); color: var(--amber); }
 .rpe-picker .rpe-skip { min-width: 28px; color: var(--text-dim); }
+.autocomplete-via { color: var(--text-dim); font-size: 10px; border: 1px solid currentColor; border-radius: 4px; padding: 0 3px; margin-left: 4px; vertical-align: 1px; }
