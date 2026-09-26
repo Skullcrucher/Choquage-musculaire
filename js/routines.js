@@ -248,6 +248,7 @@ function renderExerciseRows(modalEl, state, exercises) {
         <div><label>${t("Séries")}</label><input class="r-ex-sets" data-i="${i}" type="number" value="${esc(ex.target_sets)}"></div>
         <div><label>${t("Reps cible")}</label><input class="r-ex-reps" data-i="${i}" value="${esc(ex.reps_target)}" placeholder="8-10"></div>
         <div><label>${t("Repos (s)")}</label><input class="r-ex-rest" data-i="${i}" type="number" value="${esc(ex.rest_seconds)}"></div>
+        <div><label>${t("Charge (kg)")}</label><input class="r-ex-kg" data-i="${i}" type="number" inputmode="decimal" step="0.5" min="0" value="${esc(ex.target_kg ?? "")}" placeholder="—"></div>
       </div>
       <button class="btn btn-sm btn-danger" data-remove="${i}" style="margin-top:8px;">${t("Retirer")}</button>
     </div>
@@ -268,6 +269,10 @@ function renderExerciseRows(modalEl, state, exercises) {
   wrap.querySelectorAll(".r-ex-sets").forEach(inp => inp.oninput = () => state.exercises[inp.dataset.i].target_sets = parseInt(inp.value, 10) || 3);
   wrap.querySelectorAll(".r-ex-reps").forEach(inp => inp.oninput = () => state.exercises[inp.dataset.i].reps_target = inp.value);
   wrap.querySelectorAll(".r-ex-rest").forEach(inp => inp.oninput = () => state.exercises[inp.dataset.i].rest_seconds = parseInt(inp.value, 10) || 90);
+  wrap.querySelectorAll(".r-ex-kg").forEach(inp => inp.oninput = () => {
+    const kg = parseFloat(inp.value.replace(",", "."));
+    state.exercises[inp.dataset.i].target_kg = kg >= 0 && kg <= 1000 ? kg : null;
+  });
   wrap.querySelectorAll("[data-remove]").forEach(btn => btn.onclick = () => {
     state.exercises.splice(parseInt(btn.dataset.remove, 10), 1);
     renderExerciseRows(modalEl, state, exercises);

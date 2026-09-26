@@ -3,7 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { openModal, closeModal, esc, estimate1RM } from "./utils.js";
-import { getSetsForExercise } from "./cache.js";
+import { getSetsForExercise, getRoutines } from "./cache.js";
 import { normalizePlaylistUrl, parseSongInput, songLabel, SPOTIFY_ICON } from "./music.js";
 import { t, tn } from "./i18n.js";
 import { getBody, bodyComplete, autoEffort, estimateKcal, EFFORTS } from "./calories.js";
@@ -62,10 +62,24 @@ async function partnerChoices(workout) {
   return { friends, preselected };
 }
 
+// Charges à adapter dans la routine d'origine (double progression).
+async function progressionChoices(workout) {
+  if (!workout.routine_id) return { routine: null, list: [] };
+  const routine = (await getRoutines()).find(r => r.id === workout.routine_id);
+  if (!routine) return { routine: null, list: [] };
+  const { suggestProgressions } = await import("./progression.js");
+  const exercises = workout.exercises.map(ex => {
+    const def = (routine.exercises || []).find(e => e.exercise_name === ex.exercise_title);
+    if (!def) return null;
+    return { ...ex, reps_target: def.reps_target, target_sets: def.target_sets, target_kg: def.target_kg ?? null };
+  }).filter(Boolean);
+  return { routine, list: suggestProgressions(exercises) };
+}
+
 // Fenêtre de fin de séance. Résout avec les champs à enregistrer sur la
 // séance, ou null si l'utilisateur revient à sa séance.
 export async function openFinishDialog(workout, summary) {
-  const [records, spotify, profile, partners, body] = await Promise.all([
+  const [records, spotify, profile, partners, body, progress] = await Promise.all([
     computeRecords(workout).catch(() => []),
     import("./spotify-connect.js").then(async m => {
       if (!(await m.isSpotifyConnected())) return null;
@@ -74,7 +88,8 @@ export async function openFinishDialog(workout, summary) {
     }).catch(() => null),
     db.getProfile(db.getCurrentUser()?.uid).catch(() => null),
     partnerChoices(workout).catch(() => ({ friends: [], preselected: new Set() })),
-    getBody()
+    getBody(),
+    progressionChoices(workout).catch(e => { console.warn("[Skullcrusher] Progression", e); return { routine: null, list: [] }; })
   ]);
   const minutes = Math.min(300, Math.round(((summary.lastSetAt ? Math.min(Date.now(), Date.parse(summary.lastSetAt) + 10 * 60000) : Date.now()) - Date.parse(workout.start_time)) / 60000));
   let effort = autoEffort(summary.sets, minutes);
@@ -106,6 +121,23 @@ export async function openFinishDialog(workout, summary) {
           <input type="checkbox" id="fin-tracks" checked style="width:auto;">
         </label>
         <p class="muted spotify-attrib" style="font-size:12px; margin:0;">${SPOTIFY_ICON} ${tracks.slice(0, 4).map(tr => esc(songLabel(tr))).join(" · ")}${tracks.length > 4 ? " …" : ""}</p>
+      ` : ""}
+
+      ${progress.list.length ? `
+        <label>📈 ${t("Progression — routine « {routine} »", { routine: esc(progress.routine.name) })}</label>
+        <div id="fin-progress">
+          ${progress.list.map((p, i) => `
+            <label class="list-row" style="cursor:pointer; align-items:flex-start;">
+              <span style="font-size:14px;">
+                ${p.direction === "up" ? "⬆️" : "⬇️"} <b>${esc(p.exercise)}</b> : ${esc(p.from)} → <b>${esc(p.to)} kg</b>
+                <br><span class="muted" style="font-size:12px;">${p.direction === "up"
+                  ? t("{sets} séries à {reps}+ reps (objectif {hi}) : tu peux charger plus.", { sets: p.sets, reps: p.reps, hi: p.hi })
+                  : t("Moins de {lo} reps sur la plupart des séries : alléger un peu aide à progresser.", { lo: p.lo })}</span>
+              </span>
+              <input type="checkbox" data-prog="${i}" ${p.checked ? "checked" : ""} style="width:auto; margin-top:4px;">
+            </label>`).join("")}
+        </div>
+        <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Coché = la routine (et ton plan) utilisera cette charge à la prochaine séance. Décoche pour garder la charge actuelle.")}</p>
       ` : ""}
 
       ${partners.friends.length ? `
@@ -166,6 +198,8 @@ export async function openFinishDialog(workout, summary) {
         closeModal();
         resolve({
           shared: m.querySelector("#fin-share").checked,
+          routine: progress.routine,
+          progressions: [...m.querySelectorAll("[data-prog]:checked")].map(c => progress.list[+c.dataset.prog]),
           partners: [...m.querySelectorAll("[data-partner].active")].map(c => c.dataset.partner).slice(0, db.MAX_PARTNERS),
           effort: hasBody ? effort : null,
           watch_kcal: watch > 0 && watch <= 5000 ? watch : null,

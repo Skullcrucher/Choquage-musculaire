@@ -705,5 +705,32 @@ export default {
   "normale": "normal",
   "sem.": "wk",
   "{n} plans maximum": "{n} plans maximum",
-  "{routine} faite aujourd'hui. Bien joué !": "{routine} done today. Well done!"
+  "{routine} faite aujourd'hui. Bien joué !": "{routine} done today. Well done!",
+
+  // Import de plan complet, progression
+  "Activer ce plan": "Activate this plan",
+  "Bloc « {block} » : durée absente, 4 semaines par défaut.": "Block \"{block}\": no length, 4 weeks by default.",
+  "Charge (kg)": "Load (kg)",
+  "Coché = la routine (et ton plan) utilisera cette charge à la prochaine séance. Décoche pour garder la charge actuelle.": "Ticked = the routine (and your plan) will use this load next workout. Untick to keep the current load.",
+  "Début le {date} · {n} semaine(s)": "Starts {date} · {n} week(s)",
+  "Importer le plan et {n} routine(s)": "Import the plan and {n} routine(s)",
+  "Ligne {n} : charge illisible, ignorée.": "Line {n}: unreadable load, skipped.",
+  "Ligne {n} : date de début illisible (ex. 2026-10-05 ou 05/10/2026).": "Line {n}: unreadable start date (e.g. 2026-10-05 or 05/10/2026).",
+  "Ligne {n} : deux routines le même jour dans « {block} », la dernière est gardée.": "Line {n}: two routines on the same day in \"{block}\", the last one is kept.",
+  "Ligne {n} : jours illisibles (ex. « lundi, jeudi » ou « 1,4 »).": "Line {n}: unreadable days (e.g. \"monday, thursday\" or \"1,4\").",
+  "Ligne {n} : nombre de semaines invalide (1 à 52).": "Line {n}: invalid number of weeks (1 to 52).",
+  "Ligne {n} : « {routine} » est déjà décrite plus haut, exercice ignoré (donne-lui un autre nom pour une variante).": "Line {n}: \"{routine}\" is already described above, exercise skipped (give it another name for a variant).",
+  "Moins de {lo} reps sur la plupart des séries : alléger un peu aide à progresser.": "Fewer than {lo} reps on most sets: going a bit lighter helps you progress.",
+  "Plan importé": "Imported plan",
+  "Plan « {plan} » importé avec {n} routine(s) — tout est modifiable dans Routines": "Plan \"{plan}\" imported with {n} routine(s) — everything can be edited in Routines",
+  "Pour réutiliser une routine dans un autre bloc, ajoute une ligne avec seulement bloc, jours et routine.": "To reuse a routine in another block, add a row with only block, days and routine.",
+  "Progression — routine « {routine} »": "Progression — routine \"{routine}\"",
+  "Remplacer mes routines et plans du même nom": "Replace my routines and plans with the same name",
+  "Remplis le modèle dans Excel, Numbers ou Google Sheets (une ligne par exercice), enregistre-le en CSV puis importe-le. Routines, exercices, charges et calendrier sur plusieurs semaines : tout est créé et reste modifiable dans l'app.": "Fill in the template in Excel, Numbers or Google Sheets (one row per exercise), save it as CSV, then import it. Routines, exercises, loads and a multi-week schedule: everything is created and stays editable in the app.",
+  "charge de départ en kg (facultatif, ajustée ensuite par la progression)": "starting load in kg (optional, then adjusted by progression)",
+  "jours de la routine dans ce bloc : « lundi, jeudi » ou « 1,4 »": "days for the routine in this block: \"monday, thursday\" or \"1,4\"",
+  "nom du plan et date de début (facultatifs, 1re ligne)": "plan name and start date (optional, first row)",
+  "phase du plan et sa durée en semaines (vide = même bloc que la ligne du dessus)": "plan phase and its length in weeks (empty = same block as the row above)",
+  "{sets} séries à {reps}+ reps (objectif {hi}) : tu peux charger plus.": "{sets} sets at {reps}+ reps (target {hi}): you can load more.",
+  "« {routine} » est prévue dans le plan mais n'a aucun exercice : jour ignoré.": "\"{routine}\" is scheduled in the plan but has no exercises: day skipped."
 };

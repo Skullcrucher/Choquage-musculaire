@@ -704,5 +704,32 @@ export default {
   "normale": "normal",
   "sem.": "sem.",
   "{n} plans maximum": "{n} plan maximem",
-  "{routine} faite aujourd'hui. Bien joué !": "{routine} fini zordi. Bien zwe!"
+  "{routine} faite aujourd'hui. Bien joué !": "{routine} fini zordi. Bien zwe!",
+
+  // Import de plan complet, progression
+  "Activer ce plan": "Aktiv sa plan-la",
+  "Bloc « {block} » : durée absente, 4 semaines par défaut.": "Blok « {block} »: pena dire, 4 semenn par defo.",
+  "Charge (kg)": "Sarz (kg)",
+  "Coché = la routine (et ton plan) utilisera cette charge à la prochaine séance. Décoche pour garder la charge actuelle.": "Tike = routinn la (ek to plan) pou servi sa sarz-la prosenn seans. Detik pou gard sarz aktiel la.",
+  "Début le {date} · {n} semaine(s)": "Koumans {date} · {n} semenn",
+  "Importer le plan et {n} routine(s)": "Importe plan la ek {n} routinn",
+  "Ligne {n} : charge illisible, ignorée.": "Lign {n}: pa kapav lir sarz, ignore.",
+  "Ligne {n} : date de début illisible (ex. 2026-10-05 ou 05/10/2026).": "Lign {n}: pa kapav lir dat koumansman (egz. 2026-10-05 ouswa 05/10/2026).",
+  "Ligne {n} : deux routines le même jour dans « {block} », la dernière est gardée.": "Lign {n}: de routinn mem zour dan « {block} », dernie-la ki reste.",
+  "Ligne {n} : jours illisibles (ex. « lundi, jeudi » ou « 1,4 »).": "Lign {n}: pa kapav lir zour (egz. « lindi, zedi » ouswa « 1,4 »).",
+  "Ligne {n} : nombre de semaines invalide (1 à 52).": "Lign {n}: kantite semenn pa bon (1 ziska 52).",
+  "Ligne {n} : « {routine} » est déjà décrite plus haut, exercice ignoré (donne-lui un autre nom pour une variante).": "Lign {n}: « {routine} » deza dekrir anler, lexersis ignore (donn li enn lot nom pou enn varyant).",
+  "Moins de {lo} reps sur la plupart des séries : alléger un peu aide à progresser.": "Mwins ki {lo} rep lor laplipar seri: redwir enn tigit pou progrese.",
+  "Plan importé": "Plan importe",
+  "Plan « {plan} » importé avec {n} routine(s) — tout est modifiable dans Routines": "Plan « {plan} » importe avek {n} routinn — tou kapav modifye dan Routinn",
+  "Pour réutiliser une routine dans un autre bloc, ajoute une ligne avec seulement bloc, jours et routine.": "Pou reservi enn routinn dan enn lot blok, azout enn lign avek zis blok, zour ek routinn.",
+  "Progression — routine « {routine} »": "Progresion — routinn « {routine} »",
+  "Remplacer mes routines et plans du même nom": "Ranplas mo bann routinn ek plan ki ena mem nom",
+  "Remplis le modèle dans Excel, Numbers ou Google Sheets (une ligne par exercice), enregistre-le en CSV puis importe-le. Routines, exercices, charges et calendrier sur plusieurs semaines : tout est créé et reste modifiable dans l'app.": "Ranpli model la dan Excel, Numbers ouswa Google Sheets (enn lign par lexersis), anrezistre li an CSV apre importe li. Routinn, lexersis, sarz ek kalandrie lor plizier semenn: tou kree ek res modifyab dan app-la.",
+  "charge de départ en kg (facultatif, ajustée ensuite par la progression)": "sarz depar an kg (si to anvi, apre progresion ajiste li)",
+  "jours de la routine dans ce bloc : « lundi, jeudi » ou « 1,4 »": "zour routinn la dan sa blok-la: « lindi, zedi » ouswa « 1,4 »",
+  "nom du plan et date de début (facultatifs, 1re ligne)": "nom plan la ek dat koumansman (si to anvi, 1ye lign)",
+  "phase du plan et sa durée en semaines (vide = même bloc que la ligne du dessus)": "faz plan la ek so dire an semenn (vid = mem blok ki lign anler)",
+  "{sets} séries à {reps}+ reps (objectif {hi}) : tu peux charger plus.": "{sets} seri a {reps}+ rep (lobzektif {hi}): to kapav met plis sarz.",
+  "« {routine} » est prévue dans le plan mais n'a aucun exercice : jour ignoré.": "« {routine} » prevwar dan plan la me li pena okenn lexersis: zour ignore."
 };

@@ -714,5 +714,32 @@ export default {
   "normale": "normalna",
   "sem.": "tyg.",
   "{n} plans maximum": "Maksymalnie {n} programów",
-  "{routine} faite aujourd'hui. Bien joué !": "{routine} zrobiony dziś. Brawo!"
+  "{routine} faite aujourd'hui. Bien joué !": "{routine} zrobiony dziś. Brawo!",
+
+  // Import de plan complet, progression
+  "Activer ce plan": "Aktywuj ten program",
+  "Bloc « {block} » : durée absente, 4 semaines par défaut.": "Blok „{block}”: brak długości, domyślnie 4 tygodnie.",
+  "Charge (kg)": "Ciężar (kg)",
+  "Coché = la routine (et ton plan) utilisera cette charge à la prochaine séance. Décoche pour garder la charge actuelle.": "Zaznaczone = plan treningowy (i program) użyje tego ciężaru na następnym treningu. Odznacz, aby zostawić obecny ciężar.",
+  "Début le {date} · {n} semaine(s)": "Start {date} · {n} tyg.",
+  "Importer le plan et {n} routine(s)": "Importuj program i plany treningowe: {n}",
+  "Ligne {n} : charge illisible, ignorée.": "Wiersz {n}: nieczytelny ciężar, pominięto.",
+  "Ligne {n} : date de début illisible (ex. 2026-10-05 ou 05/10/2026).": "Wiersz {n}: nieczytelna data rozpoczęcia (np. 2026-10-05 lub 05/10/2026).",
+  "Ligne {n} : deux routines le même jour dans « {block} », la dernière est gardée.": "Wiersz {n}: dwa plany tego samego dnia w „{block}”, zostaje ostatni.",
+  "Ligne {n} : jours illisibles (ex. « lundi, jeudi » ou « 1,4 »).": "Wiersz {n}: nieczytelne dni (np. „poniedziałek, czwartek” lub „1,4”).",
+  "Ligne {n} : nombre de semaines invalide (1 à 52).": "Wiersz {n}: nieprawidłowa liczba tygodni (1–52).",
+  "Ligne {n} : « {routine} » est déjà décrite plus haut, exercice ignoré (donne-lui un autre nom pour une variante).": "Wiersz {n}: „{routine}” jest już opisany wyżej, ćwiczenie pominięte (nadaj inną nazwę wariantowi).",
+  "Moins de {lo} reps sur la plupart des séries : alléger un peu aide à progresser.": "Mniej niż {lo} powt. w większości serii: lżejszy ciężar pomoże robić postępy.",
+  "Plan importé": "Zaimportowany program",
+  "Plan « {plan} » importé avec {n} routine(s) — tout est modifiable dans Routines": "Program „{plan}” zaimportowany z {n} planami — wszystko edytujesz w zakładce Plany",
+  "Pour réutiliser une routine dans un autre bloc, ajoute une ligne avec seulement bloc, jours et routine.": "Aby użyć planu w innym bloku, dodaj wiersz tylko z blokiem, dniami i planem.",
+  "Progression — routine « {routine} »": "Progresja — plan „{routine}”",
+  "Remplacer mes routines et plans du même nom": "Zastąp moje plany i programy o tej samej nazwie",
+  "Remplis le modèle dans Excel, Numbers ou Google Sheets (une ligne par exercice), enregistre-le en CSV puis importe-le. Routines, exercices, charges et calendrier sur plusieurs semaines : tout est créé et reste modifiable dans l'app.": "Wypełnij szablon w Excelu, Numbers lub Arkuszach Google (jeden wiersz na ćwiczenie), zapisz jako CSV i zaimportuj. Plany, ćwiczenia, ciężary i kalendarz na wiele tygodni: wszystko zostanie utworzone i będzie edytowalne w aplikacji.",
+  "charge de départ en kg (facultatif, ajustée ensuite par la progression)": "ciężar początkowy w kg (opcjonalnie, potem dostosowywany przez progresję)",
+  "jours de la routine dans ce bloc : « lundi, jeudi » ou « 1,4 »": "dni planu w tym bloku: „poniedziałek, czwartek” lub „1,4”",
+  "nom du plan et date de début (facultatifs, 1re ligne)": "nazwa programu i data startu (opcjonalnie, 1. wiersz)",
+  "phase du plan et sa durée en semaines (vide = même bloc que la ligne du dessus)": "faza programu i jej długość w tygodniach (puste = ten sam blok co wiersz wyżej)",
+  "{sets} séries à {reps}+ reps (objectif {hi}) : tu peux charger plus.": "{sets} serii po {reps}+ powt. (cel {hi}): możesz dołożyć ciężaru.",
+  "« {routine} » est prévue dans le plan mais n'a aucun exercice : jour ignoré.": "„{routine}” jest w programie, ale nie ma ćwiczeń: dzień pominięty."
 };

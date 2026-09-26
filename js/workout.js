@@ -106,7 +106,7 @@ async function startWorkout(routineId, routine = null, triggerEl = null, planInf
     const lastSetsByExercise = await Promise.all(routineExercises.map(ex => getLastSetsForExercise(ex.exercise_name)));
 
     currentWorkout = {
-      id, title, start_time: now.toISOString(),
+      id, title, start_time: now.toISOString(), routine_id: routine?.id || null,
       playlist_url: routine?.playlist_url || "",
       exercises: routineExercises.map((ex, i) => {
         const lastSets = lastSetsByExercise[i];
@@ -114,16 +114,18 @@ async function startWorkout(routineId, routine = null, triggerEl = null, planInf
         const sets = lastSets.length
           ? Array.from({ length: targetCount }, (_, j) => ({
               id: null, set_index: j + 1, set_type: "normal",
-              weight_kg: lastSets[j]?.weight_kg ?? null, reps: lastSets[j]?.reps ?? null,
+              // Charge visée de la routine (progression acceptée) en priorité.
+              weight_kg: ex.target_kg ?? lastSets[j]?.weight_kg ?? null, reps: lastSets[j]?.reps ?? null,
               target_reps: ex.reps_target || "", done: false
             }))
           : Array.from({ length: targetCount }, (_, j) => ({
-              id: null, set_index: j + 1, set_type: "normal", weight_kg: null, reps: null,
+              id: null, set_index: j + 1, set_type: "normal", weight_kg: ex.target_kg ?? null, reps: null,
               target_reps: ex.reps_target || "", done: false
             }));
         return {
           exercise_title: ex.exercise_name,
           muscle_group: ex.muscle_group || "Autre",
+          reps_target: ex.reps_target || "", target_sets: ex.target_sets || 0, target_kg: ex.target_kg ?? null,
           rest_timer_seconds: restSecondsFor(ex.exercise_name, ex.rest_seconds),
           sets
         };
@@ -619,6 +621,14 @@ async function finishWorkout() {
     watch_kcal: extra.watch_kcal || null,
     last_set_at: lastSetAt
   });
+  // Progression acceptée : nouvelles charges visées dans la routine.
+  if (extra.progressions?.length && extra.routine) {
+    try {
+      const { applyProgressions } = await import("./progression.js");
+      await applyProgressions(extra.routine, extra.progressions);
+      invalidate("routines");
+    } catch (e) { console.warn("[Skullcrusher] Progression non enregistrée :", e); }
+  }
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
   localStorage.removeItem(LS_REST_KEY);

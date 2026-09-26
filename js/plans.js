@@ -31,7 +31,7 @@ export function getPlans() {
   }
   return plansPromise;
 }
-async function savePlans(plans, active) {
+export async function savePlans(plans, active) {
   await db.setPrivateData({ plans, active_plan_id: active || null });
   plansUid = db.getCurrentUser()?.uid || null;
   plansPromise = Promise.resolve({ plans, active: active || null });
@@ -42,11 +42,11 @@ function parseDay(s) {
   const [y, m, d] = String(s).split("-").map(Number);
   return new Date(y, (m || 1) - 1, d || 1);
 }
-function dayStr(date) {
+export function dayStr(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
-const dowOf = (date) => ((date.getDay() + 6) % 7) + 1;
-function mondayOf(date) {
+export const dowOf = (date) => ((date.getDay() + 6) % 7) + 1;
+export function mondayOf(date) {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   d.setDate(d.getDate() - (dowOf(d) - 1));
   return d;
