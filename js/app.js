@@ -117,6 +117,11 @@ async function switchTab(tab) {
 
 translateStatic();
 
+// Adresse propre après une réparation automatique (?refresh=…).
+if (/[?&]refresh=/.test(location.search)) {
+  history.replaceState(history.state, "", location.pathname + location.search.replace(/[?&]refresh=\d+/, "").replace(/^&/, "?") + location.hash);
+}
+
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => switchTab(btn.dataset.tab));
 });
