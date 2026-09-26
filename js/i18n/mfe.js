@@ -754,5 +754,28 @@ export default {
   "{sets} séries à {reps}+ reps (objectif {hi}) avec de la marge (RPE {rpe}) : double saut.": "{sets} seri a {reps}+ rep (lobzektif {hi}) avek marz (RPE {rpe}): dib so.",
 
   // Recherche bilingue
-  "Utiliser « {name} » de ta bibliothèque ? (Annuler = créer « {typed} »)": "Servi « {name} » ki dan to bibliotek? (Anile = kree « {typed} »)"
+  "Utiliser « {name} » de ta bibliothèque ? (Annuler = créer « {typed} »)": "Servi « {name} » ki dan to bibliotek? (Anile = kree « {typed} »)",
+
+  // Apple Music et Deezer
+  "Chercher sur {service}": "Rod lor {service}",
+  "Impossible de retrouver ce titre sur {service}.": "Pa finn kapav trouv sa sante-la lor {service}.",
+  "L'app s'adapte : les sons partagés par les autres peuvent être retrouvés sur ton service. Colle des liens Spotify, Apple Music ou Deezer (Partager → Copier le lien).": "App-la adapte li: bann sante ki lezot partaze kapav trouve lor to servis. Kol bann lien Spotify, Apple Music ouswa Deezer (Partaz → Kopye lien).",
+  "Lecteur {service}": "Lekter {service}",
+  "Les liens courts ne marchent pas : ouvre-le, puis copie l'adresse complète (open.spotify.com, music.apple.com ou deezer.com).": "Bann lien kourt pa mars: ouver li, apre kopye adres konple la (open.spotify.com, music.apple.com ouswa deezer.com).",
+  "Lien d'artiste invalide : colle un lien d'artiste Spotify, Apple Music ou Deezer.": "Lien artis pa bon: kol enn lien artis Spotify, Apple Music ouswa Deezer.",
+  "Lien de l'artiste (facultatif)": "Lien artis la (si to anvi)",
+  "Lien de playlist (Spotify, Apple Music, Deezer)": "Lien playlist (Spotify, Apple Music, Deezer)",
+  "Lien de playlist invalide : colle un lien Spotify, Apple Music ou Deezer.": "Lien playlist pa bon: kol enn lien Spotify, Apple Music ouswa Deezer.",
+  "Lien de profil invalide : colle le lien de ton profil Spotify, Apple Music ou Deezer.": "Lien profil pa bon: kol lien to profil Spotify, Apple Music ouswa Deezer.",
+  "Lien de ton profil Spotify, Apple Music ou Deezer": "Lien to profil Spotify, Apple Music ouswa Deezer",
+  "Mon service de musique": "Mo servis lamizik",
+  "Morceau : écris « Titre - Artiste » ou colle le lien d'un titre (Spotify, Apple Music, Deezer).": "Sante: ekrir « Tit - Artis » ouswa kol lien enn sante (Spotify, Apple Music, Deezer).",
+  "Ouvrir dans {service}": "Ouver dan {service}",
+  "Ouvrir {service}": "Ouver {service}",
+  "Profil {service}": "Profil {service}",
+  "Sur Apple Music ou Deezer ? Choisis ton service dans ton profil (🏆 Exercices phares & 🎧 musique) : liens, lecteurs et recherche des sons partagés s'adaptent. La connexion automatique ci-dessous n'existe que pour Spotify.": "Lor Apple Music ouswa Deezer? Swazir to servis dan to profil (🏆 Lexersis vedet & 🎧 lamizik): lien, lekter ek rod sante adapte zot. Koneksion otomatik anba la egziste zis pou Spotify.",
+  "Titre - Artiste, ou lien du morceau (Spotify, Apple Music, Deezer)": "Tit - Artis, ouswa lien sante la (Spotify, Apple Music, Deezer)",
+  "Ton profil musical (facultatif)": "To profil lamizik (si to anvi)",
+  "Écoute sur {service}": "Ekout lor {service}",
+  "Écouter sur {service}": "Ekout lor {service}"
 };

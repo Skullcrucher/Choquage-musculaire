@@ -119,12 +119,12 @@ export async function openFinishDialog(workout, summary) {
           ${records.map(r => `<div>🏆 <b>${esc(r.exercise)}</b> — ${esc(r.kg)} kg × ${esc(r.reps)} <span class="muted">(1RM ${esc(r.one_rm)} kg, +${esc(Math.round((r.one_rm - r.prev_one_rm) * 10) / 10)} kg)</span></div>`).join("")}
         </div>
         <label>🎵 ${t("Le son qui t'a porté")}</label>
-        <input id="fin-song" placeholder="${t("Titre - Artiste, ou lien Spotify du morceau")}" value="${esc(nowPlaying ? `${nowPlaying.title} - ${nowPlaying.artist}` : "")}">
+        <input id="fin-song" placeholder="${t("Titre - Artiste, ou lien du morceau (Spotify, Apple Music, Deezer)")}" value="${esc(nowPlaying ? `${nowPlaying.title} - ${nowPlaying.artist}` : "")}">
         ${nowPlaying ? `<p class="muted spotify-attrib" style="font-size:12px; margin:4px 0 0;">${SPOTIFY_ICON} ${t("Pré-rempli avec le morceau en cours sur Spotify.")}</p>` : ""}
       ` : ""}
 
       <label>🎧 ${t("Playlist de la séance (facultatif)")}</label>
-      <input id="fin-playlist" placeholder="https://open.spotify.com/playlist/…" value="${esc(defaultPlaylist)}" inputmode="url">
+      <input id="fin-playlist" placeholder="${t("Lien de playlist (Spotify, Apple Music, Deezer)")}" value="${esc(defaultPlaylist)}" inputmode="url">
 
       ${tracks.length ? `
         <label class="list-row" style="cursor:pointer; margin-top:10px;">
@@ -195,10 +195,10 @@ export async function openFinishDialog(workout, summary) {
         const err = m.querySelector("#fin-error");
         const rawPlaylist = m.querySelector("#fin-playlist").value.trim();
         const playlist = normalizePlaylistUrl(rawPlaylist);
-        if (rawPlaylist && !playlist) { err.textContent = t("Lien de playlist Spotify invalide (open.spotify.com/playlist/…)."); return; }
+        if (rawPlaylist && !playlist) { err.textContent = t("Lien de playlist invalide : colle un lien Spotify, Apple Music ou Deezer."); return; }
         const songInput = m.querySelector("#fin-song")?.value.trim() || "";
         let song = songInput ? parseSongInput(songInput) : null;
-        if (songInput && !song) { err.textContent = t("Morceau : écris « Titre - Artiste » ou colle un lien Spotify de titre."); return; }
+        if (songInput && !song) { err.textContent = t("Morceau : écris « Titre - Artiste » ou colle le lien d'un titre (Spotify, Apple Music, Deezer)."); return; }
         // Morceau en cours accepté tel quel : on ne garde que son lien Spotify.
         if (song && nowPlaying && songInput === `${nowPlaying.title} - ${nowPlaying.artist}`) song = { url: nowPlaying.url, source: "spotify" };
         if (song && /[<>]/.test((song.title || "") + (song.artist || ""))) { err.textContent = t("Les caractères < et > ne sont pas autorisés."); return; }

@@ -77,6 +77,7 @@ export async function renderReglages(container) {
     <div class="card" id="spotify-card">
       <div class="card-title">🎧 Spotify</div>
       <p class="muted" style="margin-top:0;">${t("Connecte ton compte pour proposer automatiquement le morceau en cours comme « son du record » et joindre la bande-son de tes séances (morceaux écoutés pendant l'entraînement).")} <a href="privacy.html" style="color:var(--text);">${t("Données utilisées")}</a></p>
+      <p class="muted" style="font-size:12px;">${t("Sur Apple Music ou Deezer ? Choisis ton service dans ton profil (🏆 Exercices phares & 🎧 musique) : liens, lecteurs et recherche des sons partagés s'adaptent. La connexion automatique ci-dessous n'existe que pour Spotify.")}</p>
       <p class="muted" id="spotify-status" style="font-size:13px;"></p>
       <button class="btn btn-secondary btn-sm" id="spotify-btn"></button>
       <details id="spotify-own" style="margin-top:12px;">

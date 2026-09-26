@@ -160,7 +160,7 @@ export async function renderChallenges(container) {
       ${weekPlaylist ? spotifyEmbed(weekPlaylist, 152) : winner ? `<p class="muted">${iAmWinner ? t("À toi de choisir la playlist de la semaine :") : t("Le vainqueur n'a pas encore choisi de playlist.")}</p>` : ""}
       ${iAmWinner ? `
         <div style="display:flex; gap:8px; margin-top:8px;">
-          <input id="ch-playlist" placeholder="https://open.spotify.com/playlist/…" value="${esc(weekPlaylist || myProfile?.music?.playlist_url || "")}" inputmode="url">
+          <input id="ch-playlist" placeholder="${t("Lien de playlist (Spotify, Apple Music, Deezer)")}" value="${esc(weekPlaylist || myProfile?.music?.playlist_url || "")}" inputmode="url">
           <button class="btn btn-primary btn-sm" id="ch-set-playlist" style="width:auto;">OK</button>
         </div>` : ""}
     </div>
@@ -192,7 +192,7 @@ export async function renderChallenges(container) {
   const setBtn = container.querySelector("#ch-set-playlist");
   if (setBtn) setBtn.onclick = async () => {
     const url = normalizePlaylistUrl(container.querySelector("#ch-playlist").value);
-    if (!url) { toast(t("Lien de playlist Spotify invalide")); return; }
+    if (!url) { toast(t("Lien de playlist invalide : colle un lien Spotify, Apple Music ou Deezer.")); return; }
     await db.updatePublicProfile({ challenge: { playlist: { week: cw, url } } });
     toast(t("Playlist de la semaine choisie") + " 👑");
     renderChallenges(container);
