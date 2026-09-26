@@ -302,6 +302,7 @@ export async function openMusicPlayer(url, title = t("Écouter")) {
     toggle.title = mini ? t("Agrandir") : t("Réduire");
     // Le minuteur de repos et le bas de page se placent au-dessus du lecteur.
     document.body.style.setProperty("--dock-h", dock.offsetHeight + "px");
+    window.dispatchEvent(new Event("sc:dock-change")); // bouton retour (app.js)
   };
   toggle.onclick = () => setMini(!dock.classList.contains("mini"));
   const convert = dock.querySelector("#sp-convert");
@@ -310,6 +311,7 @@ export async function openMusicPlayer(url, title = t("Écouter")) {
     dock.remove();
     document.body.classList.remove("has-spotify-dock");
     document.body.style.removeProperty("--dock-h");
+    window.dispatchEvent(new Event("sc:dock-change"));
   };
   document.body.classList.add("has-spotify-dock");
   setMini(false);

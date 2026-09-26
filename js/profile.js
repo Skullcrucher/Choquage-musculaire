@@ -213,12 +213,57 @@ export async function openProfile(uid) {
       <button class="btn btn-secondary" id="pf-close">${t("Fermer")}</button>
       ${isMe ? `<button class="btn btn-primary" id="pf-edit">${t("Modifier")}</button>` : ""}
     </div>
+    ${!isMe ? `<button class="report-link" id="pf-report">🚩 ${t("Signaler ce profil")}</button>` : ""}
   `, (modalEl) => {
     modalEl.querySelector("#pf-close").onclick = closeModal;
+    const reportBtn = modalEl.querySelector("#pf-report");
+    if (reportBtn) reportBtn.onclick = () => openReportDialog(uid, profile.display_name || t("Utilisateur"));
     const artistMine = modalEl.querySelector("#pf-artist-mine");
     if (artistMine) artistMine.onclick = () => openOnMyService(mine, artist && !music.artist_name ? { link: artist } : { text: music.artist_name, kind: "artist" });
     const edit = modalEl.querySelector("#pf-edit");
     if (edit) edit.onclick = () => { closeModal(); openProfileEditor(() => openProfile(uid)); };
+  });
+}
+
+// ---------- Signaler un profil à l'administrateur ----------
+// i18n-keys: "Contenu inapproprié", "Faux profil / usurpation", "Harcèlement ou insultes", "Spam ou publicité", "Autre"
+const REPORT_LABELS = { inappropriate: "Contenu inapproprié", fake: "Faux profil / usurpation", harassment: "Harcèlement ou insultes", spam: "Spam ou publicité", other: "Autre" };
+export const reportReasonLabel = (r) => t(REPORT_LABELS[r] || "Autre");
+
+function openReportDialog(targetUid, name) {
+  closeModal();
+  openModal(`
+    <h3>🚩 ${t("Signaler {name}", { name: esc(name) })}</h3>
+    <p class="muted" style="margin-top:0;">${t("Le signalement est envoyé à l'administrateur de l'app, qui le verra seul. La personne signalée n'est pas prévenue.")}</p>
+    <label>${t("Motif")}</label>
+    <div id="rp-reasons">
+      ${db.REPORT_REASONS.map((r, i) => `<label class="list-row" style="cursor:pointer;"><span>${reportReasonLabel(r)}</span><input type="radio" name="rp-reason" value="${r}" ${i === 0 ? "checked" : ""} style="width:auto;"></label>`).join("")}
+    </div>
+    <label>${t("Précisions (facultatif)")}</label>
+    <textarea id="rp-comment" rows="3" maxlength="300" placeholder="${t("Qu'est-ce qui pose problème ?")}"></textarea>
+    <p id="rp-error" style="color:var(--red); min-height:1em; margin:4px 0;"></p>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="rp-cancel">${t("Annuler")}</button>
+      <button class="btn btn-danger" id="rp-send">${t("Envoyer le signalement")}</button>
+    </div>
+  `, (m) => {
+    m.querySelector("#rp-cancel").onclick = closeModal;
+    m.querySelector("#rp-send").onclick = async (e) => {
+      const comment = m.querySelector("#rp-comment").value.trim();
+      if (/[<>]/.test(comment)) { m.querySelector("#rp-error").textContent = t("Les caractères < et > ne sont pas autorisés."); return; }
+      e.target.disabled = true;
+      try {
+        await db.reportProfile(targetUid, m.querySelector("[name=rp-reason]:checked").value, comment);
+        closeModal();
+        toast(t("Signalement envoyé. Merci !"), 3000);
+      } catch (err) {
+        console.warn("[Skullcrusher] Signalement", err);
+        m.querySelector("#rp-error").textContent = /permission/i.test(err?.message || err?.code || "")
+          ? t("Tu as déjà signalé ce profil : l'administrateur va l'examiner.")
+          : t("Envoi impossible, réessaie.");
+        e.target.disabled = false;
+      }
+    };
   });
 }
 

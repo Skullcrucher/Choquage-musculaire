@@ -817,5 +817,29 @@ export default {
   "Rechercher un artiste…": "Szukaj wykonawcy…",
   "Recherche…": "Wyszukiwanie…",
   "{n} fans": "{n} fanów",
-  "Utiliser « {name} » tel quel": "Użyj „{name}” bez zmian"
+  "Utiliser « {name} » tel quel": "Użyj „{name}” bez zmian",
+
+  // Signalements
+  "Aucun signalement en attente.": "Brak zgłoszeń do rozpatrzenia.",
+  "Classer": "Zamknij",
+  "Contenu inapproprié": "Nieodpowiednie treści",
+  "Envoi impossible, réessaie.": "Nie udało się wysłać, spróbuj ponownie.",
+  "Envoyer le signalement": "Wyślij zgłoszenie",
+  "Faux profil / usurpation": "Fałszywy profil / podszywanie się",
+  "Harcèlement ou insultes": "Nękanie lub obelgi",
+  "Le signalement est envoyé à l'administrateur de l'app, qui le verra seul. La personne signalée n'est pas prévenue.": "Zgłoszenie trafia tylko do administratora aplikacji. Zgłoszona osoba nie zostanie powiadomiona.",
+  "Motif": "Powód",
+  "Profil vidé": "Profil wyczyszczony",
+  "Précisions (facultatif)": "Szczegóły (opcjonalnie)",
+  "Qu'est-ce qui pose problème ?": "Na czym polega problem?",
+  "Signalement classé": "Zgłoszenie zamknięte",
+  "Signalement envoyé. Merci !": "Zgłoszenie wysłane. Dziękujemy!",
+  "Signalements indisponibles (règles Firebase à mettre à jour ?).": "Zgłoszenia niedostępne (trzeba zaktualizować reguły Firebase?).",
+  "Signalements": "Zgłoszenia",
+  "Signaler ce profil": "Zgłoś ten profil",
+  "Signaler {name}": "Zgłoś {name}",
+  "Spam ou publicité": "Spam lub reklama",
+  "Tu as déjà signalé ce profil : l'administrateur va l'examiner.": "Ten profil został już przez ciebie zgłoszony: administrator go sprawdzi.",
+  "Vider le profil public de {name} (bio, photo, salle, exercices phares, musique) ? Son pseudo et ses séances ne sont pas touchés.": "Wyczyścić publiczny profil {name} (bio, zdjęcie, siłownia, wyróżnione ćwiczenia, muzyka)? Nick i treningi pozostają bez zmian.",
+  "Vider le profil": "Wyczyść profil"
 };

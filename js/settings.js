@@ -74,6 +74,11 @@ export async function renderReglages(container) {
       <button class="btn btn-secondary" id="signout-btn" style="margin-top:10px;">${t("Se déconnecter")}</button>
     </div>
 
+    ${db.isAdmin() ? `<div class="card" id="reports-card">
+      <div class="card-title">🚩 ${t("Signalements")}</div>
+      <div id="reports-list"><p class="muted">${t("Chargement…")}</p></div>
+    </div>` : ""}
+
     <div class="card" id="spotify-card">
       <div class="card-title">🎧 Spotify</div>
       <p class="muted" style="margin-top:0;">${t("Connecte ton compte pour proposer automatiquement le morceau en cours comme « son du record » et joindre la bande-son de tes séances (morceaux écoutés pendant l'entraînement).")} <a href="privacy.html" style="color:var(--text);">${t("Données utilisées")}</a></p>
@@ -192,6 +197,7 @@ export async function renderReglages(container) {
   bindLangPicker(container, "settings-lang");
 
   setupSpotifyCard(container);
+  if (db.isAdmin()) renderReports(container);
   setupBodyCard(container);
   container.querySelector("#view-public-profile").onclick = () => openProfile(getUser()?.uid);
   container.querySelector("#edit-public-profile").onclick = () => openProfileEditor(() => openProfile(getUser()?.uid));
@@ -651,6 +657,61 @@ async function setupBodyCard(container) {
     }
     e.target.disabled = false;
   };
+}
+
+// Administrateur : signalements de profils à traiter.
+async function renderReports(container) {
+  const wrap = container.querySelector("#reports-list");
+  if (!wrap) return;
+  const [{ reportReasonLabel, openProfile }] = await Promise.all([import("./profile.js")]);
+  let reports = [];
+  try { reports = await db.listReports("open"); } catch (e) {
+    wrap.innerHTML = `<p class="muted">${t("Signalements indisponibles (règles Firebase à mettre à jour ?).")}</p>`;
+    return;
+  }
+  if (!wrap.isConnected) return;
+  updateReportsBadge(reports.length);
+  wrap.innerHTML = reports.length ? reports.map(r => `
+    <div class="report-row" data-report="${esc(r.id)}">
+      <div><b class="profile-link" data-profile="${esc(r.target_uid)}">${esc(r.target_name || t("Utilisateur"))}</b> · ${esc(reportReasonLabel(r.reason))}</div>
+      ${r.comment ? `<div style="font-size:14px; margin:4px 0;">« ${esc(r.comment)} »</div>` : ""}
+      <div class="muted" style="font-size:12px;">${t("par {name}", { name: esc(r.reporter_name || t("Utilisateur")) })} · ${esc(new Date(r.created_at).toLocaleDateString())}</div>
+      <div class="btn-row" style="margin-top:6px;">
+        <button class="btn btn-sm btn-danger" data-clear="${esc(r.id)}">${t("Vider le profil")}</button>
+        <button class="btn btn-sm btn-secondary" data-done="${esc(r.id)}">${t("Classer")}</button>
+      </div>
+    </div>`).join("") : `<p class="muted" style="margin:0;">${t("Aucun signalement en attente.")}</p>`;
+  wrap.querySelectorAll("[data-profile]").forEach(el => el.onclick = () => openProfile(el.dataset.profile));
+  wrap.querySelectorAll("[data-done]").forEach(b => b.onclick = async () => {
+    await db.closeReport(b.dataset.done, "dismissed");
+    toast(t("Signalement classé"));
+    renderReports(container);
+  });
+  wrap.querySelectorAll("[data-clear]").forEach(b => b.onclick = async () => {
+    const r = reports.find(x => x.id === b.dataset.clear);
+    if (!confirm(t("Vider le profil public de {name} (bio, photo, salle, exercices phares, musique) ? Son pseudo et ses séances ne sont pas touchés.", { name: r.target_name || t("Utilisateur") }))) return;
+    try {
+      await db.clearPublicProfile(r.target_uid);
+      await db.closeReport(r.id, "cleared");
+      toast(t("Profil vidé"));
+    } catch (e) {
+      console.error("[Skullcrusher] Modération", e);
+      toast(t("Action impossible, réessaie"));
+    }
+    renderReports(container);
+  });
+}
+
+// Pastille sur l'onglet Réglages quand des signalements attendent (admin).
+export function updateReportsBadge(n) {
+  const btn = document.querySelector(".tab-btn[data-tab=reglages]");
+  if (!btn) return;
+  btn.querySelector(".tab-badge")?.remove();
+  if (n > 0) btn.insertAdjacentHTML("beforeend", `<span class="tab-badge">${n > 9 ? "9+" : n}</span>`);
+}
+export async function checkReportsBadge() {
+  if (!db.isAdmin()) return;
+  try { updateReportsBadge((await db.listReports("open")).length); } catch (_) {}
 }
 
 async function setupSpotifyCard(container) {

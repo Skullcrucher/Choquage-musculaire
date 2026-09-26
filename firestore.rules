@@ -34,6 +34,22 @@ service cloud.firestore {
       allow write: if isSignedIn() && request.auth.uid == uid
                    && isSafeText(request.resource.data.get('display_name', ''), 30)
                    && isSafeText(request.resource.data.get('search_name', ''), 30);
+      // Modération : l'administrateur peut vider un profil signalé.
+      allow update: if isAdmin();
+    }
+
+    // Signalements de profils : n'importe quel utilisateur connecté en crée
+    // (un seul par personne et par profil : id = signaleur_signalé), seul
+    // l'administrateur les lit et les traite.
+    match /reports/{reportId} {
+      allow create: if isSignedIn()
+                    && reportId == request.auth.uid + '_' + request.resource.data.target_uid
+                    && request.resource.data.reporter_uid == request.auth.uid
+                    && request.resource.data.target_uid != request.auth.uid
+                    && request.resource.data.reason in ['inappropriate', 'fake', 'harassment', 'spam', 'other']
+                    && isSafeText(request.resource.data.get('comment', ''), 300)
+                    && request.resource.data.status == 'open';
+      allow read, update, delete: if isAdmin();
     }
 
     // Bibliothèque d'exercices : commune. Tout le monde lit et peut ajouter
