@@ -778,5 +778,29 @@ export default {
   "Titre - Artiste, ou lien du morceau (Spotify, Apple Music, Deezer)": "Title - Artist, or track link (Spotify, Apple Music, Deezer)",
   "Ton profil musical (facultatif)": "Your music profile (optional)",
   "Écoute sur {service}": "Listens on {service}",
-  "Écouter sur {service}": "Listen on {service}"
+  "Écouter sur {service}": "Listen on {service}",
+
+  // Choix d'exercice, notifications refusées
+  "Ajouter « {name} »": "Add \"{name}\"",
+  "Ajouter à la séance": "Add to workout",
+  "Ajouté : {name}": "Added: {name}",
+  "Android (Chrome) : touche l'icône à gauche de l'adresse → Autorisations → Notifications → Autoriser. Puis reviens ici.": "Android (Chrome): tap the icon left of the address → Permissions → Notifications → Allow. Then come back here.",
+  "Android : appui long sur l'icône Skullcrusher → Infos sur l'appli → Notifications → Autoriser. Puis reviens ici.": "Android: long-press the Skullcrusher icon → App info → Notifications → Allow. Then come back here.",
+  "Aperçu": "Preview",
+  "Aucun exercice trouvé.": "No exercise found.",
+  "Créer « {name} »": "Create \"{name}\"",
+  "Demande fermée sans réponse : réessaie et choisis « Autoriser ».": "Request closed without an answer: try again and choose \"Allow\".",
+  "Dernière fois : {kg} kg × {reps} ({date}) · meilleure 1RM estimée : {rm} kg": "Last time: {kg} kg × {reps} ({date}) · best estimated 1RM: {rm} kg",
+  "Notifications autorisées ✅": "Notifications allowed ✅",
+  "Notifications bloquées sur cet appareil.": "Notifications blocked on this device.",
+  "Ordinateur : clique sur l'icône à gauche de l'adresse → Notifications → Autoriser, puis reviens ici.": "Computer: click the icon left of the address → Notifications → Allow, then come back here.",
+  "Pas dans la liste ? Crée-le :": "Not in the list? Create it:",
+  "Rechercher (français ou anglais)…": "Search (French or English)…",
+  "Redemander l'autorisation": "Ask for permission again",
+  "Récents": "Recent",
+  "Ton appareil bloque encore la demande : suis les étapes ci-dessus.": "Your device still blocks the request: follow the steps above.",
+  "Tu n'as encore jamais fait cet exercice.": "You've never done this exercise yet.",
+  "Vidéos": "Videos",
+  "iPhone : Réglages → Notifications → Skullcrusher → Autoriser les notifications. Puis reviens ici.": "iPhone: Settings → Notifications → Skullcrusher → Allow Notifications. Then come back here.",
+  "{n} autres : affine la recherche.": "{n} more: refine your search."
 };

@@ -787,5 +787,29 @@ export default {
   "Titre - Artiste, ou lien du morceau (Spotify, Apple Music, Deezer)": "Tytuł - Wykonawca albo link do utworu (Spotify, Apple Music, Deezer)",
   "Ton profil musical (facultatif)": "Twój profil muzyczny (opcjonalnie)",
   "Écoute sur {service}": "Słucha w {service}",
-  "Écouter sur {service}": "Słuchaj w {service}"
+  "Écouter sur {service}": "Słuchaj w {service}",
+
+  // Choix d'exercice, notifications refusées
+  "Ajouter « {name} »": "Dodaj „{name}”",
+  "Ajouter à la séance": "Dodaj do treningu",
+  "Ajouté : {name}": "Dodano: {name}",
+  "Android (Chrome) : touche l'icône à gauche de l'adresse → Autorisations → Notifications → Autoriser. Puis reviens ici.": "Android (Chrome): dotknij ikony po lewej od adresu → Uprawnienia → Powiadomienia → Zezwól. Potem wróć tutaj.",
+  "Android : appui long sur l'icône Skullcrusher → Infos sur l'appli → Notifications → Autoriser. Puis reviens ici.": "Android: przytrzymaj ikonę Skullcrusher → Informacje o aplikacji → Powiadomienia → Zezwól. Potem wróć tutaj.",
+  "Aperçu": "Podgląd",
+  "Aucun exercice trouvé.": "Nie znaleziono ćwiczeń.",
+  "Créer « {name} »": "Utwórz „{name}”",
+  "Demande fermée sans réponse : réessaie et choisis « Autoriser ».": "Prośba zamknięta bez odpowiedzi: spróbuj ponownie i wybierz „Zezwól”.",
+  "Dernière fois : {kg} kg × {reps} ({date}) · meilleure 1RM estimée : {rm} kg": "Ostatnio: {kg} kg × {reps} ({date}) · najlepsze szacowane 1RM: {rm} kg",
+  "Notifications autorisées ✅": "Powiadomienia dozwolone ✅",
+  "Notifications bloquées sur cet appareil.": "Powiadomienia zablokowane na tym urządzeniu.",
+  "Ordinateur : clique sur l'icône à gauche de l'adresse → Notifications → Autoriser, puis reviens ici.": "Komputer: kliknij ikonę po lewej od adresu → Powiadomienia → Zezwól, potem wróć tutaj.",
+  "Pas dans la liste ? Crée-le :": "Nie ma na liście? Utwórz:",
+  "Rechercher (français ou anglais)…": "Szukaj (po francusku lub angielsku)…",
+  "Redemander l'autorisation": "Poproś ponownie o zgodę",
+  "Récents": "Ostatnie",
+  "Ton appareil bloque encore la demande : suis les étapes ci-dessus.": "Urządzenie nadal blokuje prośbę: wykonaj kroki powyżej.",
+  "Tu n'as encore jamais fait cet exercice.": "Nie robiłeś jeszcze tego ćwiczenia.",
+  "Vidéos": "Filmy",
+  "iPhone : Réglages → Notifications → Skullcrusher → Autoriser les notifications. Puis reviens ici.": "iPhone: Ustawienia → Powiadomienia → Skullcrusher → Zezwalaj na powiadomienia. Potem wróć tutaj.",
+  "{n} autres : affine la recherche.": "Jeszcze {n}: zawęź wyszukiwanie."
 };

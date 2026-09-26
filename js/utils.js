@@ -6,7 +6,7 @@ import { t, locale } from "./i18n.js";
 // Version affichée dans Réglages → À propos. À incrémenter avec
 // CACHE_NAME dans service-worker.js à chaque mise en ligne, pour voir d'un
 // coup d'œil si le téléphone utilise bien la dernière version.
-export const APP_VERSION = "59";
+export const APP_VERSION = "60";
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
@@ -49,6 +49,7 @@ export function openModal(innerHtml, onMount, options = {}) {
   });
   document.body.appendChild(backdrop);
   document.body.style.overflow = "hidden";
+  window.dispatchEvent(new Event("sc:modal-open")); // bouton retour Android (app.js)
   if (onMount) onMount(backdrop.querySelector(".modal"));
   return backdrop;
 }
@@ -56,6 +57,7 @@ export function openModal(innerHtml, onMount, options = {}) {
 export function closeModal() {
   document.body.style.overflow = "";
   document.querySelectorAll(".modal-backdrop").forEach(el => el.remove());
+  window.dispatchEvent(new Event("sc:modal-close"));
 }
 
 export function fmtDate(iso, opts = {}) {

@@ -12,7 +12,7 @@ const RULES = [
   ["Abdominaux", /(abdo|crunch|gainage|planche|plank|sit.?up|leg raise|knee raise|relevé de (jambes|genoux)|russian twist|ab wheel|roue|heel tap|side bend|flexion latérale|scissors|ciseaux|hollow|mountain climber|dead bug|v.?up|rotation russe)/],
   ["Triceps", /(triceps|tricep|skull ?crusher|barre au front|pushdown|pressdown|french press|dips? (entre bancs|banc)|bench dip|prise serrée \(barre\)|close.?grip bench)/],
   ["Fessiers", /(hip thrust|fessier|glute|abduct|pont|bridge|donkey kick|kickback (fessier|hanche)|good morning)/],
-  ["Jambes", /(squat|fente|lunge|leg press|presse (à|a) cuisse|presse horizontale|leg extension|extension (des )?jambe|leg curl|curl (ischio|jambe|allongé|couché|assis)|ischio|hamstring|nordic|mollet|calf|adduct|step.?up|cuisse|quadri|rdl|roumain|romanian|stiff.?leg|jambes? tendues|split|sissy|hack|jambe)/],
+  ["Jambes", /(squat|fente|lunge|leg press|presse (à|a) cuisse|presse horizontale|leg extension|extension (des )?jambe|leg curl|curl (ischio|jambe|allongé|couché|assis)|ischio|hamstring|nordic|nordique|mollet|calf|adduct|step.?up|cuisse|quadri|rdl|roumain|romanian|stiff.?leg|jambes? tendues|split|sissy|hack|jambe)/],
   ["Avant-bras", /(wrist|poignet|forearm|avant-bras|farmer|préhension|grip trainer)/],
   ["Épaules", /(épaule|epaule|militaire|latérale|laterale|frontale|oiseau|shoulder|overhead press|military|lateral raise|front raise|face pull|rear delt|arnold|y raise|upright row|rowing menton|tirage menton)/],
   ["Biceps", /(curl|biceps)/],
@@ -27,7 +27,7 @@ export function guessMuscleGroup(exerciseTitle) {
 }
 
 // Muscle principal d'une fiche (free-exercise-db) -> groupe de l'app.
-const GUIDE_TO_GROUP = {
+export const GUIDE_TO_GROUP = {
   "Pectoraux": "Pectoraux", "Épaules": "Épaules", "Biceps": "Biceps", "Triceps": "Triceps",
   "Avant-bras": "Avant-bras", "Abdominaux": "Abdominaux", "Fessiers": "Fessiers",
   "Quadriceps": "Jambes", "Ischio-jambiers": "Jambes", "Mollets": "Jambes", "Adducteurs": "Jambes", "Abducteurs": "Fessiers",

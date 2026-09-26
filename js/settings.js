@@ -127,6 +127,10 @@ export async function renderReglages(container) {
         </label>
       </div>
       <p class="muted" id="notify-status" style="margin-top:6px;"></p>
+      <div id="notify-denied" style="display:none;">
+        <p class="muted" id="notify-help" style="font-size:13px; margin:0 0 8px;"></p>
+        <button class="btn btn-secondary btn-sm" id="notify-retry">🔄 ${t("Redemander l'autorisation")}</button>
+      </div>
       <button class="btn btn-secondary btn-sm" id="notify-test" style="display:none;">${t("Tester : notification dans 10 s")}</button>
       <div class="list-row" style="cursor:default; margin-top:6px;">
         <div>
@@ -259,6 +263,43 @@ export async function renderReglages(container) {
   const notifyStatus = container.querySelector("#notify-status");
   const notifyTest = container.querySelector("#notify-test");
   const iosNotInstalled = isIos() && !isStandalone();
+  const deniedBox = container.querySelector("#notify-denied");
+  // Autorisation refusée : aucun navigateur ne laisse un site réafficher la
+  // demande système. On la retente (elle réapparaît si elle n'était que
+  // fermée), on explique où la rétablir, puis on détecte son retour.
+  function deniedHelp() {
+    if (/Android/i.test(navigator.userAgent)) return isStandalone()
+      ? t("Android : appui long sur l'icône Skullcrusher → Infos sur l'appli → Notifications → Autoriser. Puis reviens ici.")
+      : t("Android (Chrome) : touche l'icône à gauche de l'adresse → Autorisations → Notifications → Autoriser. Puis reviens ici.");
+    if (isIos()) return t("iPhone : Réglages → Notifications → Skullcrusher → Autoriser les notifications. Puis reviens ici.");
+    return t("Ordinateur : clique sur l'icône à gauche de l'adresse → Notifications → Autoriser, puis reviens ici.");
+  }
+  function showDenied() {
+    notifyToggle.checked = false;
+    notifyStatus.textContent = t("Notifications bloquées sur cet appareil.");
+    container.querySelector("#notify-help").textContent = deniedHelp();
+    deniedBox.style.display = "";
+  }
+  const permissionNow = () => ("Notification" in window ? Notification.permission : "unsupported");
+  // Retour dans l'app après être allé dans les réglages : autorisation rétablie ?
+  const recheck = () => {
+    if (!deniedBox.isConnected) { document.removeEventListener("visibilitychange", recheck); return; }
+    if (document.visibilityState === "visible" && deniedBox.style.display !== "none" && permissionNow() === "granted") {
+      deniedBox.style.display = "none";
+      toast(t("Notifications autorisées ✅"));
+      notifyToggle.checked = true;
+      notifyToggle.onchange();
+    }
+  };
+  document.addEventListener("visibilitychange", recheck);
+  navigator.permissions?.query({ name: "notifications" }).then(st => { st.onchange = recheck; }).catch(() => null);
+  container.querySelector("#notify-retry").onclick = async () => {
+    if (!("Notification" in window)) return;
+    const perm = await Notification.requestPermission().catch(() => Notification.permission);
+    if (perm === "granted") { deniedBox.style.display = "none"; notifyToggle.checked = true; notifyToggle.onchange(); }
+    else if (perm === "default") toast(t("Demande fermée sans réponse : réessaie et choisis « Autoriser »."), 3500);
+    else toast(t("Ton appareil bloque encore la demande : suis les étapes ci-dessus."), 4000);
+  };
   function showNotifyState() {
     notifyTest.style.display = notifyToggle.checked && pushActive() ? "" : "none";
     if (!notifyToggle.checked) { notifyStatus.textContent = ""; return; }
@@ -273,8 +314,7 @@ export async function renderReglages(container) {
       ? t("Sur iPhone, ajoute l'app à ton écran d'accueil (Partager → Sur l'écran d'accueil), puis active les notifications depuis l'app installée.")
       : t("Les notifications ne sont pas prises en charge par ce navigateur.");
   } else if (Notification.permission === "denied") {
-    notifyToggle.checked = false;
-    notifyStatus.textContent = t("Notifications bloquées — autorise-les pour cette app dans les réglages de l'iPhone (Réglages → Notifications), puis reviens ici.");
+    showDenied();
   } else {
     showNotifyState();
   }
@@ -296,11 +336,12 @@ export async function renderReglages(container) {
     }
     const ok = await setRestNotificationsEnabled(true);
     if (!ok) {
-      notifyToggle.checked = false;
-      notifyStatus.textContent = t("Autorisation refusée — autorise les notifications pour cette app dans les réglages de l'iPhone.");
+      if (permissionNow() === "denied") showDenied();
+      else { notifyToggle.checked = false; notifyStatus.textContent = t("Demande fermée sans réponse : réessaie et choisis « Autoriser »."); }
       notifyToggle.disabled = false;
       return;
     }
+    deniedBox.style.display = "none";
     if (pushConfigured()) {
       try {
         await enablePush();

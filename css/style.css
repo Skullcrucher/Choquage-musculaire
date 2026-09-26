@@ -885,3 +885,19 @@ body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var
 .rpe-picker button.active { border-color: var(--amber); color: var(--amber); }
 .rpe-picker .rpe-skip { min-width: 28px; color: var(--text-dim); }
 .autocomplete-via { color: var(--text-dim); font-size: 10px; border: 1px solid currentColor; border-radius: 4px; padding: 0 3px; margin-left: 4px; vertical-align: 1px; }
+
+/* ---------- Choix d'un exercice ---------- */
+.pk-scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+.pk-scroll::-webkit-scrollbar { display: none; }
+.pk-scroll .chip { flex-shrink: 0; white-space: nowrap; }
+.chip.chip-sm { padding: 5px 10px; font-size: 12px; }
+.pk-list { max-height: 48vh; overflow-y: auto; margin-top: 4px; border-top: 1px solid var(--border); }
+.pk-row { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.pk-row.open { border-bottom: none; }
+.pk-main { flex: 1; min-width: 0; cursor: pointer; }
+.pk-name { font-weight: 600; font-size: 15px; }
+.pk-sub { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
+.pk-info, .pk-add { flex-shrink: 0; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--text); font-size: 16px; cursor: pointer; }
+.pk-add { background: var(--amber); color: var(--on-accent); border-color: var(--amber); font-size: 20px; font-weight: 700; }
+.pk-add.done { background: var(--surface-raised); color: var(--green); border-color: var(--green); }
+.pk-preview { background: var(--surface-raised); border-radius: 10px; padding: 10px 12px; margin: 0 0 8px; border-bottom: 1px solid var(--border); }

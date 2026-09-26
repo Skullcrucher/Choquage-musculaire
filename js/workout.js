@@ -2,12 +2,11 @@
 // ONGLET SÉANCE — démarrage, log de séries, minuteur de repos
 // ============================================================
 import * as db from "./db.js";
-import { toast, openModal, closeModal, fmtDateTime, debounce, attachAutocomplete, fireRestEndNotification, esc } from "./utils.js";
+import { toast, openModal, closeModal, fmtDateTime, debounce, fireRestEndNotification, esc } from "./utils.js";
 import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { parseMusicLink, openSpotifyPlayer, providerName } from "./music.js";
 import { t, tn, locale } from "./i18n.js";
-import { guessMuscleGroup } from "./muscles.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
 let restTimerInterval = null;
@@ -482,80 +481,41 @@ function openRestPicker(exIdx) {
 }
 
 async function openAddExerciseModal() {
-  const exercises = await getExercises();
-  const names = exercises.map(e => e.name);
-  const modal = openModal(`
-    <h3>${t("Ajouter un exercice")}</h3>
-    <label>${t("Nom de l'exercice")}</label>
-    <div style="position:relative;"><input id="ex-name" placeholder="${t("ex: Développé Couché (Barre)")}"></div>
-    <label>${t("Groupe musculaire (si nouvel exercice)")}</label>
-    <select id="ex-group">${db.EXO_GROUPS.map(g => `<option value="${g}" ${g === "Autre" ? "selected" : ""}>${t(g)}</option>`).join("")}</select>
-    <div style="height:16px"></div>
-    <button class="btn btn-primary" id="confirm-add-ex">${t("Ajouter")}</button>
-  `);
-  // Nouvel exercice : groupe deviné d'après le nom, tant qu'on ne l'a pas choisi.
-  const groupSel = modal.querySelector("#ex-group");
-  let groupTouched = false;
-  groupSel.addEventListener("change", () => { groupTouched = true; });
-  modal.querySelector("#ex-name").addEventListener("input", (e) => {
-    const name = e.target.value.trim().toLowerCase();
-    const known = exercises.find(x => x.name.toLowerCase() === name);
-    if (known) groupSel.value = known.muscle_group;
-    else if (!groupTouched) groupSel.value = guessMuscleGroup(name);
-  });
-  attachAutocomplete(modal.querySelector("#ex-name"), names, (picked) => {
-    const ex = exercises.find(e => e.name === picked);
-    if (ex) modal.querySelector("#ex-group").value = ex.muscle_group;
-  });
-  modal.querySelector("#confirm-add-ex").onclick = async () => {
-    let name = modal.querySelector("#ex-name").value.trim();
-    if (!name) return;
-    let group = modal.querySelector("#ex-group").value;
-    let existing = exercises.find(e => e.name.toLowerCase() === name.toLowerCase());
-    // Nom absent de la bibliothèque (souvent tapé en anglais) : proposer
-    // l'exercice correspondant plutôt que d'en créer un doublon.
-    if (!existing) {
-      try {
-        const { searchExercises, loadAliases } = await import("./exercise-search.js");
-        await loadAliases();
-        const best = searchExercises(name, names, 1)[0];
-        if (best && best.score >= 55 && confirm(t("Utiliser « {name} » de ta bibliothèque ? (Annuler = créer « {typed} »)", { name: best.name, typed: name }))) {
-          existing = exercises.find(e => e.name === best.name);
-          name = best.name;
-          group = existing.muscle_group;
-        }
-      } catch (_) { /* recherche indisponible : on crée l'exercice tel quel */ }
-    }
-    const finalName = existing ? existing.name : name;
-    // Ajout immédiat avec 3 séries vides ; l'historique (pré-remplissage) et
-    // la création d'un nouvel exercice dans la bibliothèque se font en
-    // arrière-plan, sans faire attendre.
-    const ex = {
-      exercise_title: finalName,
-      muscle_group: existing ? existing.muscle_group : group,
-      rest_timer_seconds: restSecondsFor(finalName, existing?.rest_timer_seconds),
-      sets: [1, 2, 3].map(i => ({ id: null, set_index: i, set_type: "normal", weight_kg: null, reps: null, done: false }))
-    };
-    currentWorkout.exercises.push(ex);
-    saveLocalState();
-    closeModal();
-    renderExerciseList(document.getElementById("exercise-list"));
+  const { openExercisePicker } = await import("./exercise-picker.js");
+  await openExercisePicker({ onAdd: (name, group, existing) => addExerciseToWorkout(name, group, existing) });
+}
 
-    if (!existing) {
-      db.upsertExercise(name, group)
-        .then(() => invalidate("exercises"))
-        .catch(err => console.error("[Skullcrusher] Erreur création exercice dans la bibliothèque", err));
-    }
-    getLastSetsForExercise(finalName).then(lastSets => {
-      const untouched = ex.sets.every(s => !s.id && !s.done && s.weight_kg == null && s.reps == null);
-      if (!lastSets.length || !untouched || !currentWorkout || !currentWorkout.exercises.includes(ex)) return;
-      ex.sets = lastSets.map((s, i) => ({ id: null, set_index: i + 1, set_type: "normal", weight_kg: s.weight_kg ?? null, reps: s.reps ?? null, done: false }));
-      saveLocalState();
-      const list = document.getElementById("exercise-list");
-      if (list) renderExerciseList(list);
-      toast(t("Séries pré-remplies depuis ta dernière séance de {exercise}", { exercise: finalName }));
-    }).catch(histErr => console.error("[Skullcrusher] Erreur récupération historique exercice (pas de pré-remplissage)", histErr));
+// Ajoute un exercice (de la bibliothèque, ou nouveau) à la séance en cours.
+function addExerciseToWorkout(name, group, existing) {
+  if (!currentWorkout) return;
+  const finalName = existing ? existing.name : name;
+  // Ajout immédiat avec 3 séries vides ; l'historique (pré-remplissage) et
+  // la création d'un nouvel exercice dans la bibliothèque se font en
+  // arrière-plan, sans faire attendre.
+  const ex = {
+    exercise_title: finalName,
+    muscle_group: existing ? existing.muscle_group : group,
+    rest_timer_seconds: restSecondsFor(finalName, existing?.rest_timer_seconds),
+    sets: [1, 2, 3].map(i => ({ id: null, set_index: i, set_type: "normal", weight_kg: null, reps: null, done: false }))
   };
+  currentWorkout.exercises.push(ex);
+  saveLocalState();
+  renderExerciseList(document.getElementById("exercise-list"));
+
+  if (!existing) {
+    db.upsertExercise(name, group)
+      .then(() => invalidate("exercises"))
+      .catch(err => console.error("[Skullcrusher] Erreur création exercice dans la bibliothèque", err));
+  }
+  getLastSetsForExercise(finalName).then(lastSets => {
+    const untouched = ex.sets.every(s => !s.id && !s.done && s.weight_kg == null && s.reps == null);
+    if (!lastSets.length || !untouched || !currentWorkout || !currentWorkout.exercises.includes(ex)) return;
+    ex.sets = lastSets.map((s, i) => ({ id: null, set_index: i + 1, set_type: "normal", weight_kg: s.weight_kg ?? null, reps: s.reps ?? null, done: false }));
+    saveLocalState();
+    const list = document.getElementById("exercise-list");
+    if (list) renderExerciseList(list);
+    toast(t("Séries pré-remplies depuis ta dernière séance de {exercise}", { exercise: finalName }));
+  }).catch(histErr => console.error("[Skullcrusher] Erreur récupération historique exercice (pas de pré-remplissage)", histErr));
 }
 
 let restPushBody = "";
