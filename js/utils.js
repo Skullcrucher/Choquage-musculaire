@@ -6,7 +6,7 @@ import { t, locale } from "./i18n.js";
 // Version affichée dans Réglages → À propos. À incrémenter avec
 // CACHE_NAME dans service-worker.js à chaque mise en ligne, pour voir d'un
 // coup d'œil si le téléphone utilise bien la dernière version.
-export const APP_VERSION = "64";
+export const APP_VERSION = "65";
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
@@ -32,6 +32,20 @@ export function esc(value) {
 // calories, plans) : ce sont des estimations, pas un avis de professionnel.
 export function healthNoteHtml() {
   return `<p class="health-note">⚠️ ${t("Estimations indicatives : elles ne remplacent pas l'avis d'un coach diplômé ni d'un médecin. Tu restes responsable de l'usage que tu en fais.")} <a href="conditions.html" target="_blank" rel="noopener">${t("Conditions d'utilisation")}</a></p>`;
+}
+
+// Vide le service worker et les caches puis recharge la dernière version.
+// ?refresh= contourne le cache HTTP de index.html (retiré ensuite par app.js).
+export async function forceUpdate() {
+  try {
+    const regs = (await navigator.serviceWorker?.getRegistrations()) || [];
+    await Promise.all(regs.map(r => r.unregister()));
+    const keys = (await window.caches?.keys()) || [];
+    await Promise.all(keys.map(k => caches.delete(k)));
+  } catch (e) {
+    console.warn("[Skullcrusher] Mise à jour forcée incomplète :", e);
+  }
+  location.replace(location.pathname + "?refresh=" + Date.now() + location.hash);
 }
 
 // N'accepte comme image que les data URL d'image (photos de profil) ou les

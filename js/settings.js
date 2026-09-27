@@ -3,7 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { importCsvFile } from "./import.js";
-import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl, APP_VERSION, healthNoteHtml } from "./utils.js";
+import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl, APP_VERSION, healthNoteHtml, forceUpdate } from "./utils.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { invalidateStatsCache } from "./stats.js";
 import { getExercises, invalidate } from "./cache.js";
@@ -784,18 +784,6 @@ async function setupSpotifyCard(container) {
 
 // Vide le cache hors ligne et recharge : utile si le téléphone garde une
 // ancienne version de l'app (surtout en mode "écran d'accueil" sur iOS).
-async function forceUpdate() {
-  try {
-    const regs = (await navigator.serviceWorker?.getRegistrations()) || [];
-    await Promise.all(regs.map(r => r.unregister()));
-    const keys = (await window.caches?.keys()) || [];
-    await Promise.all(keys.map(k => caches.delete(k)));
-  } catch (e) {
-    console.warn("[Skullcrusher] Mise à jour forcée incomplète :", e);
-  }
-  location.reload();
-}
-
 async function exportCsv() {
   const sets = await db.listAllSets(20000);
   const workouts = await db.listWorkouts(2000);

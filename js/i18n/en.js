@@ -902,5 +902,10 @@ export default {
   "Accepter et continuer": "Accept and continue",
   "Accord enregistré sur cet appareil.": "Agreement saved on this device.",
   "Estimations indicatives : elles ne remplacent pas l'avis d'un coach diplômé ni d'un médecin. Tu restes responsable de l'usage que tu en fais.": "Indicative estimates: they do not replace the advice of a qualified coach or a doctor. You remain responsible for how you use them.",
-  "Partager en image": "Share as image"
+  "Partager en image": "Share as image",
+  "Nouvelle mise à jour disponible": "New update available",
+  "La version {latest} de Skullcrusher est prête (tu as la {current}). Mets à jour pour profiter des nouveautés et des corrections.": "Skullcrusher version {latest} is ready (you have {current}). Update to get the new features and fixes.",
+  "Mettre à jour": "Update",
+  "Plus tard": "Later",
+  "Mise à jour…": "Updating…"
 };

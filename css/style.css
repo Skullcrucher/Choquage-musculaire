@@ -948,3 +948,8 @@ body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var
 .dup-head input, .dup-row input { width: auto; margin-top: 3px; }
 .dup-manual { margin-top: 6px; font-size: 14px; }
 .dup-manual summary { cursor: pointer; color: var(--text-dim); }
+
+/* Fenêtre « nouvelle mise à jour » */
+.update-pop { text-align: center; }
+.update-pop h3 { margin-top: 4px; }
+.update-horns { width: 56px; height: 56px; object-fit: contain; margin: 4px auto 0; display: block; }

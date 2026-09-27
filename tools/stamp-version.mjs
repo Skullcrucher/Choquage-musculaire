@@ -32,4 +32,6 @@ if (html.includes("<!-- version:start")) html = html.replace(/<!-- version:start
 else if (html.includes('<script type="module" src="js/app.js"></script>')) html = html.replace('<script type="module" src="js/app.js"></script>', block);
 else { console.error("Emplacement du script app.js introuvable dans index.html"); process.exit(1); }
 fs.writeFileSync(indexPath, html);
+// Dernière version publiée, lue par l'app pour proposer la mise à jour (update-check.js).
+fs.writeFileSync(path.join(root, "version.json"), JSON.stringify({ version }) + "\n");
 console.log(`index.html : v${version}, ${modules.length} modules versionnés.`);

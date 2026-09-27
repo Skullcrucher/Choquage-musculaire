@@ -901,5 +901,10 @@ export default {
   "Accepter et continuer": "Aksepte ek kontinye",
   "Accord enregistré sur cet appareil.": "Lakor anrezistre lor sa aparey-la.",
   "Estimations indicatives : elles ne remplacent pas l'avis d'un coach diplômé ni d'un médecin. Tu restes responsable de l'usage que tu en fais.": "Estimasion indikativ: zot pa ranplas lavi enn coach diplome ni enn dokter. To res responsab lamanier to servi zot.",
-  "Partager en image": "Partaz an limaz"
+  "Partager en image": "Partaz an limaz",
+  "Nouvelle mise à jour disponible": "Enn nouvo mizazour disponib",
+  "La version {latest} de Skullcrusher est prête (tu as la {current}). Mets à jour pour profiter des nouveautés et des corrections.": "Version {latest} Skullcrusher pare (to ena {current}). Met azour pou profit bann nouvote ek koreksion.",
+  "Mettre à jour": "Met azour",
+  "Plus tard": "Pli tar",
+  "Mise à jour…": "Pe met azour…"
 };

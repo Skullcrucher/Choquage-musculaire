@@ -911,5 +911,10 @@ export default {
   "Accepter et continuer": "Akceptuj i kontynuuj",
   "Accord enregistré sur cet appareil.": "Zgoda zapisana na tym urządzeniu.",
   "Estimations indicatives : elles ne remplacent pas l'avis d'un coach diplômé ni d'un médecin. Tu restes responsable de l'usage que tu en fais.": "Szacunki orientacyjne: nie zastępują porady dyplomowanego trenera ani lekarza. Odpowiadasz za sposób, w jaki z nich korzystasz.",
-  "Partager en image": "Udostępnij jako obraz"
+  "Partager en image": "Udostępnij jako obraz",
+  "Nouvelle mise à jour disponible": "Dostępna nowa aktualizacja",
+  "La version {latest} de Skullcrusher est prête (tu as la {current}). Mets à jour pour profiter des nouveautés et des corrections.": "Wersja {latest} Skullcrusher jest gotowa (masz {current}). Zaktualizuj, aby korzystać z nowości i poprawek.",
+  "Mettre à jour": "Aktualizuj",
+  "Plus tard": "Później",
+  "Mise à jour…": "Aktualizowanie…"
 };
