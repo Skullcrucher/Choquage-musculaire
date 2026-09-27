@@ -63,7 +63,9 @@ service cloud.firestore {
                     && isSafeText(request.resource.data.name, 80);
       allow update: if (isAdmin() || (isSignedIn() && resource.data.get('created_by', '') == request.auth.uid))
                     && request.resource.data.get('created_by', '') == resource.data.get('created_by', '')
-                    && isSafeText(request.resource.data.name, 80);
+                    && isSafeText(request.resource.data.name, 80)
+                    // Fusion de doublons : redirection vers un autre nom.
+                    && (!('merged_into' in request.resource.data) || isSafeText(request.resource.data.merged_into, 80));
       allow delete: if isAdmin()
                     || (isSignedIn() && resource.data.get('created_by', '') == request.auth.uid);
     }

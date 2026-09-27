@@ -10,7 +10,7 @@
 // depuis la routine prévue (routine_id), ou porte son nom, ce jour-là.
 // ============================================================
 import * as db from "./db.js";
-import { toast, openModal, closeModal, esc } from "./utils.js";
+import { toast, openModal, closeModal, esc, healthNoteHtml } from "./utils.js";
 import { getRoutines, getWorkouts } from "./cache.js";
 import { t, locale } from "./i18n.js";
 
@@ -185,6 +185,7 @@ export async function renderPlans(content) {
     <button class="btn btn-primary" id="new-plan" ${routines.length ? "" : "disabled"}>+ ${t("Nouveau plan")}</button>
     ${routines.length ? "" : `<p class="muted">${t("Crée d'abord des routines : un plan les répartit sur les jours de la semaine.")}</p>`}
     <p class="muted" style="font-size:13px;">${t("Un plan enchaîne tes routines sur plusieurs semaines ou mois, en blocs (ex. 4 semaines hypertrophie, puis 3 semaines force, puis 1 semaine de décharge). Le plan actif s'affiche dans l'onglet Séance.")}</p>
+    ${healthNoteHtml()}
     ${plans.map(p => {
       const pos = planPosition(p);
       const status = pos.status === "upcoming" ? t("Commence le {date}", { date: parseDay(p.start_date).toLocaleDateString(locale(), { day: "numeric", month: "long" }) })

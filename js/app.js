@@ -159,6 +159,14 @@ initAuth((user) => {
       switchTab(activeTab);
       // Administrateur : pastille des signalements en attente.
       import("./settings.js").then(m => m.checkReportsBadge()).catch(() => null);
+      // Doublons fusionnés par d'autres (administrateur…) : appliqués à ses données.
+      import("./cache.js").then(async c => {
+        await c.getExercises();
+        const n = await (await import("./db.js")).applyExerciseMerges();
+        if (n) c.invalidate("sets", "routines");
+      }).catch(e => console.warn("[Skullcrusher] Fusion des doublons :", e));
+      // Conditions d'utilisation (avertissement santé) : accord une fois par compte.
+      import("./terms.js").then(m => m.ensureTermsAccepted(user)).catch(e => console.warn("[Skullcrusher] Conditions :", e));
       // Retour de la page de connexion Spotify (?code=...), s'il y en a un.
       if (/[?&](code|error)=/.test(location.search)) {
         import("./spotify-connect.js")

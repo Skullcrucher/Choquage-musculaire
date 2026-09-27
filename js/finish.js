@@ -2,7 +2,7 @@
 // FIN DE SÉANCE — records, "son du record", playlist, bande-son, partage
 // ============================================================
 import * as db from "./db.js";
-import { openModal, closeModal, esc, estimate1RM } from "./utils.js";
+import { openModal, closeModal, esc, estimate1RM, healthNoteHtml } from "./utils.js";
 import { getSetsForExercise, getRoutines } from "./cache.js";
 import { normalizePlaylistUrl, parseSongInput, songLabel, SPOTIFY_ICON } from "./music.js";
 import { t, tn } from "./i18n.js";
@@ -147,6 +147,7 @@ export async function openFinishDialog(workout, summary) {
             </label>`).join("")}
         </div>
         <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Coché = la routine (et ton plan) utilisera cette charge à la prochaine séance. Décoche pour garder la charge actuelle.")}</p>
+        ${healthNoteHtml()}
       ` : ""}
 
       ${partners.friends.length ? `
@@ -164,6 +165,7 @@ export async function openFinishDialog(workout, summary) {
         </div>
         <p class="muted" id="fin-kcal" style="margin:0 0 6px; font-size:13px;"></p>
       ` : `<p class="muted" style="margin:0 0 6px; font-size:13px;">${t("Renseigne sexe, âge, taille et poids dans Réglages → 🔥 Calories pour une estimation.")}</p>`}
+      ${hasBody ? healthNoteHtml() : ""}
       <input id="fin-watch" type="number" inputmode="numeric" min="0" max="5000" placeholder="${t("kcal de ta montre (facultatif)")}">
 
       <label class="list-row" style="cursor:pointer; margin-top:10px;">

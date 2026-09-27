@@ -65,6 +65,7 @@ export function renderLoginGate(container) {
       <p class="muted" id="login-error" style="margin-top:12px; color:var(--red);"></p>
       <button class="props-btn-invisible" id="forgot-btn" style="background:none; border:none; color:var(--steel); font-size:13px; margin-top:6px; cursor:pointer;">${t("Mot de passe oublié ?")}</button>
       <p class="muted" style="margin-top:18px; font-size:12px;">${t("Tes séances restent privées, sauf celles que tu partages sur le feed. La bibliothèque d'exercices est commune à tous ; tes routines sont personnelles.")}</p>
+      <p class="muted" style="font-size:12px; margin:8px 0 0;">${t("En créant un compte, tu acceptes les {terms}. Skullcrusher ne remplace pas un coach diplômé ni un médecin.", { terms: `<a href="conditions.html" style="color:var(--text);">${t("conditions d'utilisation")}</a>` })}</p>
       <a href="privacy.html" class="muted" style="font-size:12px; margin-top:8px; display:inline-block;">${t("Politique de confidentialité")}</a>
       <div style="margin-top:16px; max-width:220px; margin-left:auto; margin-right:auto;">${langPickerHtml("login-lang")}</div>
     </div>
