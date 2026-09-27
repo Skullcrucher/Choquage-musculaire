@@ -1002,3 +1002,27 @@ body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var
 .plan-wdot.missed { background: rgba(224,36,36,0.25); color: var(--amber); }
 .plan-wdot.todo { background: var(--surface-raised); color: var(--text-dim); }
 .plan-wcount { font-size: 12px; color: var(--text-dim); text-align: right; }
+
+/* Notes ★ */
+.stars { color: #F5B301; letter-spacing: 1px; }
+.stars-off { color: var(--surface-raised); }
+.stars-empty { color: var(--text-dim); font-size: 13px; }
+.rate-btn { background: var(--surface-raised); border: 1px solid var(--border); color: var(--text); border-radius: 999px; padding: 5px 10px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.rate-btn.rated { border-color: #F5B301; }
+.star-picker { display: flex; justify-content: center; gap: 6px; margin: 10px 0 4px; }
+.star-picker button { background: none; border: none; font-size: 40px; line-height: 1; color: var(--surface-raised); cursor: pointer; transition: transform 0.1s, color 0.1s; }
+.star-picker button.on { color: #F5B301; }
+.star-picker button:active { transform: scale(1.2); }
+.official-badge { display: inline-block; white-space: nowrap; font-size: 11px; font-weight: 700; color: #0B0B0C; background: linear-gradient(90deg, #F5B301, #FFD95A); border-radius: 999px; padding: 2px 8px; vertical-align: middle; }
+.discover-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 0 0 12px; background: var(--surface-raised); border-radius: var(--radius); padding: 4px; }
+.plan-sched { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin: 8px 0; }
+.plan-sched div { background: var(--surface-raised); border-radius: 6px; padding: 5px 2px; text-align: center; font-size: 10px; line-height: 1.2; color: var(--text-dim); overflow: hidden; }
+.plan-sched div b { display: block; font-size: 11px; color: var(--text); }
+.plan-sched div.on { background: rgba(224,36,36,0.14); color: var(--text); }
+
+/* Réglages : sections repliables */
+.card.collapsible > .card-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; margin-bottom: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+.card.collapsible > .collapse-body { display: none; margin-top: 12px; }
+.card.collapsible.open > .collapse-body { display: block; }
+.collapse-chevron { font-size: 22px; line-height: 1; color: var(--text-dim); transition: transform 0.2s; flex-shrink: 0; }
+.card.collapsible.open .collapse-chevron { transform: rotate(90deg); color: var(--amber); }

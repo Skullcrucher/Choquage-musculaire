@@ -1,17 +1,16 @@
 // ============================================================
-// ONGLET HISTORIQUE — calendrier + liste des séances passées + routines
+// ONGLET HISTORIQUE — calendrier + liste des séances passées
+// (routines, plans et suivi du plan : onglet Séance)
 // ============================================================
 import { fmtDateTime, fmtDuration, esc } from "./utils.js";
 import { getBody, workoutCalories } from "./calories.js";
 import { getWorkouts } from "./cache.js";
 import { openWorkoutDetail } from "./workout-detail.js";
-import { renderRoutines } from "./routines.js";
 import { t, locale } from "./i18n.js";
 
 let viewMonth = new Date();
 let workoutsCache = [];
 let selectedDay = null;
-let mode = "mine"; // "mine" | "plan" | "routines"
 
 // Initiales des jours (lundi → dimanche) dans la langue de l'app.
 const DOW = Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(locale(), { weekday: "narrow" }));
@@ -20,36 +19,9 @@ export async function renderHistorique(container) {
   workoutsCache = await getWorkouts();
   container.innerHTML = `
     <h1 class="section-title">${t("Historique")}</h1>
-    <div class="chip-row" id="mode-chips" style="margin-bottom:14px;">
-      <div class="chip ${mode === "mine" ? "active" : ""}" data-mode="mine">${t("Mes séances")}</div>
-      <div class="chip ${mode === "plan" ? "active" : ""}" data-mode="plan">📅 ${t("Suivi du plan")}</div>
-      <div class="chip ${mode === "routines" ? "active" : ""}" data-mode="routines">${t("Routines")}</div>
-    </div>
     <div id="hist-content"></div>
   `;
-  container.querySelectorAll("#mode-chips .chip").forEach(chip => {
-    chip.onclick = () => {
-      mode = chip.dataset.mode;
-      container.querySelectorAll("#mode-chips .chip").forEach(c => c.classList.toggle("active", c === chip));
-      drawContent(container);
-    };
-  });
-  await drawContent(container);
-}
-
-async function drawContent(container) {
-  const content = container.querySelector("#hist-content");
-  if (!content) return;
-  if (mode === "routines") {
-    await renderRoutines(content);
-  } else if (mode === "plan") {
-    content.innerHTML = `<div class="empty-state"><span class="num">···</span>${t("Chargement")}</div>`;
-    await (await import("./plans.js")).renderPlanTracking(content, {
-      onOpenWorkout: (w) => w && openWorkoutDetail(w, () => drawContent(container))
-    });
-  } else {
-    renderMine(content);
-  }
+  renderMine(container.querySelector("#hist-content"));
 }
 
 function renderMine(content) {

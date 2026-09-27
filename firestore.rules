@@ -56,6 +56,49 @@ service cloud.firestore {
       allow delete: if isSignedIn() && request.auth.uid == uid;
     }
 
+    // Plans partagés : copie d'un plan (et de ses routines) visible par les
+    // amis choisis ou par tous. Seul l'auteur écrit.
+    match /shared_plans/{planId} {
+      allow read: if isSignedIn() && (resource.data.owner_uid == request.auth.uid
+                    || resource.data.visibility == 'public'
+                    || request.auth.uid in resource.data.get('shared_with', []));
+      allow create, update: if isSignedIn()
+                    && request.resource.data.owner_uid == request.auth.uid
+                    && (resource == null || resource.data.owner_uid == request.auth.uid)
+                    && isSafeText(request.resource.data.get('name', ''), 80)
+                    && isSafeText(request.resource.data.get('description', ''), 500)
+                    && isSafeText(request.resource.data.get('owner_name', ''), 30)
+                    && request.resource.data.visibility in ['friends', 'public']
+                    && request.resource.data.get('shared_with', []) is list
+                    && request.resource.data.get('shared_with', []).size() <= 200
+                    && request.resource.data.routines is list
+                    && request.resource.data.routines.size() <= 14
+                    && request.resource.data.blocks is list
+                    && request.resource.data.blocks.size() <= 20;
+      allow delete: if isSignedIn() && resource.data.owner_uid == request.auth.uid;
+    }
+
+    // Notes de routines et de plans (1 à 5 étoiles), une par personne et
+    // par cible ; pas de note sur sa propre routine.
+    function notOwnRoutine(target) {
+      return !target.matches('^routine_.*')
+        || !exists(/databases/$(database)/documents/routines/$(target.split('_')[1]))
+        || get(/databases/$(database)/documents/routines/$(target.split('_')[1])).data.owner_uid != request.auth.uid;
+    }
+    match /ratings/{ratingId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn()
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.target is string
+                    && request.resource.data.target.matches('^(routine|plan)_[A-Za-z0-9-]{1,60}$')
+                    && ratingId == request.resource.data.target + '_' + request.auth.uid
+                    && request.resource.data.stars is int
+                    && request.resource.data.stars >= 1 && request.resource.data.stars <= 5
+                    && request.resource.data.keys().hasOnly(['target', 'uid', 'stars', 'updated_at'])
+                    && notOwnRoutine(request.resource.data.target);
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
     // Signalements de profils : n'importe quel utilisateur connecté en crée
     // (un seul par personne et par profil : id = signaleur_signalé), seul
     // l'administrateur les lit et les traite.

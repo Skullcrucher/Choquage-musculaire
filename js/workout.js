@@ -45,13 +45,38 @@ export async function renderSeance(container) {
     if (currentWorkout.presence === undefined) currentWorkout.presence = presenceDefault();
     renderActiveWorkout(container);
   } else {
+    seanceMain = "start"; // ouverture de l'onglet : toujours sur « Démarrer »
     await renderStartScreen(container);
   }
 }
 
 const LS_START_MODE = "skullcrusher_start_mode"; // "routine" | "plan"
+let seanceMain = "start"; // "start" | "tracking" | "routines"
 
+// Écran Séance sans séance en cours : démarrer, suivi du plan, routines et plans.
 async function renderStartScreen(container) {
+  container.innerHTML = `
+    <h1 class="section-title">${t("Séance")}</h1>
+    <div class="chip-row" id="seance-main" style="margin-bottom:14px;">
+      <div class="chip ${seanceMain === "start" ? "active" : ""}" data-smain="start">▶ ${t("Démarrer")}</div>
+      <div class="chip ${seanceMain === "tracking" ? "active" : ""}" data-smain="tracking">📅 ${t("Suivi du plan")}</div>
+      <div class="chip ${seanceMain === "routines" ? "active" : ""}" data-smain="routines">📋 ${t("Routines")}</div>
+    </div>
+    <div id="seance-main-body"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>
+  `;
+  container.querySelectorAll("[data-smain]").forEach(c => c.onclick = () => { seanceMain = c.dataset.smain; renderStartScreen(container); });
+  const body = container.querySelector("#seance-main-body");
+  if (seanceMain === "tracking") {
+    const { openWorkoutDetail } = await import("./workout-detail.js");
+    await (await import("./plans.js")).renderPlanTracking(body, { onOpenWorkout: (w) => w && openWorkoutDetail(w, () => renderStartScreen(container)) });
+  } else if (seanceMain === "routines") {
+    await (await import("./routines.js")).renderRoutines(body);
+  } else {
+    await drawStartPanel(body, () => renderStartScreen(container));
+  }
+}
+
+async function drawStartPanel(container, refreshAll) {
   const [allRoutines, workouts, planView, planIds] = await Promise.all([
     getRoutines(), getWorkouts(),
     import("./plans.js").then(m => m.planSessionsHtml()).catch(e => { console.warn("[Skullcrusher] Plan indisponible", e); return null; }),
@@ -65,7 +90,6 @@ async function renderStartScreen(container) {
   if (startMode !== "routine" && startMode !== "plan") startMode = planView?.sessions?.length ? "plan" : "routine";
   const weekCount = countThisWeek(workouts);
   container.innerHTML = `
-    <h1 class="section-title">${t("Séance")}</h1>
     <div class="card-hero">
       <div class="muted" style="margin-bottom:2px;">${t("Cette semaine")}</div>
       <span class="num" style="font-size:56px; color:var(--amber); display:block; line-height:1;">${weekCount}</span>
@@ -83,7 +107,7 @@ async function renderStartScreen(container) {
   const draw = () => {
     if (startMode === "plan") {
       body.innerHTML = planView?.html || `<p class="muted">${t("Plan indisponible.")}</p>`;
-      if (planView?.card?.bind) planView.card.bind(body, () => renderStartScreen(container));
+      if (planView?.card?.bind) planView.card.bind(body, refreshAll);
       body.querySelectorAll("[data-plan-session]").forEach(el => {
         const s = planView.sessions[+el.dataset.planSession];
         el.onclick = (e) => {

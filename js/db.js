@@ -546,6 +546,58 @@ export async function copyRoutine(routine) {
   return ref.id;
 }
 
+// ---------- Plans partagés ----------
+// shared_plans/{id} : copie d'un plan et de ses routines, visible par les
+// amis choisis ou par tous (Découvrir → Plans). Le plan d'origine reste
+// privé (user_private) et garde shared_id pour mettre à jour le partage.
+export async function listSharedPlans() {
+  const uid = requireUid();
+  const [pub, shared, mine] = await Promise.all([
+    getDocs(query(collection(dbase, "shared_plans"), where("visibility", "==", "public"), limit(300))),
+    getDocs(query(collection(dbase, "shared_plans"), where("shared_with", "array-contains", uid), limit(200))),
+    getDocs(query(collection(dbase, "shared_plans"), where("owner_uid", "==", uid), limit(50)))
+  ]);
+  const byId = new Map();
+  for (const d of [...pub.docs, ...shared.docs, ...mine.docs]) byId.set(d.id, { id: d.id, ...d.data() });
+  return [...byId.values()];
+}
+export async function saveSharedPlan(id, data) {
+  const now = new Date().toISOString();
+  const payload = { ...data, owner_uid: requireUid(), owner_name: await myPublicName(), updated_at: now };
+  if (id) { await setDoc(doc(dbase, "shared_plans", id), payload); return id; }
+  const ref = await addDoc(collection(dbase, "shared_plans"), { ...payload, created_at: now });
+  return ref.id;
+}
+export async function deleteSharedPlan(id) {
+  await deleteDoc(doc(dbase, "shared_plans", id));
+}
+
+// ---------- Notes (1 à 5 étoiles) ----------
+// ratings/{cible}_{uid} ; cible = "routine_<id>" ou "plan_<id>" (plan
+// partagé ou programme Skullcrusher). La moyenne est calculée à la lecture.
+export async function getRatings(targets) {
+  const uid = requireUid();
+  const list = [...new Set(targets)].filter(Boolean);
+  const out = {};
+  list.forEach(tg => { out[tg] = { sum: 0, count: 0, mine: 0 }; });
+  for (let i = 0; i < list.length; i += 30) {
+    const snap = await getDocs(query(collection(dbase, "ratings"), where("target", "in", list.slice(i, i + 30))));
+    snap.docs.forEach(d => {
+      const r = d.data(), o = out[r.target];
+      if (!o || !(r.stars >= 1 && r.stars <= 5)) return;
+      o.sum += r.stars; o.count++;
+      if (r.uid === uid) o.mine = r.stars;
+    });
+  }
+  return out;
+}
+export async function rateTarget(target, stars) {
+  const uid = requireUid();
+  const ref = doc(dbase, "ratings", `${target}_${uid}`);
+  if (!stars) { await deleteDoc(ref); return; }
+  await setDoc(ref, { target, uid, stars, updated_at: new Date().toISOString() });
+}
+
 // ---------- Votes ----------
 // Un vote = routines/{id}/votes/{uid} + vote_count incrémenté dans le même
 // lot (les règles vérifient que les deux vont ensemble, donc un vote par
