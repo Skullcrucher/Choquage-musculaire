@@ -38,6 +38,24 @@ service cloud.firestore {
       allow update: if isAdmin();
     }
 
+    // Statut « à la salle » : présent tant qu'une séance est en cours (et
+    // que l'utilisateur ne l'a pas masqué). Lisible par soi et par ses amis
+    // (amitié acceptée) seulement.
+    function isFriendOf(uid) {
+      return exists(/databases/$(database)/documents/friendships/$(request.auth.uid < uid ? request.auth.uid + '_' + uid : uid + '_' + request.auth.uid))
+        && get(/databases/$(database)/documents/friendships/$(request.auth.uid < uid ? request.auth.uid + '_' + uid : uid + '_' + request.auth.uid)).data.status == 'accepted';
+    }
+    match /presence/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isFriendOf(uid));
+      allow create, update: if isSignedIn() && request.auth.uid == uid
+                    && request.resource.data.keys().hasOnly(['since', 'last_seen', 'title', 'name'])
+                    && request.resource.data.since is string
+                    && request.resource.data.last_seen is string
+                    && isSafeText(request.resource.data.get('title', ''), 80)
+                    && isSafeText(request.resource.data.get('name', ''), 30);
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
     // Signalements de profils : n'importe quel utilisateur connecté en crée
     // (un seul par personne et par profil : id = signaleur_signalé), seul
     // l'administrateur les lit et les traite.

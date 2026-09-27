@@ -321,6 +321,25 @@ export async function deleteExercise(id) {
   await deleteDoc(doc(dbase, "exercises", id));
 }
 
+// ==================== STATUT « À LA SALLE » ====================
+// presence/{uid} existe pendant une séance en cours (si l'utilisateur ne
+// s'est pas masqué) ; seuls ses amis peuvent le lire (firestore.rules).
+export async function setPresence(data) {
+  await setDoc(doc(dbase, "presence", requireUid()), data);
+}
+export async function clearPresence() {
+  await deleteDoc(doc(dbase, "presence", requireUid()));
+}
+export async function getPresences(uids) {
+  const res = await Promise.all([...new Set(uids)].map(async (uid) => {
+    try {
+      const snap = await getDoc(doc(dbase, "presence", uid));
+      return snap.exists() ? { uid, ...snap.data() } : null;
+    } catch (_) { return null; } // plus amis entre-temps
+  }));
+  return res.filter(Boolean);
+}
+
 // ==================== DOUBLONS D'EXERCICES ====================
 // Fusionner « from » dans « to » : ses propres séries et routines prennent
 // le nom gardé (historique, stats et records réunis), le temps de repos

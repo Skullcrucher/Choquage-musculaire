@@ -906,5 +906,15 @@ export default {
   "La version {latest} de Skullcrusher est prête (tu as la {current}). Mets à jour pour profiter des nouveautés et des corrections.": "Version {latest} Skullcrusher pare (to ena {current}). Met azour pou profit bann nouvote ek koreksion.",
   "Mettre à jour": "Met azour",
   "Plus tard": "Pli tar",
-  "Mise à jour…": "Pe met azour…"
+  "Mise à jour…": "Pe met azour…",
+  "depuis {n} min": "depi {n} min",
+  "depuis {h} h {m}": "depi {h}h{m}",
+  "À la salle en ce moment": "Lasal aster-la",
+  "À la salle": "Lasal",
+  "Montrer à mes amis quand je suis à la salle": "Montre mo bann kamarad kan mo lasal",
+  "Pendant une séance en cours, dans leur feed. Modifiable pour chaque séance.": "Pandan enn seans ki pe fer, dan zot feed. Kapav sanz li pou sak seans.",
+  "Tes amis voient dans le feed que tu es à la salle": "To bann kamarad trouve dan feed ki to lasal",
+  "Invisible": "Invizib",
+  "Tes amis voient que tu es à la salle": "To bann kamarad trouve ki to lasal",
+  "Invisible pour cette séance": "Invizib pou sa seans-la"
 };

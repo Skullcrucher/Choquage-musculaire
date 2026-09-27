@@ -953,3 +953,19 @@ body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var
 .update-pop { text-align: center; }
 .update-pop h3 { margin-top: 4px; }
 .update-horns { width: 56px; height: 56px; object-fit: contain; margin: 4px auto 0; display: block; }
+
+/* Statut « à la salle » */
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgba(95,190,114,0.6); } 70% { box-shadow: 0 0 0 7px rgba(95,190,114,0); } 100% { box-shadow: 0 0 0 0 rgba(95,190,114,0); } }
+.live-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #5FBE72; margin-right: 6px; vertical-align: middle; animation: live-pulse 1.8s infinite; flex-shrink: 0; }
+.gym-now { background: linear-gradient(135deg, rgba(95,190,114,0.10), rgba(224,36,36,0.06)); border: 1px solid rgba(95,190,114,0.35); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 14px; }
+.gym-now-title { font-family: 'Anton', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; font-size: 15px; margin-bottom: 6px; display: flex; align-items: center; }
+.gym-now-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+.gym-now-row + .gym-now-row { border-top: 1px solid var(--border); }
+.gym-now-avatar { position: relative; width: 38px; height: 38px; border-radius: 50%; background: var(--surface-raised) center/cover no-repeat; display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--amber); flex-shrink: 0; }
+.live-dot-badge { position: absolute; right: -2px; bottom: -2px; margin: 0; border: 2px solid var(--bg, #0B0B0C); width: 12px; height: 12px; }
+.gym-now-name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gym-now-sub { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gym-badge { font-size: 11px; font-weight: 600; color: #5FBE72; background: rgba(95,190,114,0.12); border-radius: 999px; padding: 2px 7px; margin-left: 4px; }
+.workout-subline { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.presence-toggle { background: var(--surface-raised); color: var(--text-dim); border: 1px solid var(--border); border-radius: 999px; padding: 5px 11px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; }
+.presence-toggle.on { color: #5FBE72; border-color: rgba(95,190,114,0.45); background: rgba(95,190,114,0.10); }

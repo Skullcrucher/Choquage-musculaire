@@ -166,6 +166,8 @@ initAuth((user) => {
         if (n) c.invalidate("sets", "routines");
       }).catch(e => console.warn("[Skullcrusher] Fusion des doublons :", e));
       // Conditions d'utilisation (avertissement santé) : accord une fois par compte.
+      // Réglage « à la salle » du profil (peut venir d'un autre appareil).
+      import("./presence.js").then(m => m.syncPresenceDefault()).catch(() => null);
       // Nouvelle version publiée ? Proposée d'abord, puis les conditions.
       import("./update-check.js").then(m => m.checkForUpdate({ force: true })).catch(() => null)
         .then(() => import("./terms.js")).then(m => m.ensureTermsAccepted(user)).catch(e => console.warn("[Skullcrusher] Conditions :", e));

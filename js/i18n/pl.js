@@ -916,5 +916,15 @@ export default {
   "La version {latest} de Skullcrusher est prête (tu as la {current}). Mets à jour pour profiter des nouveautés et des corrections.": "Wersja {latest} Skullcrusher jest gotowa (masz {current}). Zaktualizuj, aby korzystać z nowości i poprawek.",
   "Mettre à jour": "Aktualizuj",
   "Plus tard": "Później",
-  "Mise à jour…": "Aktualizowanie…"
+  "Mise à jour…": "Aktualizowanie…",
+  "depuis {n} min": "od {n} min",
+  "depuis {h} h {m}": "od {h} h {m}",
+  "À la salle en ce moment": "Teraz na siłowni",
+  "À la salle": "Na siłowni",
+  "Montrer à mes amis quand je suis à la salle": "Pokazuj znajomym, kiedy jestem na siłowni",
+  "Pendant une séance en cours, dans leur feed. Modifiable pour chaque séance.": "Podczas trwającego treningu, w ich aktualnościach. Można zmienić dla każdego treningu.",
+  "Tes amis voient dans le feed que tu es à la salle": "Znajomi widzą w aktualnościach, że jesteś na siłowni",
+  "Invisible": "Niewidoczny",
+  "Tes amis voient que tu es à la salle": "Znajomi widzą, że jesteś na siłowni",
+  "Invisible pour cette séance": "Niewidoczny podczas tego treningu"
 };

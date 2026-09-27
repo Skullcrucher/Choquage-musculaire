@@ -907,5 +907,15 @@ export default {
   "La version {latest} de Skullcrusher est prête (tu as la {current}). Mets à jour pour profiter des nouveautés et des corrections.": "Skullcrusher version {latest} is ready (you have {current}). Update to get the new features and fixes.",
   "Mettre à jour": "Update",
   "Plus tard": "Later",
-  "Mise à jour…": "Updating…"
+  "Mise à jour…": "Updating…",
+  "depuis {n} min": "for {n} min",
+  "depuis {h} h {m}": "for {h} h {m}",
+  "À la salle en ce moment": "At the gym right now",
+  "À la salle": "At the gym",
+  "Montrer à mes amis quand je suis à la salle": "Show my friends when I'm at the gym",
+  "Pendant une séance en cours, dans leur feed. Modifiable pour chaque séance.": "During a workout in progress, in their feed. Can be changed for each workout.",
+  "Tes amis voient dans le feed que tu es à la salle": "Your friends see in the feed that you're at the gym",
+  "Invisible": "Invisible",
+  "Tes amis voient que tu es à la salle": "Your friends can see you're at the gym",
+  "Invisible pour cette séance": "Invisible for this workout"
 };

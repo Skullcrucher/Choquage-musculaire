@@ -58,6 +58,7 @@ const APP_SHELL = [
   "./js/terms.js",
   "./js/exercise-dupes.js",
   "./js/update-check.js",
+  "./js/presence.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/logo.png",
