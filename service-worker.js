@@ -1,10 +1,11 @@
 // À incrémenter avec APP_VERSION (js/utils.js) à chaque mise en ligne.
-const CACHE_NAME = "skullcrusher-cache-v63";
+const CACHE_NAME = "skullcrusher-cache-v65";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
   "./privacy.html",
+  "./conditions.html",
   "./css/style.css",
   "./fonts/anton-latin-400-normal.woff2",
   "./fonts/inter-latin-400-normal.woff2",
@@ -53,6 +54,11 @@ const APP_SHELL = [
   "./js/exercises-seed.js",
   "./js/exercise-guides.js",
   "./js/exercise-detail.js",
+  "./js/share-card.js",
+  "./js/terms.js",
+  "./js/exercise-dupes.js",
+  "./js/update-check.js",
+  "./js/presence.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/logo.png",
@@ -84,6 +90,8 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== "GET" || url.origin !== location.origin) return;
+  // Numéro de la dernière version (update-check.js) : toujours le réseau, jamais en cache.
+  if (url.pathname.endsWith("/version.json")) return;
 
   event.respondWith(
     fetch(event.request, { cache: "no-cache" }).then((resp) => {

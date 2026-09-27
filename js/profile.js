@@ -347,6 +347,10 @@ export async function openProfileEditor(onSaved = () => {}) {
       <span>${t("Afficher mes chiffres (séances, tonnes, rythme)")}</span>
       <input type="checkbox" id="pf-stats" ${p.show_stats ? "checked" : ""} style="width:auto;">
     </label>
+    <label class="list-row" style="cursor:pointer;">
+      <span>🟢 ${t("Montrer à mes amis quand je suis à la salle")}<br><span class="muted" style="font-size:12px;">${t("Pendant une séance en cours, dans leur feed. Modifiable pour chaque séance.")}</span></span>
+      <input type="checkbox" id="pf-presence" ${p.show_presence !== false ? "checked" : ""} style="width:auto;">
+    </label>
 
     <div class="profile-section-title">🏆 ${t("Exercices phares ({n} max)", { n: MAX_HIGHLIGHTS })}</div>
     <p class="muted" style="margin-top:0; font-size:13px;">${t("Pour chacun : ta meilleure 1RM estimée, ta meilleure série et ta progression sur 12 mois, mises à jour après chaque séance.")}</p>
@@ -419,12 +423,14 @@ export async function openProfileEditor(onSaved = () => {}) {
           gym: val("#pf-gym"),
           since_year: since >= 1950 && since <= year ? since : null,
           show_stats: showStats,
+          show_presence: modalEl.querySelector("#pf-presence").checked,
           public_stats: publicStats,
           highlights,
           music: { ...links, artist_name: val("#pf-artist-name"), provider: val("#pf-provider") },
           has_music: !!(links.playlist_url || links.artist_url || links.spotify_profile_url || val("#pf-artist-name"))
         });
         setMyProvider(val("#pf-provider"));
+        import("./presence.js").then(m => m.rememberPresenceDefault(modalEl.querySelector("#pf-presence")?.checked ?? true)).catch(() => null);
         closeModal();
         toast(t("Profil mis à jour"));
         onSaved();

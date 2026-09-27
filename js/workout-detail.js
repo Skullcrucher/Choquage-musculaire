@@ -121,6 +121,7 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
           `).join("")}
         </div>
       `).join("") || `<p class="muted">${t("Aucune série enregistrée.")}</p>`}
+      ${isOwner ? `<button class="btn btn-primary share-btn" id="share-workout" style="margin-bottom:8px;">📸 ${t("Partager en image")}</button>` : ""}
       ${isOwner ? `<button class="btn btn-secondary" id="edit-workout">✏️ ${t("Modifier la séance")}</button>` : ""}
       ${isOwner && friendUids.length ? `
         <button class="btn btn-secondary btn-sm" id="edit-partners" style="margin-top:8px;">🤝 ${t("Entraîné avec…")}</button>
@@ -176,6 +177,12 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
     bindProfiles();
     bindSongLinks(modalEl);
 
+    const shareWorkoutBtn = modalEl.querySelector("#share-workout");
+    if (shareWorkoutBtn) shareWorkoutBtn.onclick = async () => {
+      const names = partners.map(uid => profiles[uid]?.display_name).filter(Boolean);
+      closeModal();
+      (await import("./share-card.js")).openShareCard({ kind: "workout", workout, partners: names });
+    };
     const editWorkoutBtn = modalEl.querySelector("#edit-workout");
     if (editWorkoutBtn) editWorkoutBtn.onclick = () => openWorkoutEditor(workout, sets, body, () => reopen("gym"), () => reopen("gym"));
 

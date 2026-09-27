@@ -1,7 +1,7 @@
 // ============================================================
 // FICHE D'EXERCICE — muscles, conseils, vidéo, historique
 // ============================================================
-import { openModal, closeModal, estimate1RM, isoWeek, fmtDateTime, esc } from "./utils.js";
+import { openModal, closeModal, estimate1RM, isoWeek, fmtDateTime, esc, healthNoteHtml } from "./utils.js";
 import { getSetsForExercise } from "./cache.js";
 import { EXERCISE_GUIDES } from "./exercise-guides.js";
 import { t, getLang } from "./i18n.js";
@@ -63,6 +63,7 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "")
           <div class="stat-box"><span class="num">${best1RM}</span><span class="lbl">${t("1RM estimée (kg)")}</span></div>
         </div>
         <canvas id="detail-chart" height="160"></canvas>
+        ${healthNoteHtml()}
         <div style="margin-top:10px;">
           ${sets.slice(0, 6).map(s => `
             <div class="list-row" style="cursor:default;">
@@ -74,9 +75,12 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "")
       ` : `<p class="muted">${t("Pas encore de série enregistrée pour cet exercice.")}</p>`}
     </div>
 
-    <button class="btn btn-secondary" id="detail-close" style="margin-top:16px;">${t("Fermer")}</button>
+    ${sets.length ? `<button class="btn btn-primary share-btn" id="detail-share" style="margin-top:16px;">📸 ${t("Partager ma progression")}</button>` : ""}
+    <button class="btn btn-secondary" id="detail-close" style="margin-top:10px;">${t("Fermer")}</button>
   `, (modalEl) => {
     modalEl.querySelector("#detail-close").onclick = closeModal;
+    const shareBtn = modalEl.querySelector("#detail-share");
+    if (shareBtn) shareBtn.onclick = async () => { closeModal(); (await import("./share-card.js")).openShareCard({ kind: "exercise", exercise: exerciseName }); };
     if (sets.length) renderDetailChart(modalEl, sets);
   });
 }

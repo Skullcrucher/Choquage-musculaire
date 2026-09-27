@@ -50,6 +50,7 @@ export async function renderFriends(container) {
   const knownUids = new Map(friendships.map(f => [f.other_uid, f]));
 
   container.innerHTML = `
+    <div id="gym-now"></div>
     ${myProfile?.display_name ? "" : `<div class="card" style="border-color:var(--amber);"><p style="margin:0;">${t("Choisis d'abord un <b>pseudo</b> dans Réglages → Compte : c'est grâce à lui que tes amis pourront te trouver.")}</p></div>`}
     <div class="card">
       <div class="card-title">${t("Ajouter un ami")}</div>
@@ -72,6 +73,12 @@ export async function renderFriends(container) {
       ${outgoing.map(f => personRow({ uid: f.other_uid, ...profiles[f.other_uid] }, `<button class="btn btn-sm btn-secondary" data-remove="${esc(f.id)}">${t("Annuler")}</button>`)).join("")}
     </div>` : ""}
   `;
+  // Amis en pleine séance, rafraîchi chaque minute tant que l'onglet est affiché.
+  const gymEl = container.querySelector("#gym-now");
+  const refreshGym = () => import("./presence.js").then(m => m.renderGymNow(gymEl, { onOpenProfile: openProfile })).catch(e => console.warn("[Skullcrusher] À la salle :", e));
+  refreshGym();
+  const gymTimer = setInterval(() => { if (!gymEl.isConnected) clearInterval(gymTimer); else if (document.visibilityState === "visible") refreshGym(); }, 60 * 1000);
+
 
   const refresh = () => renderFriends(container);
   const bindProfiles = (root) => root.querySelectorAll("[data-profile]").forEach(el => {

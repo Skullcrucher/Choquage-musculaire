@@ -3,7 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { importCsvFile } from "./import.js";
-import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl, APP_VERSION } from "./utils.js";
+import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl, APP_VERSION, healthNoteHtml, forceUpdate } from "./utils.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { invalidateStatsCache } from "./stats.js";
 import { getExercises, invalidate } from "./cache.js";
@@ -118,6 +118,7 @@ export async function renderReglages(container) {
         <summary class="muted" style="cursor:pointer;">${t("Comment c'est calculé ?")}</summary>
         <p class="muted" style="font-size:13px;">${t("Calories = MET × métabolisme de repos × durée. Le métabolisme de repos vient de ton sexe, âge, taille et poids (formule de Harris-Benedict révisée). Le MET de la musculation vient du Compendium of Physical Activities : 3,5 (effort léger), 5 (modéré), 6 (intense) ; il couvre toute la séance, repos compris.")}</p>
         <p class="muted" style="font-size:13px;">${t("La durée va du début à la fin de la séance, en s'arrêtant 10 min après ta dernière série. L'effort est proposé d'après le rythme de la séance (séries par heure) et se corrige en fin de séance. Précision : ±25 % environ. Si tu as une montre cardio, saisis ses calories en fin de séance : elles remplacent l'estimation.")}</p>
+        ${healthNoteHtml()}
       </details>
     </div>
 
@@ -180,7 +181,7 @@ export async function renderReglages(container) {
       <div class="card-title">${t("À propos")}</div>
       <p class="muted" style="margin-top:0;">${t("Version de l'app : {version} · Projet Firebase : {project}", { version: `<b>${APP_VERSION}</b>`, project: esc(firebaseConfig.projectId) })}</p>
       <button class="btn btn-secondary btn-sm" id="force-update">${t("Forcer la mise à jour")}</button>
-      <p style="margin:10px 0 0;"><a href="privacy.html" style="color:var(--text); text-decoration-color:var(--amber);">${t("Politique de confidentialité")}</a></p>
+      <p style="margin:10px 0 0;"><a href="conditions.html" style="color:var(--text); text-decoration-color:var(--amber);">${t("Conditions d'utilisation")}</a> · <a href="privacy.html" style="color:var(--text); text-decoration-color:var(--amber);">${t("Politique de confidentialité")}</a></p>
       <p class="muted">${t("Ajoute cette page à ton écran d'accueil (icône Partager → \"Sur l'écran d'accueil\") pour l'utiliser comme une app.")}</p>
     </div>
 
@@ -189,6 +190,7 @@ export async function renderReglages(container) {
       <p class="muted" style="margin-top:0;">${t("Complète ta bibliothèque avec {n} exercices standards (barre, haltère, machine, poulie, poids du corps) — les exercices déjà présents ne sont pas dupliqués.", { n: EXERCISE_SEED.length })}</p>
       <button class="btn btn-secondary" id="load-seed">${t("Charger la bibliothèque standard")}</button>
       <button class="btn btn-secondary" id="check-muscles" style="margin-top:8px;">🔎 ${t("Vérifier les groupes musculaires")}</button>
+      <button class="btn btn-secondary" id="merge-dupes" style="margin-top:8px;">🧩 ${t("Fusionner les doublons")}</button>
       <p class="muted" style="margin:10px 0 0; font-size:13px;">${t("Bibliothèque commune à tous les utilisateurs : tu peux modifier les exercices que tu as ajoutés, pas ceux des autres.")}</p>
       <div style="height:12px"></div>
       <div id="exercise-lib"></div>
@@ -440,6 +442,9 @@ export async function renderReglages(container) {
   container.querySelector("#force-update").onclick = forceUpdate;
   container.querySelector("#load-seed").onclick = () => loadSeedLibrary(container);
   container.querySelector("#check-muscles").onclick = () => checkMuscleGroups(container);
+  container.querySelector("#merge-dupes").onclick = () => import("./exercise-dupes.js")
+    .then(m => m.openDuplicatesTool(() => { invalidateStatsCache(); renderExerciseLib(container); }))
+    .catch(e => { console.error("[Skullcrusher] Doublons", e); toast(t("Action impossible, réessaie")); });
 
   await renderExerciseLib(container);
 }
@@ -516,7 +521,8 @@ async function loadSeedLibrary(container) {
   btn.textContent = t("Chargement…");
   let added = 0;
   const existing = await getExercises();
-  const existingNames = new Set(existing.map(e => e.name.toLowerCase()));
+  // Les fiches fusionnées (doublons) ne sont pas recréées.
+  const existingNames = new Set([...existing.map(e => e.name), ...db.mergedExercises().keys()].map(n => n.toLowerCase()));
   for (const [name, group] of EXERCISE_SEED) {
     if (!existingNames.has(name.toLowerCase())) {
       await db.upsertExercise(name, group, "", false);
@@ -778,18 +784,6 @@ async function setupSpotifyCard(container) {
 
 // Vide le cache hors ligne et recharge : utile si le téléphone garde une
 // ancienne version de l'app (surtout en mode "écran d'accueil" sur iOS).
-async function forceUpdate() {
-  try {
-    const regs = (await navigator.serviceWorker?.getRegistrations()) || [];
-    await Promise.all(regs.map(r => r.unregister()));
-    const keys = (await window.caches?.keys()) || [];
-    await Promise.all(keys.map(k => caches.delete(k)));
-  } catch (e) {
-    console.warn("[Skullcrusher] Mise à jour forcée incomplète :", e);
-  }
-  location.reload();
-}
-
 async function exportCsv() {
   const sets = await db.listAllSets(20000);
   const workouts = await db.listWorkouts(2000);

@@ -292,9 +292,21 @@ export async function upsertExercise(name, muscleGroup, equipment = "", isCustom
   return id;
 }
 
+// Les fiches fusionnées (doublons, champ merged_into) sont retirées de la
+// liste ; leur redirection reste disponible via mergedExercises().
+let mergedMap = new Map();
 export async function listExercises() {
   const snap = await getDocs(query(collection(dbase, "exercises"), orderBy("name")));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const kept = all.filter(e => !e.merged_into);
+  const keptNames = new Set(kept.map(e => e.name));
+  // Seulement vers une fiche existante : une redirection ne peut pas
+  // renommer des séries vers un nom arbitraire.
+  mergedMap = new Map(all.filter(e => e.merged_into && keptNames.has(e.merged_into)).map(e => [e.name, e.merged_into]));
+  return kept;
+}
+export function mergedExercises() {
+  return mergedMap;
 }
 
 export function canEditExercise(ex) {
@@ -307,6 +319,100 @@ export async function updateExercise(id, patch) {
 
 export async function deleteExercise(id) {
   await deleteDoc(doc(dbase, "exercises", id));
+}
+
+// ==================== STATUT « À LA SALLE » ====================
+// presence/{uid} existe pendant une séance en cours (si l'utilisateur ne
+// s'est pas masqué) ; seuls ses amis peuvent le lire (firestore.rules).
+export async function setPresence(data) {
+  await setDoc(doc(dbase, "presence", requireUid()), data);
+}
+export async function clearPresence() {
+  await deleteDoc(doc(dbase, "presence", requireUid()));
+}
+export async function getPresences(uids) {
+  const res = await Promise.all([...new Set(uids)].map(async (uid) => {
+    try {
+      const snap = await getDoc(doc(dbase, "presence", uid));
+      return snap.exists() ? { uid, ...snap.data() } : null;
+    } catch (_) { return null; } // plus amis entre-temps
+  }));
+  return res.filter(Boolean);
+}
+
+// ==================== DOUBLONS D'EXERCICES ====================
+// Fusionner « from » dans « to » : ses propres séries et routines prennent
+// le nom gardé (historique, stats et records réunis), le temps de repos
+// mémorisé suit. La fiche en double est ensuite redirigée (merged_into)
+// si on a le droit de la modifier (créateur ou administrateur) : elle
+// disparaît des listes et les séries des autres utilisateurs suivront à
+// leur prochaine ouverture de l'app (voir applyExerciseMerges).
+async function renameMySets(fromName, toName) {
+  const uid = requireUid();
+  let total = 0;
+  for (;;) {
+    const snap = await getDocs(query(collectionGroup(dbase, "sets"),
+      where("owner_uid", "==", uid), where("exercise_title", "==", fromName), limit(400)));
+    if (snap.empty) break;
+    const batch = writeBatch(dbase);
+    snap.docs.forEach(d => batch.update(d.ref, { exercise_title: toName }));
+    await batch.commit();
+    total += snap.size;
+    if (snap.size < 400) break;
+  }
+  return total;
+}
+
+async function renameInMyRoutines(fromName, toName) {
+  const snap = await getDocs(query(collection(dbase, "routines"), where("owner_uid", "==", requireUid())));
+  let n = 0;
+  for (const d of snap.docs) {
+    const data = d.data();
+    if (!(data.exercises || []).some(e => e.exercise_name === fromName)) continue;
+    const exercises = data.exercises.map(e => e.exercise_name === fromName ? { ...e, exercise_name: toName } : e);
+    await updateDoc(d.ref, { exercises, ...routineDerived(exercises), updated_at: new Date().toISOString() });
+    n++;
+  }
+  return n;
+}
+
+async function moveRestPref(fromName, toName) {
+  const prefs = await loadRestPrefs();
+  const from = String(fromName).trim().toLowerCase(), to = String(toName).trim().toLowerCase();
+  if (prefs[from] && !prefs[to]) await saveRestPref(toName, prefs[from]);
+}
+
+export async function mergeExercise(fromEx, toName) {
+  const sets = await renameMySets(fromEx.name, toName);
+  const routines = await renameInMyRoutines(fromEx.name, toName);
+  await moveRestPref(fromEx.name, toName).catch(() => null);
+  let redirected = false;
+  if (fromEx.id && canEditExercise(fromEx)) {
+    await updateExercise(fromEx.id, { merged_into: toName });
+    redirected = true;
+  }
+  return { sets, routines, redirected };
+}
+
+// À l'ouverture : applique à ses propres données les fusions faites par
+// d'autres (administrateur, créateur de la fiche). Une seule fois par nom
+// et par appareil.
+const LS_MERGES_DONE = "skullcrusher_merges_done";
+export async function applyExerciseMerges() {
+  const uid = requireUid();
+  let done = {};
+  try { done = JSON.parse(localStorage.getItem(LS_MERGES_DONE) || "{}"); } catch (_) {}
+  const mine = new Set(done[uid] || []);
+  let changed = 0;
+  for (const [from, to] of mergedMap) {
+    if (mine.has(from)) continue;
+    changed += await renameMySets(from, to);
+    changed += await renameInMyRoutines(from, to);
+    mine.add(from);
+  }
+  done[uid] = [...mine];
+  try { localStorage.setItem(LS_MERGES_DONE, JSON.stringify(done)); } catch (_) {}
+  return changed;
 }
 
 // ==================== ROUTINES ====================
@@ -723,6 +829,9 @@ export async function importRows(rows, onProgress = () => {}) {
   onProgress(0, rows.length, stats, "Exercices");
   const exSnap = await getDocs(collection(dbase, "exercises"));
   const existingExIds = new Set(exSnap.docs.map(d => d.id));
+  // Doublons fusionnés : les séries importées prennent le nom gardé
+  // (l'identifiant de série reste calculé sur le nom du fichier).
+  const redirect = new Map(exSnap.docs.filter(d => d.data().merged_into).map(d => [d.data().name, d.data().merged_into]));
   const newExercises = new Map();
   for (const r of rows) {
     const id = slugify(r.exercise_title);
@@ -797,7 +906,7 @@ export async function importRows(rows, onProgress = () => {}) {
     }
     for (const { setId, row } of newSets) {
       ops.push({ ref: doc(dbase, "workouts", workoutId, "sets", setId), kind: "set", data: {
-        exercise_title: row.exercise_title,
+        exercise_title: redirect.get(row.exercise_title) || row.exercise_title,
         superset_id: row.superset_id || null,
         exercise_notes: row.exercise_notes || "",
         set_index: row.set_index,

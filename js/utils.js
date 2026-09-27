@@ -6,7 +6,7 @@ import { t, locale } from "./i18n.js";
 // Version affichée dans Réglages → À propos. À incrémenter avec
 // CACHE_NAME dans service-worker.js à chaque mise en ligne, pour voir d'un
 // coup d'œil si le téléphone utilise bien la dernière version.
-export const APP_VERSION = "63";
+export const APP_VERSION = "65";
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
@@ -28,6 +28,26 @@ export function esc(value) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+// Petit rappel sous les chiffres « sensibles » (1RM estimée, progression,
+// calories, plans) : ce sont des estimations, pas un avis de professionnel.
+export function healthNoteHtml() {
+  return `<p class="health-note">⚠️ ${t("Estimations indicatives : elles ne remplacent pas l'avis d'un coach diplômé ni d'un médecin. Tu restes responsable de l'usage que tu en fais.")} <a href="conditions.html" target="_blank" rel="noopener">${t("Conditions d'utilisation")}</a></p>`;
+}
+
+// Vide le service worker et les caches puis recharge la dernière version.
+// ?refresh= contourne le cache HTTP de index.html (retiré ensuite par app.js).
+export async function forceUpdate() {
+  try {
+    const regs = (await navigator.serviceWorker?.getRegistrations()) || [];
+    await Promise.all(regs.map(r => r.unregister()));
+    const keys = (await window.caches?.keys()) || [];
+    await Promise.all(keys.map(k => caches.delete(k)));
+  } catch (e) {
+    console.warn("[Skullcrusher] Mise à jour forcée incomplète :", e);
+  }
+  location.replace(location.pathname + "?refresh=" + Date.now() + location.hash);
+}
+
 // N'accepte comme image que les data URL d'image (photos de profil) ou les
 // URL https — jamais du texte qui pourrait sortir du `url('...')`.
 export function safeImageUrl(url) {
@@ -38,12 +58,14 @@ export function safeImageUrl(url) {
 }
 
 // options.onDismiss : appelé si l'utilisateur ferme en touchant à côté.
+// options.locked : ne se ferme ni en touchant à côté ni avec le bouton retour.
 export function openModal(innerHtml, onMount, options = {}) {
   const backdrop = document.createElement("div");
   backdrop.className = "modal-backdrop";
   backdrop.innerHTML = `<div class="modal">${innerHtml}</div>`;
+  if (options.locked) backdrop.dataset.locked = "1";
   backdrop.addEventListener("click", (e) => {
-    if (e.target !== backdrop) return;
+    if (e.target !== backdrop || options.locked) return;
     closeModal();
     if (options.onDismiss) options.onDismiss();
   });
@@ -56,7 +78,8 @@ export function openModal(innerHtml, onMount, options = {}) {
 
 export function closeModal() {
   document.body.style.overflow = "";
-  document.querySelectorAll(".modal-backdrop").forEach(el => el.remove());
+  document.querySelectorAll(".modal-backdrop:not([data-locked])").forEach(el => el.remove());
+  if (document.querySelector(".modal-backdrop")) document.body.style.overflow = "hidden";
   window.dispatchEvent(new Event("sc:modal-close"));
 }
 

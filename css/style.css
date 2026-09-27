@@ -924,3 +924,48 @@ body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var
 .report-row:last-child { border-bottom: none; }
 .tab-btn { position: relative; }
 .tab-badge { position: absolute; top: 2px; right: calc(50% - 20px); background: var(--red); color: #fff; font-size: 10px; font-weight: 700; border-radius: 999px; min-width: 16px; height: 16px; padding: 0 4px; display: flex; align-items: center; justify-content: center; }
+
+/* ---------- Image à partager ---------- */
+.share-preview { position: relative; display: flex; justify-content: center; background: #050506; border-radius: 14px; padding: 10px; margin: 6px 0; }
+.share-preview canvas { width: auto; height: auto; max-width: 100%; max-height: 52vh; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+.share-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 14px; background: rgba(5,5,6,0.6); border-radius: 14px; }
+.share-options { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; margin-top: 6px; }
+.share-options label { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+.share-options input { width: auto; }
+.share-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+
+/* Rappel « estimations indicatives » */
+.health-note { font-size: 11.5px; line-height: 1.4; color: var(--text-dim); margin: 10px 0 0; }
+.health-note a { color: var(--text); text-decoration-color: var(--amber); }
+.terms-box { max-height: 42vh; overflow-y: auto; font-size: 13px; line-height: 1.5; padding-right: 4px; }
+.terms-check { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0; font-size: 14px; }
+.terms-check input { width: auto; margin-top: 3px; }
+
+/* Fusion des doublons d'exercices */
+.dup-group { border: 1px solid var(--border, rgba(255,255,255,0.1)); border-radius: var(--radius); padding: 8px 10px; margin-bottom: 10px; }
+.dup-head { display: flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; margin: 0 0 4px; }
+.dup-row { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; cursor: pointer; font-size: 14px; margin: 0; }
+.dup-head input, .dup-row input { width: auto; margin-top: 3px; }
+.dup-manual { margin-top: 6px; font-size: 14px; }
+.dup-manual summary { cursor: pointer; color: var(--text-dim); }
+
+/* Fenêtre « nouvelle mise à jour » */
+.update-pop { text-align: center; }
+.update-pop h3 { margin-top: 4px; }
+.update-horns { width: 56px; height: 56px; object-fit: contain; margin: 4px auto 0; display: block; }
+
+/* Statut « à la salle » */
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgba(95,190,114,0.6); } 70% { box-shadow: 0 0 0 7px rgba(95,190,114,0); } 100% { box-shadow: 0 0 0 0 rgba(95,190,114,0); } }
+.live-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #5FBE72; margin-right: 6px; vertical-align: middle; animation: live-pulse 1.8s infinite; flex-shrink: 0; }
+.gym-now { background: linear-gradient(135deg, rgba(95,190,114,0.10), rgba(224,36,36,0.06)); border: 1px solid rgba(95,190,114,0.35); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 14px; }
+.gym-now-title { font-family: 'Anton', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; font-size: 15px; margin-bottom: 6px; display: flex; align-items: center; }
+.gym-now-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+.gym-now-row + .gym-now-row { border-top: 1px solid var(--border); }
+.gym-now-avatar { position: relative; width: 38px; height: 38px; border-radius: 50%; background: var(--surface-raised) center/cover no-repeat; display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--amber); flex-shrink: 0; }
+.live-dot-badge { position: absolute; right: -2px; bottom: -2px; margin: 0; border: 2px solid var(--bg, #0B0B0C); width: 12px; height: 12px; }
+.gym-now-name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gym-now-sub { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gym-badge { font-size: 11px; font-weight: 600; color: #5FBE72; background: rgba(95,190,114,0.12); border-radius: 999px; padding: 2px 7px; margin-left: 4px; }
+.workout-subline { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.presence-toggle { background: var(--surface-raised); color: var(--text-dim); border: 1px solid var(--border); border-radius: 999px; padding: 5px 11px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; }
+.presence-toggle.on { color: #5FBE72; border-color: rgba(95,190,114,0.45); background: rgba(95,190,114,0.10); }

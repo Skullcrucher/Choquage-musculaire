@@ -7,6 +7,7 @@ import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate 
 import { openExerciseDetail } from "./exercise-detail.js";
 import { parseMusicLink, openSpotifyPlayer, providerName, providerIcon } from "./music.js";
 import { t, tn, locale } from "./i18n.js";
+import { presenceDefault, startPresence, stopPresence, touchPresence } from "./presence.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
 let restTimerInterval = null;
@@ -41,6 +42,7 @@ export async function renderSeance(container) {
     if (!currentWorkout || currentWorkout.id !== activeId) {
       currentWorkout = loadLocalState() || { id: activeId, title: t("Séance"), start_time: new Date().toISOString(), exercises: [] };
     }
+    if (currentWorkout.presence === undefined) currentWorkout.presence = presenceDefault();
     renderActiveWorkout(container);
   } else {
     await renderStartScreen(container);
@@ -107,6 +109,7 @@ async function startWorkout(routineId, routine = null, triggerEl = null, planInf
 
     currentWorkout = {
       id, title, start_time: now.toISOString(), routine_id: routine?.id || null,
+      presence: presenceDefault(), // statut « à la salle » visible par les amis
       playlist_url: routine?.playlist_url || "",
       exercises: routineExercises.map((ex, i) => {
         const lastSets = lastSetsByExercise[i];
@@ -146,7 +149,12 @@ function renderActiveWorkout(container) {
     <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
       <h1 class="section-title" style="margin-bottom:0;">${esc(currentWorkout.title)}</h1>
     </div>
-    <p class="muted" style="margin-top:0;">${t("Débutée à {time}", { time: fmtDateTime(currentWorkout.start_time) })}</p>
+    <div class="workout-subline">
+      <p class="muted" style="margin:0;">${t("Débutée à {time}", { time: fmtDateTime(currentWorkout.start_time) })}</p>
+      <button class="presence-toggle ${currentWorkout.presence !== false ? "on" : ""}" id="presence-toggle" title="${t("Tes amis voient dans le feed que tu es à la salle")}">
+        ${currentWorkout.presence !== false ? `<span class="live-dot"></span>${t("À la salle")}` : `👻 ${t("Invisible")}`}
+      </button>
+    </div>
     <div id="workout-music"></div>
     <div id="exercise-list"></div>
     <button class="btn btn-secondary btn-compact" id="add-exercise" style="margin-top:6px;">+ ${t("Ajouter un exercice")}</button>
@@ -161,6 +169,14 @@ function renderActiveWorkout(container) {
   container.querySelector("#add-exercise").onclick = () => openAddExerciseModal();
   container.querySelector("#finish-workout").onclick = finishWorkout;
   container.querySelector("#cancel-workout").onclick = cancelWorkout;
+  container.querySelector("#presence-toggle").onclick = () => {
+    currentWorkout.presence = currentWorkout.presence === false;
+    saveLocalState();
+    if (currentWorkout.presence) startPresence(currentWorkout); else stopPresence();
+    toast(currentWorkout.presence ? t("Tes amis voient que tu es à la salle") : t("Invisible pour cette séance"));
+    renderActiveWorkout(container);
+  };
+  if (currentWorkout.presence !== false) startPresence(currentWorkout);
   resumeRestTimerIfAny();
 }
 
@@ -291,6 +307,7 @@ function renderExerciseList(el) {
         set.id = newId;
       }
       saveLocalState();
+      touchPresence();
     };
     // Une seule écriture à la fois par série : évite de créer deux fois la
     // même série si deux sauvegardes partent avant que la première ait un id.
@@ -639,6 +656,7 @@ async function finishWorkout() {
       invalidate("routines");
     } catch (e) { console.warn("[Skullcrusher] Progression non enregistrée :", e); }
   }
+  stopPresence();
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
   localStorage.removeItem(LS_REST_KEY);
@@ -659,6 +677,7 @@ async function finishWorkout() {
 async function cancelWorkout() {
   if (!confirm(t("Supprimer cette séance et toutes ses séries ?"))) return;
   await db.deleteWorkout(currentWorkout.id);
+  stopPresence();
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
   localStorage.removeItem(LS_REST_KEY);

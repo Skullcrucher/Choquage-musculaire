@@ -159,6 +159,18 @@ initAuth((user) => {
       switchTab(activeTab);
       // Administrateur : pastille des signalements en attente.
       import("./settings.js").then(m => m.checkReportsBadge()).catch(() => null);
+      // Doublons fusionnés par d'autres (administrateur…) : appliqués à ses données.
+      import("./cache.js").then(async c => {
+        await c.getExercises();
+        const n = await (await import("./db.js")).applyExerciseMerges();
+        if (n) c.invalidate("sets", "routines");
+      }).catch(e => console.warn("[Skullcrusher] Fusion des doublons :", e));
+      // Conditions d'utilisation (avertissement santé) : accord une fois par compte.
+      // Réglage « à la salle » du profil (peut venir d'un autre appareil).
+      import("./presence.js").then(m => m.syncPresenceDefault()).catch(() => null);
+      // Nouvelle version publiée ? Proposée d'abord, puis les conditions.
+      import("./update-check.js").then(m => m.checkForUpdate({ force: true })).catch(() => null)
+        .then(() => import("./terms.js")).then(m => m.ensureTermsAccepted(user)).catch(e => console.warn("[Skullcrusher] Conditions :", e));
       // Retour de la page de connexion Spotify (?code=...), s'il y en a un.
       if (/[?&](code|error)=/.test(location.search)) {
         import("./spotify-connect.js")
@@ -177,3 +189,11 @@ initAuth((user) => {
   }
 });
 
+
+// Retour dans l'app (ouverte en arrière-plan depuis longtemps) : nouvelle
+// version publiée entre-temps ? (au plus une vérification toutes les 5 min)
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && appStarted) {
+    import("./update-check.js").then(m => m.checkForUpdate()).catch(() => null);
+  }
+});

@@ -9,7 +9,7 @@
 //   - la vue "par exercice" ne charge que l'exercice choisi.
 // "Tout" charge l'historique complet (plus long la première fois).
 // ============================================================
-import { isoWeek, estimate1RM, esc } from "./utils.js";
+import { isoWeek, estimate1RM, esc, healthNoteHtml } from "./utils.js";
 import { getExercises, getWorkouts, getSetsForPeriod, getSetsForExercise, invalidate, onAllSetsProgress } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { t, locale } from "./i18n.js";
@@ -92,7 +92,10 @@ export async function renderStats(container) {
   const totalTonnage = workouts.reduce((acc, w) => acc + (w.total_tonnage || 0), 0);
 
   container.innerHTML = `
-    <h1 class="section-title">${t("Statistiques")}</h1>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <h1 class="section-title">${t("Statistiques")}</h1>
+      <button class="btn btn-sm btn-primary share-btn" id="share-stats" style="width:auto;">📸 ${t("Partager")}</button>
+    </div>
     <div class="stat-grid">
       <div class="stat-box"><span class="num">${workouts.length}</span><span class="lbl">${t("séances")}</span></div>
       <div class="stat-box"><span class="num">${Math.round(totalTonnage / 1000)}</span><span class="lbl">${t("tonnes soulevées")}</span></div>
@@ -118,6 +121,8 @@ export async function renderStats(container) {
   `;
 
   const ctx = { container, exercises, exerciseNames, muscleGroups };
+  container.querySelector("#share-stats").onclick = async () =>
+    (await import("./share-card.js")).openShareCard({ kind: "period", periodDays: state.periodWeeks ? (state.periodWeeks <= 4 ? 30 : state.periodWeeks <= 13 ? 91 : state.periodWeeks <= 26 ? 182 : 365) : null });
   container.querySelectorAll("#period-chips .chip").forEach(chip => {
     chip.onclick = () => {
       state.periodWeeks = chip.dataset.weeks ? parseInt(chip.dataset.weeks, 10) : null;
@@ -276,6 +281,7 @@ function drawExerciseView(content, exerciseSetsAll, ctx) {
       <button class="btn btn-secondary btn-sm" id="exercise-sheet-btn" style="margin-top:10px;">${t("Voir la fiche de l'exercice")}</button>
       <canvas id="exercise-canvas" height="220" style="margin-top:12px;"></canvas>
       <div id="exercise-1rm" class="muted" style="margin-top:10px;"></div>
+      ${healthNoteHtml()}
     </div>
   `;
   const picker = content.querySelector("#exercise-picker");
