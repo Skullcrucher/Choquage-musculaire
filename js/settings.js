@@ -34,6 +34,34 @@ async function loadTimerSync() {
   }
 }
 
+// Sections repliables : chaque carte se replie sur son titre. Toutes
+// fermées à l'ouverture de l'app ; celles qu'on ouvre le restent pendant la
+// session (changement d'onglet, de langue…).
+const openSections = new Set();
+function makeCollapsible(container) {
+  container.querySelectorAll(":scope > .card").forEach((card, i) => {
+    const title = card.querySelector(":scope > .card-title");
+    if (!title) return;
+    const key = card.id || `s${i}`;
+    const body = document.createElement("div");
+    body.className = "collapse-body";
+    while (title.nextSibling) body.appendChild(title.nextSibling);
+    card.appendChild(body);
+    card.classList.add("collapsible");
+    title.setAttribute("role", "button");
+    title.tabIndex = 0;
+    title.insertAdjacentHTML("beforeend", `<span class="collapse-chevron" aria-hidden="true">›</span>`);
+    const set = (open) => {
+      card.classList.toggle("open", open);
+      title.setAttribute("aria-expanded", String(open));
+      if (open) openSections.add(key); else openSections.delete(key);
+    };
+    set(openSections.has(key));
+    title.onclick = () => set(!card.classList.contains("open"));
+    title.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); title.click(); } };
+  });
+}
+
 export async function renderReglages(container) {
   const timerSync = await loadTimerSync();
   const { pushConfigured, pushActive, enablePush, disablePush, scheduleRestPush, isIos, isStandalone } = timerSync;
@@ -196,6 +224,7 @@ export async function renderReglages(container) {
       <div id="exercise-lib"></div>
     </div>
   `;
+  makeCollapsible(container);
   bindLangPicker(container, "settings-lang");
 
   setupSpotifyCard(container);

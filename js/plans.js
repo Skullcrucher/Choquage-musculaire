@@ -224,8 +224,8 @@ export async function planSessionsHtml() {
   const plan = plans.find(p => p.id === active);
   if (!plan) {
     return { html: plans.length
-      ? `<div class="empty-state"><span class="num">📅</span>${t("Aucun plan actif.")}<br><span class="muted">${t("Active un plan dans Historique → Routines → Plans.")}</span></div>`
-      : `<div class="empty-state"><span class="num">📅</span>${t("Pas encore de plan.")}<br><span class="muted">${t("Crée ou importe un plan dans Historique → Routines → Plans.")}</span></div>`, sessions: [] };
+      ? `<div class="empty-state"><span class="num">📅</span>${t("Aucun plan actif.")}<br><span class="muted">${t("Active un plan dans Séance → Routines → Plans.")}</span></div>`
+      : `<div class="empty-state"><span class="num">📅</span>${t("Pas encore de plan.")}<br><span class="muted">${t("Crée ou importe un plan dans Séance → Routines → Plans.")}</span></div>`, sessions: [] };
   }
   const [routines, workouts, card] = await Promise.all([getRoutines(), getWorkouts(), todayPlanCard({ compact: true })]);
   const pos = planPosition(plan);

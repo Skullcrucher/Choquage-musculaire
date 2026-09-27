@@ -920,9 +920,9 @@ export default {
   "Invisible pour cette séance": "Invisible for this workout",
   "Suivi du plan": "Plan tracking",
   "Aucun plan actif.": "No active plan.",
-  "Active un plan dans Historique → Routines → Plans.": "Activate a plan in History → Routines → Plans.",
+  "Active un plan dans Séance → Routines → Plans.": "Activate a plan in Workout → Routines → Plans.",
   "Pas encore de plan.": "No plan yet.",
-  "Crée ou importe un plan dans Historique → Routines → Plans.": "Create or import a plan in History → Routines → Plans.",
+  "Crée ou importe un plan dans Séance → Routines → Plans.": "Create or import a plan in Workout → Routines → Plans.",
   "Séances de la semaine": "This week's workouts",
   "{done}/{total} faite(s)": "{done}/{total} done",
   "Faite ({day})": "Done ({day})",
@@ -989,5 +989,6 @@ export default {
   "Très bien": "Very good",
   "Excellent": "Excellent",
   "Tu ne peux pas noter ta routine": "You can't rate your own routine",
-  "Les mieux notées": "Top rated"
+  "Les mieux notées": "Top rated",
+  "Démarrer": "Start"
 };

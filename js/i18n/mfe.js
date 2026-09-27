@@ -919,9 +919,9 @@ export default {
   "Invisible pour cette séance": "Invizib pou sa seans-la",
   "Suivi du plan": "Swivi plan",
   "Aucun plan actif.": "Okenn plan aktif.",
-  "Active un plan dans Historique → Routines → Plans.": "Aktiv enn plan dan Listwar → Routinn → Plan.",
+  "Active un plan dans Séance → Routines → Plans.": "Aktiv enn plan dan Seans → Routinn → Plan.",
   "Pas encore de plan.": "Pa ankor ena plan.",
-  "Crée ou importe un plan dans Historique → Routines → Plans.": "Kre ouswa import enn plan dan Listwar → Routinn → Plan.",
+  "Crée ou importe un plan dans Séance → Routines → Plans.": "Kre ouswa import enn plan dan Seans → Routinn → Plan.",
   "Séances de la semaine": "Bann seans sa semenn-la",
   "{done}/{total} faite(s)": "{done}/{total} fini fer",
   "Faite ({day})": "Fini fer ({day})",
@@ -988,5 +988,6 @@ export default {
   "Très bien": "Mari bon",
   "Excellent": "Ekselan",
   "Tu ne peux pas noter ta routine": "To pa kapav donn not to prop routinn",
-  "Les mieux notées": "Pli bon not"
+  "Les mieux notées": "Pli bon not",
+  "Démarrer": "Komanse"
 };

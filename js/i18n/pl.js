@@ -929,9 +929,9 @@ export default {
   "Invisible pour cette séance": "Niewidoczny podczas tego treningu",
   "Suivi du plan": "Postęp planu",
   "Aucun plan actif.": "Brak aktywnego planu.",
-  "Active un plan dans Historique → Routines → Plans.": "Aktywuj plan w Historia → Rutyny → Plany.",
+  "Active un plan dans Séance → Routines → Plans.": "Aktywuj plan w Trening → Rutyny → Plany.",
   "Pas encore de plan.": "Brak planu.",
-  "Crée ou importe un plan dans Historique → Routines → Plans.": "Utwórz lub zaimportuj plan w Historia → Rutyny → Plany.",
+  "Crée ou importe un plan dans Séance → Routines → Plans.": "Utwórz lub zaimportuj plan w Trening → Rutyny → Plany.",
   "Séances de la semaine": "Treningi w tym tygodniu",
   "{done}/{total} faite(s)": "{done}/{total} zrobione",
   "Faite ({day})": "Zrobione ({day})",
@@ -998,5 +998,6 @@ export default {
   "Très bien": "Bardzo dobrze",
   "Excellent": "Świetnie",
   "Tu ne peux pas noter ta routine": "Nie możesz ocenić własnej rutyny",
-  "Les mieux notées": "Najwyżej oceniane"
+  "Les mieux notées": "Najwyżej oceniane",
+  "Démarrer": "Rozpocznij"
 };
