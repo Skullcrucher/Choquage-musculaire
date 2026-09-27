@@ -71,7 +71,6 @@ export async function renderFeedTab(container) {
       <div class="chip ${feedMode === "music" ? "active" : ""}" data-fmode="music">🎧 ${t("Son")}</div>
       <div class="chip ${feedMode === "friends" ? "active" : ""}" data-fmode="friends">👥 ${t("Amis")}<span id="friend-req-count"></span></div>
     </div>
-    <div id="gym-now"></div>
     <div id="feed-body"></div>
   `;
   container.querySelectorAll("[data-fmode]").forEach(chip => {
@@ -81,11 +80,6 @@ export async function renderFeedTab(container) {
       drawFeedBody(container);
     };
   });
-  // Amis en pleine séance, rafraîchi chaque minute tant que le feed est affiché.
-  const gymEl = container.querySelector("#gym-now");
-  const refreshGym = () => import("./presence.js").then(m => m.renderGymNow(gymEl, { onOpenProfile: openProfile })).catch(e => console.warn("[Skullcrusher] À la salle :", e));
-  refreshGym();
-  const gymTimer = setInterval(() => { if (!gymEl.isConnected) clearInterval(gymTimer); else if (document.visibilityState === "visible") refreshGym(); }, 60 * 1000);
   countIncomingRequests().then(n => {
     const el = container.querySelector("#friend-req-count");
     if (el && n) el.innerHTML = ` <span class="req-dot">${n}</span>`;
