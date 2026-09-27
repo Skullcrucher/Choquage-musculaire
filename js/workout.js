@@ -49,11 +49,20 @@ export async function renderSeance(container) {
   }
 }
 
+const LS_START_MODE = "skullcrusher_start_mode"; // "routine" | "plan"
+
 async function renderStartScreen(container) {
-  const [routines, workouts, planCard] = await Promise.all([
+  const [allRoutines, workouts, planView, planIds] = await Promise.all([
     getRoutines(), getWorkouts(),
-    import("./plans.js").then(m => m.todayPlanCard()).catch(e => { console.warn("[Skullcrusher] Plan indisponible", e); return null; })
+    import("./plans.js").then(m => m.planSessionsHtml()).catch(e => { console.warn("[Skullcrusher] Plan indisponible", e); return null; }),
+    import("./plans.js").then(m => m.planRoutineIds()).catch(() => new Set())
   ]);
+  if (!container.isConnected) return;
+  // Les séances des plans sont dans l'onglet « Depuis un plan ».
+  const routines = allRoutines.filter(r => !planIds.has(r.id));
+  let startMode = null;
+  try { startMode = localStorage.getItem(LS_START_MODE); } catch (_) {}
+  if (startMode !== "routine" && startMode !== "plan") startMode = planView?.sessions?.length ? "plan" : "routine";
   const weekCount = countThisWeek(workouts);
   container.innerHTML = `
     <h1 class="section-title">${t("Séance")}</h1>
@@ -62,25 +71,47 @@ async function renderStartScreen(container) {
       <span class="num" style="font-size:56px; color:var(--amber); display:block; line-height:1;">${weekCount}</span>
       <div class="muted">${weekCount > 1 ? t("séances bouclées") : t("séance bouclée")}</div>
     </div>
-    ${planCard ? planCard.html : ""}
     <button class="btn btn-primary" id="start-empty">+ ${t("Démarrer une séance vide")}</button>
-    <div style="height:18px"></div>
-    ${routines.length ? `<h3 class="muted" style="margin-bottom:8px; text-transform:none; font-family:'Inter',sans-serif; font-weight:600; font-size:14px;">${t("Depuis une routine")}</h3>` : ""}
-    ${routines.map(r => `
-      <div class="card" style="cursor:pointer" data-start-routine="${r.id}">
-        <div class="card-title">${esc(r.name)}</div>
-        <div class="muted">${tn((r.exercises || []).length, "{n} exercice", "{n} exercices")}</div>
-      </div>
-    `).join("")}
-    ${routines.length === 0 ? `<p class="muted">${t("Pas encore de routine — crée-en une dans l'onglet Routines, ou démarre une séance vide.")}</p>` : ""}
+    <div class="start-tabs" id="start-tabs">
+      <button class="start-tab ${startMode === "routine" ? "active" : ""}" data-smode="routine">📋 ${t("Depuis une routine")}</button>
+      <button class="start-tab ${startMode === "plan" ? "active" : ""}" data-smode="plan">📅 ${t("Depuis un plan")}</button>
+    </div>
+    <div id="start-body"></div>
   `;
   container.querySelector("#start-empty").onclick = (e) => startWorkout(null, null, e.currentTarget);
-  const planBtn = container.querySelector("#plan-start");
-  if (planCard?.bind) planCard.bind(container, () => renderStartScreen(container));
-  if (planBtn && planCard?.routine) planBtn.onclick = (e) => startWorkout(planCard.routine.id, planCard.routine, e.currentTarget, { plan_id: planCard.plan.id, plan_week: planCard.week });
-  container.querySelectorAll("[data-start-routine]").forEach(el => {
-    el.onclick = (e) => startWorkout(el.dataset.startRoutine, routines.find(r => r.id === el.dataset.startRoutine), e.currentTarget);
+  const body = container.querySelector("#start-body");
+  const draw = () => {
+    if (startMode === "plan") {
+      body.innerHTML = planView?.html || `<p class="muted">${t("Plan indisponible.")}</p>`;
+      if (planView?.card?.bind) planView.card.bind(body, () => renderStartScreen(container));
+      body.querySelectorAll("[data-plan-session]").forEach(el => {
+        const s = planView.sessions[+el.dataset.planSession];
+        el.onclick = (e) => {
+          if (s.done && !confirm(t("{routine} est déjà faite cette semaine. La refaire ?", { routine: s.routine.name }))) return;
+          startWorkout(s.routine.id, s.routine, e.currentTarget, { plan_id: planView.plan.id, plan_week: planView.week });
+        };
+      });
+    } else {
+      body.innerHTML = `
+        ${routines.map(r => `
+          <div class="card" style="cursor:pointer" data-start-routine="${r.id}">
+            <div class="card-title">${esc(r.name)}</div>
+            <div class="muted">${tn((r.exercises || []).length, "{n} exercice", "{n} exercices")}</div>
+          </div>
+        `).join("")}
+        ${routines.length === 0 ? `<p class="muted">${t("Pas encore de routine — crée-en une dans l'onglet Routines, ou démarre une séance vide.")}</p>` : ""}`;
+      body.querySelectorAll("[data-start-routine]").forEach(el => {
+        el.onclick = (e) => startWorkout(el.dataset.startRoutine, routines.find(r => r.id === el.dataset.startRoutine), e.currentTarget);
+      });
+    }
+  };
+  container.querySelectorAll("[data-smode]").forEach(b => b.onclick = () => {
+    startMode = b.dataset.smode;
+    try { localStorage.setItem(LS_START_MODE, startMode); } catch (_) {}
+    container.querySelectorAll("[data-smode]").forEach(x => x.classList.toggle("active", x === b));
+    draw();
   });
+  draw();
 }
 
 function withTimeout(promise, ms, label) {

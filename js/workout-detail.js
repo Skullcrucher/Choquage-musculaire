@@ -4,7 +4,7 @@
 import * as db from "./db.js";
 import { openModal, closeModal, fmtDateTime, fmtDuration, estimate1RM, toast, esc, attachAutocomplete } from "./utils.js";
 import { getUser } from "./auth.js";
-import { invalidate, getWorkouts, getExercises } from "./cache.js";
+import { invalidate, getWorkouts, getExercises, getRoutines } from "./cache.js";
 import { songBlockHtml, bindSongLinks, spotifyEmbed, parseMusicLink, normalizePlaylistUrl, parseSongInput, SPOTIFY_ICON } from "./music.js";
 import { t } from "./i18n.js";
 import { getBody, workoutCalories, EFFORTS } from "./calories.js";
@@ -123,6 +123,7 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
       `).join("") || `<p class="muted">${t("Aucune série enregistrée.")}</p>`}
       ${isOwner ? `<button class="btn btn-primary share-btn" id="share-workout" style="margin-bottom:8px;">📸 ${t("Partager en image")}</button>` : ""}
       ${isOwner ? `<button class="btn btn-secondary" id="edit-workout">✏️ ${t("Modifier la séance")}</button>` : ""}
+      ${isOwner && sets.length ? `<button class="btn btn-secondary" id="routine-from-workout" style="margin-top:8px;">📋 ${t("Créer ou modifier une routine")}</button>` : ""}
       ${isOwner && friendUids.length ? `
         <button class="btn btn-secondary btn-sm" id="edit-partners" style="margin-top:8px;">🤝 ${t("Entraîné avec…")}</button>
         <div id="partners-picker" style="display:none; margin-top:8px;">
@@ -183,6 +184,8 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
       closeModal();
       (await import("./share-card.js")).openShareCard({ kind: "workout", workout, partners: names });
     };
+    const routineBtn = modalEl.querySelector("#routine-from-workout");
+    if (routineBtn) routineBtn.onclick = () => { closeModal(); openRoutineFromWorkout(workout, sets); };
     const editWorkoutBtn = modalEl.querySelector("#edit-workout");
     if (editWorkoutBtn) editWorkoutBtn.onclick = () => openWorkoutEditor(workout, sets, body, () => reopen("gym"), () => reopen("gym"));
 
@@ -477,5 +480,78 @@ async function openWorkoutEditor(workout, sets, body, onSaved, onCancel) {
         e.target.disabled = false;
       }
     };
+  });
+}
+
+// ---------- Routine à partir d'une séance réalisée ----------
+// Exercices dans l'ordre de la séance ; séries, fourchette de répétitions et
+// charge visée d'après les séries de travail (échauffements exclus).
+async function exercisesFromWorkout(sets) {
+  const library = await getExercises().catch(() => []);
+  await db.loadRestPrefs().catch(() => null);
+  const order = [];
+  const by = new Map();
+  sets.forEach(s => {
+    if (s.weight_kg == null && s.reps == null) return;
+    if (!by.has(s.exercise_title)) { by.set(s.exercise_title, []); order.push(s.exercise_title); }
+    by.get(s.exercise_title).push(s);
+  });
+  return order.map(name => {
+    const all = by.get(name);
+    const work = all.filter(s => s.set_type !== "warmup");
+    const list = work.length ? work : all;
+    const reps = list.map(s => s.reps).filter(r => r > 0);
+    const lo = reps.length ? Math.min(...reps) : null, hi = reps.length ? Math.max(...reps) : null;
+    const kgs = list.map(s => s.weight_kg).filter(k => k > 0);
+    const known = library.find(e => e.name.toLowerCase() === name.toLowerCase());
+    return {
+      exercise_name: name,
+      target_sets: list.length,
+      reps_target: lo == null ? "" : lo === hi ? String(lo) : `${lo}-${hi}`,
+      target_kg: kgs.length ? Math.max(...kgs) : null,
+      rest_seconds: db.restPrefFor(name) || 90,
+      muscle_group: known?.muscle_group || guessMuscleGroup(name)
+    };
+  });
+}
+
+// Garde les réglages de la routine (repos, notes…) pour les exercices déjà présents.
+function mergeIntoRoutine(routine, fromWorkout) {
+  return fromWorkout.map(ex => {
+    const old = (routine.exercises || []).find(e => (e.exercise_name || "").toLowerCase() === ex.exercise_name.toLowerCase());
+    return old ? { ...old, ...ex, rest_seconds: old.rest_seconds || ex.rest_seconds } : ex;
+  });
+}
+
+async function openRoutineFromWorkout(workout, sets) {
+  const [exercises, routines, { openRoutineEditor }] = await Promise.all([
+    exercisesFromWorkout(sets), getRoutines().catch(() => []), import("./routines.js")
+  ]);
+  if (!exercises.length) { toast(t("Aucune série enregistrée dans cette séance.")); return; }
+  const origin = workout.routine_id ? routines.find(r => r.id === workout.routine_id) : null;
+  const others = routines.filter(r => r.id !== origin?.id);
+  const done = () => { invalidate("routines"); };
+  openModal(`
+    <h3>📋 ${t("Routine depuis cette séance")}</h3>
+    <p class="muted" style="margin-top:0; font-size:13px;">${t("{n} exercice(s) repris avec leurs séries, répétitions et charges. L'éditeur s'ouvre pour vérifier avant d'enregistrer.", { n: exercises.length })}</p>
+    <div class="muted" style="font-size:13px; margin-bottom:12px;">${exercises.map(e => `${esc(e.exercise_name)} ${e.target_sets}×${esc(e.reps_target || "?")}${e.target_kg ? ` @ ${e.target_kg} kg` : ""}`).join("<br>")}</div>
+    <button class="btn btn-primary" id="rfw-new">➕ ${t("Nouvelle routine")}</button>
+    ${origin ? `<button class="btn btn-secondary" id="rfw-origin" style="margin-top:8px;">🔄 ${t("Mettre à jour « {routine} »", { routine: esc(origin.name) })}</button>` : ""}
+    ${others.length ? `
+      <label>${t("Ou mettre à jour une autre routine")}</label>
+      <select id="rfw-pick"><option value="">—</option>${others.map(r => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join("")}</select>
+      <button class="btn btn-secondary" id="rfw-other" style="margin-top:8px;" disabled>✏️ ${t("Mettre à jour cette routine")}</button>` : ""}
+    <div class="btn-row" style="margin-top:12px;"><button class="btn btn-secondary" id="rfw-cancel">${t("Annuler")}</button></div>
+  `, (m) => {
+    m.querySelector("#rfw-cancel").onclick = closeModal;
+    m.querySelector("#rfw-new").onclick = () => { closeModal(); openRoutineEditor({ name: workout.title || "", exercises }, done); };
+    const upd = (r) => { closeModal(); openRoutineEditor({ ...r, exercises: mergeIntoRoutine(r, exercises) }, done); };
+    const originBtn = m.querySelector("#rfw-origin");
+    if (originBtn) originBtn.onclick = () => upd(origin);
+    const pick = m.querySelector("#rfw-pick"), other = m.querySelector("#rfw-other");
+    if (pick) {
+      pick.onchange = () => { other.disabled = !pick.value; };
+      other.onclick = () => upd(others.find(r => r.id === pick.value));
+    }
   });
 }
