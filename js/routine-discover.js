@@ -1,21 +1,24 @@
 // ============================================================
 // DÉCOUVRIR — routines publiques et partagées par des amis :
-// recherche, filtres, votes 👍 et ajout à sa bibliothèque
+// recherche, filtres, notes ★ et ajout à sa bibliothèque ; routines
+// Skullcrusher (programmes standards) et plans partagés (plan-discover.js)
 // ============================================================
 import * as db from "./db.js";
 import { toast, openModal, closeModal, attachAutocomplete, esc, debounce } from "./utils.js";
 import { getExercises, getRoutines, invalidate } from "./cache.js";
 import { spotifyEmbed } from "./music.js";
 import { t, tn } from "./i18n.js";
+import { officialRoutines } from "./programs.js";
+import { ratingKey, score, starsHtml, openRatingModal } from "./ratings.js";
 
-// i18n-keys: "Courte (≤ 4 exos)", "Moyenne (5-7)", "Longue (8+)", "Les plus populaires", "Les plus récentes", "Moins d'exercices", "Plus d'exercices", "Tout", "👥 Amis", "🌍 Communauté"
+// i18n-keys: "Courte (≤ 4 exos)", "Moyenne (5-7)", "Longue (8+)", "Les mieux notées", "Les plus récentes", "Moins d'exercices", "Plus d'exercices", "Tout", "👥 Amis", "🌍 Communauté"
 const SIZES = {
   short: { label: "Courte (≤ 4 exos)", test: n => n <= 4 },
   medium: { label: "Moyenne (5-7)", test: n => n >= 5 && n <= 7 },
   long: { label: "Longue (8+)", test: n => n >= 8 }
 };
 const SORTS = {
-  popular: "Les plus populaires",
+  popular: "Les mieux notées",
   recent: "Les plus récentes",
   fewest: "Moins d'exercices",
   most: "Plus d'exercices"
@@ -34,13 +37,30 @@ function activeFilterCount() {
   return (filters.source !== "all") + filters.muscles.length + !!filters.exercise + !!filters.level + !!filters.goal + !!filters.size;
 }
 
+let discoverMode = "routines"; // "routines" | "plans"
+export function setDiscoverMode(mode) { discoverMode = mode; }
+
 export async function renderDiscover(content, onLibraryChanged) {
-  content.innerHTML = `<div class="empty-state"><span class="num">···</span>${t("Chargement")}</div>`;
+  content.innerHTML = `
+    <div class="discover-tabs">
+      <button class="start-tab ${discoverMode === "routines" ? "active" : ""}" data-dmode="routines">🏋️ ${t("Routines")}</button>
+      <button class="start-tab ${discoverMode === "plans" ? "active" : ""}" data-dmode="plans">📅 ${t("Plans")}</button>
+    </div>
+    <div id="discover-body"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>`;
+  content.querySelectorAll("[data-dmode]").forEach(b => b.onclick = () => {
+    discoverMode = b.dataset.dmode;
+    renderDiscover(content, onLibraryChanged);
+  });
+  const body = content.querySelector("#discover-body");
+  if (discoverMode === "plans") { await (await import("./plan-discover.js")).renderDiscoverPlans(body); return; }
+  await renderDiscoverRoutines(body, onLibraryChanged, () => renderDiscover(content, onLibraryChanged));
+}
+
+async function renderDiscoverRoutines(content, onLibraryChanged, reload) {
   const myUid = db.getCurrentUser()?.uid;
-  const [all, friendships, myVotes, myRoutines, exercises] = await Promise.all([
+  const [all, friendships, myRoutines, exercises] = await Promise.all([
     db.listDiscoverRoutines(),
     db.listFriendships(),
-    db.getMyVotes().catch(() => ({})),
     getRoutines(),
     getExercises()
   ]);
@@ -49,9 +69,12 @@ export async function renderDiscover(content, onLibraryChanged) {
   const copiedIds = new Set(myRoutines.map(r => r.source?.routine_id).filter(Boolean));
   // Une routine "amis" d'un ancien ami reste dans shared_with jusqu'à ce que
   // son propriétaire la modifie : on ne l'affiche plus.
-  const routines = all.filter(r => r.owner_uid === myUid || r.visibility === "public" || friendUids.has(r.owner_uid));
+  // Routines Skullcrusher (programmes standards) en plus de celles des utilisateurs.
+  const routines = [...officialRoutines(), ...all.filter(r => r.owner_uid === myUid || r.visibility === "public" || friendUids.has(r.owner_uid))];
+  const ratings = await db.getRatings(routines.map(r => ratingKey("routine", r.id))).catch(() => ({}));
+  if (!content.isConnected) return;
 
-  const ctx = { routines, myUid, friendUids, myVotes, copiedIds, onLibraryChanged };
+  const ctx = { routines, myUid, friendUids, copiedIds, onLibraryChanged, ratings };
 
   content.innerHTML = `
     <div style="position:relative;">
@@ -110,7 +133,7 @@ export async function renderDiscover(content, onLibraryChanged) {
   exInput.addEventListener("input", debounce(() => { filters.exercise = exInput.value; draw(); }, 200));
   q("#d-level").onchange = () => { filters.level = q("#d-level").value; draw(); };
   q("#d-goal").onchange = () => { filters.goal = q("#d-goal").value; draw(); };
-  q("#d-reset").onclick = () => { resetFilters(); renderDiscover(content, onLibraryChanged); };
+  q("#d-reset").onclick = () => { resetFilters(); reload(); };
 
   draw();
 }
@@ -140,10 +163,11 @@ function applyFilters(ctx) {
     return true;
   });
   const votes = r => r.vote_count || 0;
+  const rated = r => score(ctx.ratings[ratingKey("routine", r.id)]);
   const count = r => r.exercise_count ?? (r.exercises || []).length;
   const date = r => r.created_at || r.updated_at || "";
   const sorters = {
-    popular: (a, b) => votes(b) - votes(a) || date(b).localeCompare(date(a)),
+    popular: (a, b) => rated(b) - rated(a) || votes(b) - votes(a) || date(b).localeCompare(date(a)),
     recent: (a, b) => date(b).localeCompare(date(a)),
     fewest: (a, b) => count(a) - count(b) || votes(b) - votes(a),
     most: (a, b) => count(b) - count(a) || votes(b) - votes(a)
@@ -169,13 +193,13 @@ function drawResults(content, ctx) {
   }
   const medals = ["🥇", "🥈", "🥉"];
   const showMedals = filters.sort === "popular";
-  results.innerHTML = list.map((r, i) => routineCard(r, ctx, showMedals && (r.vote_count || 0) > 0 ? medals[i] : "")).join("");
+  results.innerHTML = list.map((r, i) => routineCard(r, ctx, showMedals && ctx.ratings[ratingKey("routine", r.id)]?.count ? medals[i] : "")).join("");
   bindCardActions(results, list, ctx, () => drawResults(content, ctx));
 }
 
 function routineCard(r, ctx, medal) {
   const mine = r.owner_uid === ctx.myUid;
-  const voted = !!ctx.myVotes[r.id];
+  const rating = ctx.ratings[ratingKey("routine", r.id)];
   const copied = ctx.copiedIds.has(r.id);
   const count = r.exercise_count ?? (r.exercises || []).length;
   const meta = [
@@ -186,10 +210,10 @@ function routineCard(r, ctx, medal) {
     <div class="card feed-card" data-open="${esc(r.id)}">
       <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
         <div style="min-width:0;">
-          <div class="card-title" style="margin-bottom:2px;">${medal ? `${medal} ` : ""}${esc(r.name)}</div>
+          <div class="card-title" style="margin-bottom:2px;">${medal ? `${medal} ` : ""}${esc(r.name)}${r.official ? ` <span class="official-badge">⭐ ${t("Officiel")}</span>` : ""}</div>
           <div class="muted" style="font-size:13px;">${t("par {name}", { name: mine ? t("toi") : esc(r.owner_name || t("Anonyme")) })}${ctx.friendUids.has(r.owner_uid) ? ` · 👥 ${t("ami")}` : ""} · ${tn(count, "{n} exercice", "{n} exercices")}</div>
         </div>
-        <button class="vote-btn ${voted ? "voted" : ""}" data-vote="${esc(r.id)}" ${mine ? `disabled title="${t("Tu ne peux pas voter pour ta routine")}"` : ""}>👍 <span>${r.vote_count || 0}</span></button>
+        <button class="rate-btn ${rating?.mine ? "rated" : ""}" data-rate="${esc(r.id)}" ${mine ? `disabled title="${t("Tu ne peux pas noter ta routine")}"` : ""}>${starsHtml(rating, { compact: true })}</button>
       </div>
       ${r.description ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">${esc(r.description)}</p>` : ""}
       <div class="chip-row" style="margin:10px 0 0;">
@@ -207,28 +231,26 @@ function bindCardActions(root, list, ctx, redraw) {
   root.querySelectorAll("[data-open]").forEach(el => {
     el.onclick = () => openRoutineDetail(find(el.dataset.open), ctx, redraw);
   });
-  root.querySelectorAll("[data-vote]").forEach(btn => {
-    btn.onclick = (e) => { e.stopPropagation(); vote(find(btn.dataset.vote), ctx, btn, redraw); };
+  root.querySelectorAll("[data-rate]").forEach(btn => {
+    btn.onclick = (e) => { e.stopPropagation(); rate(find(btn.dataset.rate), ctx, redraw); };
   });
   root.querySelectorAll("[data-copy]").forEach(btn => {
     btn.onclick = (e) => { e.stopPropagation(); addToLibrary(find(btn.dataset.copy), ctx, btn, redraw); };
   });
 }
 
-async function vote(r, ctx, btn, redraw) {
+// Note ★ d'une routine (pas la sienne).
+function rate(r, ctx, redraw) {
   if (!r || r.owner_uid === ctx.myUid) return;
-  btn.disabled = true;
-  const wasVoted = !!ctx.myVotes[r.id];
-  try {
-    await db.toggleRoutineVote(r.id, wasVoted);
-    r.vote_count = Math.max(0, (r.vote_count || 0) + (wasVoted ? -1 : 1));
-    if (wasVoted) delete ctx.myVotes[r.id]; else ctx.myVotes[r.id] = true;
+  const key = ratingKey("routine", r.id);
+  const cur = ctx.ratings[key] || { sum: 0, count: 0, mine: 0 };
+  openRatingModal(key, r.name, cur.mine, (stars) => {
+    if (cur.mine) { cur.sum -= cur.mine; cur.count--; }
+    if (stars) { cur.sum += stars; cur.count++; }
+    cur.mine = stars;
+    ctx.ratings[key] = cur;
     redraw();
-  } catch (err) {
-    console.error("[Skullcrusher] Erreur vote routine", err);
-    toast(t("Vote impossible, réessaie"));
-    btn.disabled = false;
-  }
+  });
 }
 
 async function addToLibrary(r, ctx, btn, redraw) {
@@ -253,7 +275,8 @@ function openRoutineDetail(r, ctx, redraw) {
   const refreshModal = () => { closeModal(); redraw(); openRoutineDetail(r, ctx, redraw); };
   openModal(`
     <h3 style="margin-bottom:4px;">${esc(r.name)}</h3>
-    <p class="muted" style="margin-top:0;">${t("par {name}", { name: mine ? t("toi") : esc(r.owner_name || t("Anonyme")) })} · 👍 ${r.vote_count || 0}</p>
+    <p class="muted" style="margin-top:0;">${t("par {name}", { name: mine ? t("toi") : esc(r.owner_name || t("Anonyme")) })}${r.official ? ` <span class="official-badge">⭐ ${t("Officiel")}</span>` : ""}</p>
+    <p style="margin:-4px 0 10px;">${starsHtml(ctx.ratings[ratingKey("routine", r.id)])}</p>
     ${r.description ? `<p>${esc(r.description)}</p>` : ""}
     ${r.playlist_url ? `<div class="muted" style="font-size:13px;">🎧 ${t("Playlist de la routine")}</div>${spotifyEmbed(r.playlist_url, 152)}` : ""}
     ${(r.exercises || []).map(e => `
@@ -266,13 +289,13 @@ function openRoutineDetail(r, ctx, redraw) {
       </div>`).join("") || `<p class="muted">${t("Aucun exercice.")}</p>`}
     <div class="btn-row" style="margin-top:14px;">
       <button class="btn btn-secondary" id="rd-close">${t("Fermer")}</button>
-      ${mine ? "" : `<button class="btn btn-secondary" id="rd-vote">${ctx.myVotes[r.id] ? t("Retirer mon 👍") : t("👍 Voter")}</button>`}
+      ${mine ? "" : `<button class="btn btn-secondary" id="rd-rate">★ ${ctx.ratings[ratingKey("routine", r.id)]?.mine ? t("Modifier ma note") : t("Noter")}</button>`}
     </div>
     ${mine ? "" : `<button class="btn btn-primary" id="rd-copy" style="margin-top:10px;" ${ctx.copiedIds.has(r.id) ? "disabled" : ""}>${ctx.copiedIds.has(r.id) ? t("✓ Dans ta bibliothèque") : t("+ Ajouter à ma bibliothèque")}</button>`}
   `, (modalEl) => {
     modalEl.querySelector("#rd-close").onclick = closeModal;
-    const voteBtn = modalEl.querySelector("#rd-vote");
-    if (voteBtn) voteBtn.onclick = () => vote(r, ctx, voteBtn, refreshModal);
+    const rateBtn = modalEl.querySelector("#rd-rate");
+    if (rateBtn) rateBtn.onclick = () => { closeModal(); rate(r, ctx, redraw); };
     const copyBtn = modalEl.querySelector("#rd-copy");
     if (copyBtn) copyBtn.onclick = () => addToLibrary(r, ctx, copyBtn, refreshModal);
   });
