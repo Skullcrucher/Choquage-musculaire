@@ -46,15 +46,19 @@ export function routineMetaChips(r) {
 }
 
 async function renderMyRoutines(content) {
-  const routines = await getRoutines();
+  const [all, planIds] = await Promise.all([getRoutines(), import("./plans.js").then(m => m.planRoutineIds()).catch(() => new Set())]);
   if (!content.isConnected) return;
+  // Les séances des plans sont rangées avec leur plan (onglet Plans).
+  const routines = all.filter(r => !planIds.has(r.id));
+  const hidden = all.length - routines.length;
   content.innerHTML = `
     <button class="btn btn-primary" id="new-routine">+ ${t("Nouvelle routine")}</button>
     <div class="btn-row" style="margin-top:8px;">
       <button class="btn btn-secondary btn-sm" id="import-plan">📥 ${t("Importer un plan")}</button>
-      ${routines.length ? `<button class="btn btn-secondary btn-sm" id="export-plan">📤 ${t("Exporter en CSV")}</button>` : ""}
+      ${all.length ? `<button class="btn btn-secondary btn-sm" id="export-plan">📤 ${t("Exporter en CSV")}</button>` : ""}
     </div>
     <div style="height:14px"></div>
+    ${hidden ? `<p class="muted" style="font-size:13px; margin:-4px 0 12px;">📅 ${t("{n} séance(s) de plan rangée(s) dans l'onglet Plans.", { n: hidden })}</p>` : ""}
     ${routines.length === 0 ? `<div class="empty-state"><span class="num">▤</span>${t("Pas encore de routine.")}<br><span class="muted">${t("Crée la tienne ou pioche dans l'onglet Découvrir.")}</span></div>` : ""}
     ${routines.map(r => `
       <div class="card" data-routine="${esc(r.id)}">
@@ -166,7 +170,7 @@ async function openShareModal(routine, onDone) {
 }
 
 // ---------- Éditeur ----------
-async function openRoutineEditor(routine, onSaved) {
+export async function openRoutineEditor(routine, onSaved) {
   const exercises = await getExercises();
   const state = {
     name: routine?.name || "",
@@ -180,7 +184,7 @@ async function openRoutineEditor(routine, onSaved) {
     Object.entries(map).map(([k, v]) => `<option value="${k}" ${k === current ? "selected" : ""}>${esc(v)}</option>`).join("");
 
   openModal(`
-    <h3>${routine ? t("Modifier la routine") : t("Nouvelle routine")}</h3>
+    <h3>${routine?.id ? t("Modifier la routine") : t("Nouvelle routine")}</h3>
     <label>${t("Nom")}</label>
     <input id="r-name" value="${esc(state.name)}" placeholder="${t("ex: Push A")}" maxlength="80">
     <label>${t("Description (facultatif)")}</label>

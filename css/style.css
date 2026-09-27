@@ -969,3 +969,36 @@ body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var
 .workout-subline { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
 .presence-toggle { background: var(--surface-raised); color: var(--text-dim); border: 1px solid var(--border); border-radius: 999px; padding: 5px 11px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; }
 .presence-toggle.on { color: #5FBE72; border-color: rgba(95,190,114,0.45); background: rgba(95,190,114,0.10); }
+
+/* Écran Séance : Depuis une routine / Depuis un plan */
+.start-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 18px 0 12px; background: var(--surface-raised); border-radius: var(--radius); padding: 4px; }
+.start-tab { background: none; border: none; color: var(--text-dim); font: 600 14px 'Inter', sans-serif; padding: 10px 6px; border-radius: calc(var(--radius) - 3px); cursor: pointer; }
+.start-tab.active { background: var(--amber); color: var(--on-accent, #fff); }
+.plan-sessions-head { display: flex; justify-content: space-between; align-items: baseline; margin: 14px 0 8px; font-weight: 600; font-size: 14px; }
+.plan-session { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 12px 14px; }
+.plan-session-mark { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; text-transform: uppercase; background: var(--surface-raised); color: var(--text-dim); }
+.plan-session-sub { font-size: 13px; }
+.plan-session.today { border-color: var(--amber); }
+.plan-session.today .plan-session-mark { background: var(--amber); color: #fff; font-size: 15px; }
+.plan-session.done { background: rgba(46, 160, 67, 0.12); border-color: rgba(63, 185, 80, 0.45); }
+.plan-session.done .plan-session-mark { background: #3fb950; color: #0B0B0C; font-size: 18px; }
+.plan-session.done .plan-session-sub { color: #3fb950; }
+.plan-routines { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; font-size: 13px; }
+.plan-routines .chip { font: inherit; font-size: 12px; cursor: pointer; }
+
+/* Suivi du plan (Historique) */
+.plan-track-bar { height: 10px; border-radius: 999px; background: var(--surface-raised); overflow: hidden; margin: 10px 0 4px; }
+.plan-track-bar > div { height: 100%; background: linear-gradient(90deg, var(--amber), #3fb950); border-radius: 999px; }
+.stat-box .num small { font-size: 0.55em; color: var(--text-dim); }
+.plan-weeks { display: flex; flex-direction: column; gap: 6px; }
+.plan-wrow { display: grid; grid-template-columns: 74px 1fr 36px; gap: 8px; align-items: center; }
+.plan-wrow.current { background: rgba(224,36,36,0.08); border-radius: 8px; padding: 4px; margin: 0 -4px; }
+.plan-wrow.future { opacity: 0.55; }
+.plan-wnum { font-weight: 700; font-size: 13px; line-height: 1.1; }
+.plan-wnum span { display: block; font-weight: 400; font-size: 11px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-wdays { display: flex; flex-wrap: wrap; gap: 4px; }
+.plan-wdot { width: 24px; height: 24px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.plan-wdot.done { background: #3fb950; color: #0B0B0C; }
+.plan-wdot.missed { background: rgba(224,36,36,0.25); color: var(--amber); }
+.plan-wdot.todo { background: var(--surface-raised); color: var(--text-dim); }
+.plan-wcount { font-size: 12px; color: var(--text-dim); text-align: right; }

@@ -11,7 +11,7 @@ import { t, locale } from "./i18n.js";
 let viewMonth = new Date();
 let workoutsCache = [];
 let selectedDay = null;
-let mode = "mine"; // "mine" | "routines"
+let mode = "mine"; // "mine" | "plan" | "routines"
 
 // Initiales des jours (lundi → dimanche) dans la langue de l'app.
 const DOW = Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(locale(), { weekday: "narrow" }));
@@ -22,6 +22,7 @@ export async function renderHistorique(container) {
     <h1 class="section-title">${t("Historique")}</h1>
     <div class="chip-row" id="mode-chips" style="margin-bottom:14px;">
       <div class="chip ${mode === "mine" ? "active" : ""}" data-mode="mine">${t("Mes séances")}</div>
+      <div class="chip ${mode === "plan" ? "active" : ""}" data-mode="plan">📅 ${t("Suivi du plan")}</div>
       <div class="chip ${mode === "routines" ? "active" : ""}" data-mode="routines">${t("Routines")}</div>
     </div>
     <div id="hist-content"></div>
@@ -41,6 +42,11 @@ async function drawContent(container) {
   if (!content) return;
   if (mode === "routines") {
     await renderRoutines(content);
+  } else if (mode === "plan") {
+    content.innerHTML = `<div class="empty-state"><span class="num">···</span>${t("Chargement")}</div>`;
+    await (await import("./plans.js")).renderPlanTracking(content, {
+      onOpenWorkout: (w) => w && openWorkoutDetail(w, () => drawContent(container))
+    });
   } else {
     renderMine(content);
   }
