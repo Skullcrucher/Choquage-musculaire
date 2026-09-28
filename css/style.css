@@ -132,7 +132,11 @@ button { font-family: inherit; }
    déplace les éléments « fixed » (barre d'onglets, minuteur) quand la
    barre de Safari se replie ou pendant le rebond ; ici ils ne bougent plus. */
 html, body { overflow: hidden; }
-body { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+/* La page épouse exactement l'écran (même repère que la barre d'onglets
+   « fixed »). Pas de 100vh/100dvh : dans l'app installée sur iPhone, ils
+   peuvent valoir moins que l'écran (zones sûres, après le clavier) et
+   laissaient une bande noire en bas. */
+body { position: fixed; top: 0; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; }
 body > .topbar { flex: none; }
 body > .view {
   flex: 1 1 auto; min-height: 0;
