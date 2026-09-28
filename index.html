@@ -11,6 +11,24 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Skullcrusher">
+<script>
+  // App installée sur iPhone : iOS annonce une fenêtre plus courte que
+  // l'écran (de la hauteur de la barre d'état), ce qui laissait une bande
+  // noire en bas. On donne à la page la vraie hauteur de l'écran.
+  (function () {
+    var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    var standalone = navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+    if (!ios || !standalone) return;
+    function fit() {
+      var portrait = !window.matchMedia || matchMedia("(orientation: portrait)").matches;
+      var h = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+      document.documentElement.style.setProperty("--app-h", Math.max(h, window.innerHeight) + "px");
+    }
+    fit();
+    window.addEventListener("orientationchange", function () { setTimeout(fit, 300); });
+    window.addEventListener("resize", fit);
+  })();
+</script>
 <link rel="stylesheet" href="css/style.css">
 <script src="js/vendor/papaparse.min.js"></script>
 <script src="js/vendor/chart.umd.js"></script>
@@ -141,59 +159,60 @@
 <script type="importmap">
 {
  "imports": {
-  "./js/app.js": "./js/app.js?v=68",
-  "./js/auth.js": "./js/auth.js?v=68",
-  "./js/cache.js": "./js/cache.js?v=68",
-  "./js/calories.js": "./js/calories.js?v=68",
-  "./js/challenges.js": "./js/challenges.js?v=68",
-  "./js/db.js": "./js/db.js?v=68",
-  "./js/exercise-detail.js": "./js/exercise-detail.js?v=68",
-  "./js/exercise-dupes.js": "./js/exercise-dupes.js?v=68",
-  "./js/exercise-guides.js": "./js/exercise-guides.js?v=68",
-  "./js/exercise-match.js": "./js/exercise-match.js?v=68",
-  "./js/exercise-picker.js": "./js/exercise-picker.js?v=68",
-  "./js/exercise-search.js": "./js/exercise-search.js?v=68",
-  "./js/exercises-seed.js": "./js/exercises-seed.js?v=68",
-  "./js/feed.js": "./js/feed.js?v=68",
-  "./js/finish.js": "./js/finish.js?v=68",
-  "./js/firebase-config.js": "./js/firebase-config.js?v=68",
-  "./js/friends.js": "./js/friends.js?v=68",
-  "./js/history.js": "./js/history.js?v=68",
-  "./js/i18n.js": "./js/i18n.js?v=68",
-  "./js/i18n/en.js": "./js/i18n/en.js?v=68",
-  "./js/i18n/mfe.js": "./js/i18n/mfe.js?v=68",
-  "./js/i18n/pl.js": "./js/i18n/pl.js?v=68",
-  "./js/import.js": "./js/import.js?v=68",
-  "./js/muscles.js": "./js/muscles.js?v=68",
-  "./js/music-wall.js": "./js/music-wall.js?v=68",
-  "./js/music.js": "./js/music.js?v=68",
-  "./js/plan-discover.js": "./js/plan-discover.js?v=68",
-  "./js/plan-import.js": "./js/plan-import.js?v=68",
-  "./js/plan-share.js": "./js/plan-share.js?v=68",
-  "./js/plans.js": "./js/plans.js?v=68",
-  "./js/presence.js": "./js/presence.js?v=68",
-  "./js/profile.js": "./js/profile.js?v=68",
-  "./js/programs.js": "./js/programs.js?v=68",
-  "./js/progression.js": "./js/progression.js?v=68",
-  "./js/ratings.js": "./js/ratings.js?v=68",
-  "./js/routine-discover.js": "./js/routine-discover.js?v=68",
-  "./js/routines.js": "./js/routines.js?v=68",
-  "./js/settings.js": "./js/settings.js?v=68",
-  "./js/share-card.js": "./js/share-card.js?v=68",
-  "./js/spotify-config.js": "./js/spotify-config.js?v=68",
-  "./js/spotify-connect.js": "./js/spotify-connect.js?v=68",
-  "./js/stats.js": "./js/stats.js?v=68",
-  "./js/terms.js": "./js/terms.js?v=68",
-  "./js/timer-sync-config.js": "./js/timer-sync-config.js?v=68",
-  "./js/timer-sync.js": "./js/timer-sync.js?v=68",
-  "./js/update-check.js": "./js/update-check.js?v=68",
-  "./js/utils.js": "./js/utils.js?v=68",
-  "./js/workout-detail.js": "./js/workout-detail.js?v=68",
-  "./js/workout.js": "./js/workout.js?v=68"
+  "./js/app.js": "./js/app.js?v=69",
+  "./js/auth.js": "./js/auth.js?v=69",
+  "./js/cache.js": "./js/cache.js?v=69",
+  "./js/calories.js": "./js/calories.js?v=69",
+  "./js/challenges.js": "./js/challenges.js?v=69",
+  "./js/db.js": "./js/db.js?v=69",
+  "./js/exercise-detail.js": "./js/exercise-detail.js?v=69",
+  "./js/exercise-dupes.js": "./js/exercise-dupes.js?v=69",
+  "./js/exercise-guides.js": "./js/exercise-guides.js?v=69",
+  "./js/exercise-match.js": "./js/exercise-match.js?v=69",
+  "./js/exercise-picker.js": "./js/exercise-picker.js?v=69",
+  "./js/exercise-search.js": "./js/exercise-search.js?v=69",
+  "./js/exercises-seed.js": "./js/exercises-seed.js?v=69",
+  "./js/feed.js": "./js/feed.js?v=69",
+  "./js/finish.js": "./js/finish.js?v=69",
+  "./js/firebase-config.js": "./js/firebase-config.js?v=69",
+  "./js/friends.js": "./js/friends.js?v=69",
+  "./js/history.js": "./js/history.js?v=69",
+  "./js/i18n.js": "./js/i18n.js?v=69",
+  "./js/i18n/en.js": "./js/i18n/en.js?v=69",
+  "./js/i18n/mfe.js": "./js/i18n/mfe.js?v=69",
+  "./js/i18n/pl.js": "./js/i18n/pl.js?v=69",
+  "./js/import.js": "./js/import.js?v=69",
+  "./js/muscles.js": "./js/muscles.js?v=69",
+  "./js/music-wall.js": "./js/music-wall.js?v=69",
+  "./js/music.js": "./js/music.js?v=69",
+  "./js/plan-discover.js": "./js/plan-discover.js?v=69",
+  "./js/plan-import.js": "./js/plan-import.js?v=69",
+  "./js/plan-share.js": "./js/plan-share.js?v=69",
+  "./js/plans.js": "./js/plans.js?v=69",
+  "./js/presence.js": "./js/presence.js?v=69",
+  "./js/profile.js": "./js/profile.js?v=69",
+  "./js/programs.js": "./js/programs.js?v=69",
+  "./js/progression.js": "./js/progression.js?v=69",
+  "./js/ratings.js": "./js/ratings.js?v=69",
+  "./js/routine-discover.js": "./js/routine-discover.js?v=69",
+  "./js/routines.js": "./js/routines.js?v=69",
+  "./js/settings.js": "./js/settings.js?v=69",
+  "./js/share-card.js": "./js/share-card.js?v=69",
+  "./js/spotify-config.js": "./js/spotify-config.js?v=69",
+  "./js/spotify-connect.js": "./js/spotify-connect.js?v=69",
+  "./js/stats.js": "./js/stats.js?v=69",
+  "./js/terms.js": "./js/terms.js?v=69",
+  "./js/timer-sync-config.js": "./js/timer-sync-config.js?v=69",
+  "./js/timer-sync.js": "./js/timer-sync.js?v=69",
+  "./js/update-check.js": "./js/update-check.js?v=69",
+  "./js/utils.js": "./js/utils.js?v=69",
+  "./js/workout-detail.js": "./js/workout-detail.js?v=69",
+  "./js/workout-reminder.js": "./js/workout-reminder.js?v=69",
+  "./js/workout.js": "./js/workout.js?v=69"
  }
 }
 </script>
-<script type="module" src="js/app.js?v=68"></script>
+<script type="module" src="js/app.js?v=69"></script>
 <!-- version:end -->
 </body>
 </html>

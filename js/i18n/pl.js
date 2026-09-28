@@ -1013,5 +1013,18 @@ export default {
   "Type des nouvelles séries": "Typ nowych serii",
   "Échec": "Do upadku",
   "Les nouvelles séries seront en échec": "Nowe serie będą do upadku",
-  "Les nouvelles séries seront normales": "Nowe serie będą normalne"
+  "Les nouvelles séries seront normales": "Nowe serie będą normalne",
+  "Rappel si la séance reste ouverte": "Przypomnienie, gdy trening pozostaje otwarty",
+  "Après {t} sans nouvelle série": "Po {t} bez nowej serii",
+  "Désactivé": "Wyłączone",
+  "Pour ne pas oublier de terminer une séance : un bandeau discret dans l'app et, si les notifications sont activées, une notification app fermée. Rien pendant que tu t'entraînes.": "Aby nie zapomnieć zakończyć treningu: dyskretny pasek w aplikacji, a przy włączonych powiadomieniach — powiadomienie, gdy aplikacja jest zamknięta. Nic podczas treningu.",
+  "Rappel désactivé": "Przypomnienie wyłączone",
+  "Rappel enregistré": "Przypomnienie zapisane",
+  "Séance toujours ouverte": "Trening wciąż otwarty",
+  "« {title} » est ouverte sans nouvelle série depuis {min} min. Pense à la terminer (ou à l'annuler).": "„{title}” jest otwarty bez nowej serii od {min} min. Pamiętaj, aby go zakończyć (lub anulować).",
+  "{n} min": "{n} min",
+  "{h} h {m}": "{h} h {m}",
+  "« {title} » est toujours ouverte — aucune série depuis {idle}.": "„{title}” jest wciąż otwarty — brak serii od {idle}.",
+  "Terminer": "Zakończ",
+  "Je continue": "Kontynuuję"
 };

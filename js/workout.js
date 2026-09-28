@@ -8,6 +8,7 @@ import { openExerciseDetail } from "./exercise-detail.js";
 import { parseMusicLink, openSpotifyPlayer, providerName, providerIcon } from "./music.js";
 import { t, tn, locale } from "./i18n.js";
 import { presenceDefault, startPresence, stopPresence, touchPresence } from "./presence.js";
+import { armReminder, clearReminder } from "./workout-reminder.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
 let restTimerInterval = null;
@@ -27,8 +28,14 @@ function countThisWeek(workouts) {
 }
 
 function saveLocalState() {
-  if (currentWorkout) localStorage.setItem(LS_STATE_KEY, JSON.stringify(currentWorkout));
+  if (!currentWorkout) return;
+  // Dernière action : sert au rappel de séance oubliée (workout-reminder.js).
+  currentWorkout.last_activity = new Date().toISOString();
+  localStorage.setItem(LS_STATE_KEY, JSON.stringify(currentWorkout));
+  armReminder(currentWorkout);
 }
+// « Je continue » sur le bandeau de rappel : même heure en mémoire.
+window.addEventListener("sc:workout-activity", () => { if (currentWorkout) currentWorkout.last_activity = new Date().toISOString(); });
 
 function loadLocalState() {
   const raw = localStorage.getItem(LS_STATE_KEY);
@@ -754,6 +761,7 @@ async function finishWorkout() {
     } catch (e) { console.warn("[Skullcrusher] Progression non enregistrée :", e); }
   }
   stopPresence();
+  clearReminder();
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
   localStorage.removeItem(LS_REST_KEY);
@@ -775,6 +783,7 @@ async function cancelWorkout() {
   if (!confirm(t("Supprimer cette séance et toutes ses séries ?"))) return;
   await db.deleteWorkout(currentWorkout.id);
   stopPresence();
+  clearReminder();
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_STATE_KEY);
   localStorage.removeItem(LS_REST_KEY);

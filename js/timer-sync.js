@@ -97,6 +97,19 @@ async function post(path, body) {
   return res.json();
 }
 
+// Le serveur gère-t-il plusieurs minuteurs par appareil (repos + rappel) ?
+// Sinon, un rappel écraserait la fin de repos : on n'en programme pas.
+let slotsPromise = null;
+function serverHasSlots() {
+  if (!slotsPromise) {
+    slotsPromise = fetch(`${SERVER}/vapid-public-key`)
+      .then(r => r.ok ? r.json() : {})
+      .then(d => Array.isArray(d.features) && d.features.includes("slots"))
+      .catch(() => { slotsPromise = null; return false; });
+  }
+  return slotsPromise;
+}
+
 // Programme la notification de fin de repos pour l'instant endMs.
 export async function scheduleRestPush(endMs, body) {
   if (!pushActive()) return false;
@@ -107,7 +120,8 @@ export async function scheduleRestPush(endMs, body) {
       subscription: sub.toJSON(),
       delayMs: Math.max(0, Math.round(endMs - Date.now())),
       title: t("Repos terminé") + " 🤘",
-      body: body || t("C'est reparti pour la série suivante.")
+      body: body || t("C'est reparti pour la série suivante."),
+      ...((await serverHasSlots()) ? { slot: "rest" } : {})
     });
     return true;
   } catch (e) {
@@ -120,8 +134,33 @@ export async function cancelRestPush() {
   if (!pushConfigured()) return;
   try {
     const sub = await getSubscription();
-    if (sub) await post("/cancel", { endpoint: sub.endpoint });
+    if (sub) await post("/cancel", { endpoint: sub.endpoint, ...((await serverHasSlots()) ? { slot: "rest" } : {}) });
   } catch (e) {
     console.warn("[Skullcrusher] Annulation push impossible :", e);
+  }
+}
+
+// Rappel « séance toujours ouverte », app fermée : notification à endMs
+// (reprogrammée à chaque série). Seulement si le serveur a deux minuteurs.
+export async function scheduleReminderPush(endMs, title, body) {
+  if (!pushActive() || !(await serverHasSlots())) return false;
+  try {
+    const sub = await getSubscription();
+    if (!sub) return false;
+    await post("/schedule", { subscription: sub.toJSON(), slot: "reminder", delayMs: Math.max(0, Math.round(endMs - Date.now())), title, body });
+    return true;
+  } catch (e) {
+    console.warn("[Skullcrusher] Rappel de séance non programmé :", e);
+    return false;
+  }
+}
+
+export async function cancelReminderPush() {
+  if (!pushActive() || !(await serverHasSlots())) return;
+  try {
+    const sub = await getSubscription();
+    if (sub) await post("/cancel", { endpoint: sub.endpoint, slot: "reminder" });
+  } catch (e) {
+    console.warn("[Skullcrusher] Annulation du rappel impossible :", e);
   }
 }

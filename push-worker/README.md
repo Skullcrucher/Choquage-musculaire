@@ -50,8 +50,12 @@ n'a rien d'autre à faire.
 
 ## Fonctionnement
 - `GET /vapid-public-key` : clé publique utilisée par l'app pour s'abonner.
-- `POST /schedule {subscription, delayMs, title, body}` : programme (ou reprogramme)
-  la notification de l'appareil ; un seul minuteur par appareil.
-- `POST /cancel {endpoint}` : annule (repos passé, séance terminée).
+- `POST /schedule {subscription, delayMs, title, body, slot}` : programme (ou reprogramme)
+  une notification de l'appareil. Deux minuteurs indépendants par appareil :
+  `slot: "rest"` (fin de repos, 30 min max, par défaut) et `slot: "reminder"`
+  (rappel d'une séance restée ouverte, 4 h max).
+- `POST /cancel {endpoint, slot}` : annule ce minuteur (sans `slot` : les deux).
+- `GET /vapid-public-key` renvoie aussi `features: ["slots"]` : l'app ne
+  programme de rappel que si le serveur déployé gère les deux minuteurs.
 - Un Durable Object par appareil garde l'échéance et se réveille par alarme ;
   l'envoi respecte les standards Web Push (signature VAPID, chiffrement aes128gcm).

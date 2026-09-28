@@ -106,6 +106,7 @@ async function switchTab(tab) {
       TABS[tab].render(view),
       new Promise((_, reject) => setTimeout(() => reject(new Error(t("Ça prend trop de temps à charger. Vérifie ta connexion, ou qu'aucun bloqueur de contenu ne bride ce site."))), 20000))
     ]);
+    if (myToken === renderToken) checkForgottenWorkout();
   } catch (e) {
     console.error(e);
     if (myToken === renderToken) {
@@ -212,3 +213,16 @@ function resetPageScroll() {
 }
 document.addEventListener("focusout", () => setTimeout(resetPageScroll, 60));
 window.visualViewport?.addEventListener("resize", () => setTimeout(resetPageScroll, 60));
+
+// Séance oubliée : bandeau discret après une longue inactivité (voir
+// workout-reminder.js), vérifié à chaque onglet, au retour dans l'app et
+// toutes les 5 minutes.
+function checkForgottenWorkout() {
+  if (!appStarted) return;
+  import("./workout-reminder.js").then(m => m.updateForgottenBanner(async () => {
+    if (activeTab !== "seance") await switchTab("seance");
+    document.getElementById("finish-workout")?.click();
+  })).catch(() => null);
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkForgottenWorkout(); });
+setInterval(checkForgottenWorkout, 5 * 60 * 1000);

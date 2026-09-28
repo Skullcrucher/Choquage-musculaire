@@ -176,6 +176,11 @@ export async function renderReglages(container) {
           <span class="switch-track"></span>
         </label>
       </div>
+      <label>⏰ ${t("Rappel si la séance reste ouverte")}</label>
+      <select id="reminder-min">
+        ${[0, 45, 60, 90, 120].map(m => `<option value="${m}">${m ? t("Après {t} sans nouvelle série", { t: m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60}` : `${m / 60} h` }) : t("Désactivé")}</option>`).join("")}
+      </select>
+      <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Pour ne pas oublier de terminer une séance : un bandeau discret dans l'app et, si les notifications sont activées, une notification app fermée. Rien pendant que tu t'entraînes.")}</p>
       <label>${t("Type des nouvelles séries")}</label>
       <select id="default-set-type">
         <option value="failure" ${defaultSetType() === "failure" ? "selected" : ""}>💀 ${t("Échec")}</option>
@@ -298,6 +303,16 @@ export async function renderReglages(container) {
     if (btn.isConnected) { btn.disabled = false; btn.textContent = t("Supprimer toutes mes séances"); }
   };
 
+  import("./workout-reminder.js").then(m => {
+    const sel = container.querySelector("#reminder-min");
+    if (!sel) return;
+    sel.value = String(m.reminderMinutes());
+    sel.onchange = () => {
+      m.setReminderMinutes(parseInt(sel.value, 10));
+      try { const st = JSON.parse(localStorage.getItem("skullcrusher_active_workout_state") || "null"); if (localStorage.getItem("skullcrusher_active_workout_id") && st) m.armReminder(st); } catch (_) {}
+      toast(sel.value === "0" ? t("Rappel désactivé") : t("Rappel enregistré"));
+    };
+  }).catch(() => null);
   container.querySelector("#default-set-type").onchange = (e) => {
     setDefaultSetType(e.target.value);
     toast(e.target.value === "failure" ? t("Les nouvelles séries seront en échec") : t("Les nouvelles séries seront normales"));

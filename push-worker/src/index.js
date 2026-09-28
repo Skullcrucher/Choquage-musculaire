@@ -7,16 +7,19 @@
 // (standard Web Push) à la seconde près, même app fermée.
 //
 //   GET  /vapid-public-key          -> clé publique à donner à pushManager.subscribe
-//   POST /schedule {subscription, delayMs, title, body}
-//   POST /cancel   {endpoint}
+//   POST /schedule {subscription, delayMs, title, body, slot?}
+//   POST /cancel   {endpoint, slot?}
 //
-// Un Durable Object "RestTimer" par abonnement (appareil) garde l'échéance
-// et utilise une alarme pour se réveiller au bon moment. Un Durable Object
+// Deux minuteurs par appareil (« slot ») : "rest" (fin de repos, par
+// défaut) et "reminder" (rappel d'une séance restée ouverte). Sans slot,
+// /cancel annule tout (anciennes versions de l'app).
+// Un Durable Object "RestTimer" par abonnement (appareil) garde les
+// échéances et utilise une alarme pour se réveiller au bon moment. Un Durable Object
 // dédié ("__vapid__") génère une fois pour toutes la paire de clés VAPID
 // qui signe les envois : aucune clé à créer ni à stocker à la main.
 // ============================================================
 
-const MAX_DELAY_MS = 30 * 60 * 1000;
+const SLOTS = { rest: 30 * 60 * 1000, reminder: 4 * 3600 * 1000 }; // délai max par minuteur
 const PUSH_HOSTS = [
   /^web\.push\.apple\.com$/,
   /^fcm\.googleapis\.com$/,
@@ -84,7 +87,7 @@ export default {
       if (request.method === "GET" && url.pathname === "/vapid-public-key") {
         const keys = await env.TIMERS.get(env.TIMERS.idFromName("__vapid__")).fetch("https://do/keys");
         const { publicKey } = await keys.json();
-        return json({ publicKey }, 200, cors);
+        return json({ publicKey, features: ["slots"] }, 200, cors);
       }
 
       if (request.method === "POST" && (url.pathname === "/schedule" || url.pathname === "/cancel")) {
@@ -95,7 +98,11 @@ export default {
           const sub = body.subscription;
           if (!sub?.keys?.p256dh || !sub?.keys?.auth) return json({ error: "abonnement invalide" }, 400, cors);
           const delayMs = Number(body.delayMs);
-          if (!Number.isFinite(delayMs) || delayMs < 0 || delayMs > MAX_DELAY_MS) return json({ error: "délai invalide" }, 400, cors);
+          const max = SLOTS[body.slot || "rest"];
+          if (!max) return json({ error: "minuteur invalide" }, 400, cors);
+          if (!Number.isFinite(delayMs) || delayMs < 0 || delayMs > max) return json({ error: "délai invalide" }, 400, cors);
+        } else if (body.slot && !SLOTS[body.slot]) {
+          return json({ error: "minuteur invalide" }, 400, cors);
         }
         const stub = await timerStub(env, endpoint);
         const res = await stub.fetch("https://do" + url.pathname, { method: "POST", body: JSON.stringify(body) });
@@ -124,33 +131,60 @@ export class RestTimer {
     if (path === "/keys") return Response.json(await this.getOrCreateKeys());
 
     const body = await request.json();
+    const jobs = await this.getJobs();
     if (path === "/schedule") {
       const text = (v, max) => String(v || "").slice(0, max);
-      await this.state.storage.put("job", {
-        subscription: body.subscription,
+      const slot = body.slot || "rest";
+      const fireAt = Date.now() + Number(body.delayMs);
+      jobs[slot] = {
+        subscription: body.subscription, fireAt, tag: slot,
         title: text(body.title, 80) || "Repos terminé 🤘",
         body: text(body.body, 200) || "C'est reparti pour la série suivante."
-      });
-      const fireAt = Date.now() + Number(body.delayMs);
-      await this.state.storage.setAlarm(fireAt);
+      };
+      await this.saveJobs(jobs);
       return Response.json({ ok: true, fireAt });
     }
     if (path === "/cancel") {
-      await this.state.storage.deleteAlarm();
-      await this.state.storage.delete("job");
+      if (body.slot) delete jobs[body.slot];
+      else Object.keys(jobs).forEach(k => delete jobs[k]);
+      await this.saveJobs(jobs);
       return Response.json({ ok: true });
     }
     return Response.json({ error: "introuvable" }, { status: 404 });
   }
 
+  // Échéances en cours ; reprend l'ancien format (un seul "job" = repos).
+  async getJobs() {
+    const jobs = (await this.state.storage.get("jobs")) || {};
+    const legacy = await this.state.storage.get("job");
+    if (legacy) {
+      if (!jobs.rest) jobs.rest = { ...legacy, fireAt: (await this.state.storage.getAlarm()) || Date.now(), tag: "rest" };
+      await this.state.storage.delete("job");
+    }
+    return jobs;
+  }
+
+  // Enregistre les échéances et règle l'alarme sur la plus proche.
+  async saveJobs(jobs) {
+    await this.state.storage.put("jobs", jobs);
+    const next = Math.min(...Object.values(jobs).map(j => j.fireAt));
+    if (Number.isFinite(next)) await this.state.storage.setAlarm(next);
+    else await this.state.storage.deleteAlarm();
+  }
+
   async alarm() {
-    const job = await this.state.storage.get("job");
-    if (!job) return;
-    await this.state.storage.delete("job");
+    const jobs = await this.getJobs();
+    const now = Date.now();
+    const due = Object.entries(jobs).filter(([, j]) => j.fireAt <= now + 1000);
+    if (!due.length) { await this.saveJobs(jobs); return; }
+    due.forEach(([k]) => delete jobs[k]);
+    await this.saveJobs(jobs);
     const keysRes = await this.env.TIMERS.get(this.env.TIMERS.idFromName("__vapid__")).fetch("https://do/keys");
     const keys = await keysRes.json();
-    const res = await sendWebPush(job.subscription, JSON.stringify({ title: job.title, body: job.body }), keys, this.env.VAPID_SUBJECT);
-    if (!res.ok) console.warn("Envoi push refusé", res.status, await res.text().catch(() => ""));
+    for (const [, job] of due) {
+      const res = await sendWebPush(job.subscription, JSON.stringify({ title: job.title, body: job.body, tag: job.tag }), keys, this.env.VAPID_SUBJECT);
+      if (!res.ok) console.warn("Envoi push refusé", res.status, await res.text().catch(() => ""));
+    }
   }
 
   // Paire de clés VAPID (ECDSA P-256), générée au premier appel puis conservée.
