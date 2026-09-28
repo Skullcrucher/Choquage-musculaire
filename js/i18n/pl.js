@@ -1007,5 +1007,7 @@ export default {
   "Importés": "Zaimportowane",
   "Équivalent Skullcrusher : {name}": "Odpowiednik w Skullcrusher: {name}",
   "Importé": "Zaimportowane",
-  "Perso": "Własne"
+  "Perso": "Własne",
+  "Type": "Typ",
+  "Normale": "Normalna"
 };

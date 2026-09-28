@@ -997,5 +997,7 @@ export default {
   "Importés": "Importe",
   "Équivalent Skullcrusher : {name}": "Ekivalan Skullcrusher: {name}",
   "Importé": "Importe",
-  "Perso": "Perso"
+  "Perso": "Perso",
+  "Type": "Tip",
+  "Normale": "Normal"
 };

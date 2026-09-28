@@ -265,7 +265,21 @@ const setHasData = (s) => !!s.id || s.weight_kg != null || s.reps != null;
 // Sauvegardes en cours par série (pas stockées dans l'état local sérialisé).
 const pendingSaves = new WeakMap();
 
+// Redessine la liste en gardant la position de défilement et le champ en
+// cours de saisie (sinon, sur iPhone, l'écran saute et le clavier se ferme).
 function renderExerciseList(el) {
+  const view = document.getElementById("view");
+  const top = view ? view.scrollTop : 0;
+  const active = document.activeElement;
+  const activeRow = active && el.contains(active) ? active.closest(".set-row") : null;
+  const focusSel = activeRow && active.classList.length
+    ? `.set-row[data-ex="${activeRow.dataset.ex}"][data-set="${activeRow.dataset.set}"] .${active.classList[0]}` : null;
+  drawExerciseList(el);
+  if (view) view.scrollTop = top;
+  if (focusSel) el.querySelector(focusSel)?.focus({ preventScroll: true });
+}
+
+function drawExerciseList(el) {
   const count = currentWorkout.exercises.length;
   el.innerHTML = currentWorkout.exercises.map((ex, exIdx) => `
     <div class="exercise-block">
@@ -344,7 +358,8 @@ function renderExerciseList(el) {
     const doSave = async () => {
       // Série ou exercice supprimé entre-temps : rien à écrire.
       if (!currentWorkout || !currentWorkout.exercises.includes(ex) || !ex.sets.includes(set)) return;
-      if (set.weight_kg == null && set.reps == null) return;
+      // Série vidée : si elle est déjà enregistrée, on enregistre le vide.
+      if (set.weight_kg == null && set.reps == null && !set.id) return;
       set.logged_at = set.logged_at || new Date().toISOString(); // durée réelle de séance (calories)
       const payload = {
         exercise_title: ex.exercise_title, set_index: set.set_index, set_type: set.set_type,
@@ -376,12 +391,8 @@ function renderExerciseList(el) {
     kgInput.oninput = () => { set.weight_kg = kgInput.value ? parseFloat(kgInput.value) : null; persist(); };
     repsInput.oninput = () => { set.reps = repsInput.value ? parseInt(repsInput.value, 10) : null; persist(); };
 
-    badge.onclick = () => {
-      const types = ["normal", "warmup", "dropset", "failure"];
-      set.set_type = types[(types.indexOf(set.set_type) + 1) % types.length];
-      persist();
-      renderExerciseList(el);
-    };
+    // Type de série : choix direct (normale, échauffement, dégressive, échec).
+    badge.onclick = () => showTypePicker(row, set, persist);
 
     check.onclick = async () => {
       set.done = !set.done;
@@ -427,6 +438,9 @@ function showRpePicker(row, set, savePersist) {
     if (b.dataset.rpe) {
       set.rpe = parseFloat(b.dataset.rpe);
       row.querySelector(".set-index").innerHTML = `${set.set_index}<small class="rpe-tag">@${String(set.rpe).replace(".", ",")}</small>`;
+      // RPE 10 = échec : la série passe directement en « échec ».
+      if (set.rpe === 10) setSetType(row, set, "failure");
+      else if (set.set_type === "failure") setSetType(row, set, "normal");
       savePersist();
       saveLocalState();
     }
@@ -434,8 +448,36 @@ function showRpePicker(row, set, savePersist) {
   });
 }
 
+// i18n-keys: "échauf.", "drop", "échec"
+const SET_TYPES = [["normal", "—"], ["warmup", "échauf."], ["dropset", "drop"], ["failure", "échec"]];
+function setSetType(row, set, type) {
+  set.set_type = type;
+  const badge = row.querySelector(".set-type-badge");
+  if (badge) {
+    badge.className = `set-type-badge ${type}`;
+    badge.textContent = t(SET_TYPES.find(([k]) => k === type)[1]);
+  }
+}
+
+// Choix du type d'une série sous la ligne (sans redessiner la liste).
+function showTypePicker(row, set, persist) {
+  const open = row.nextElementSibling?.classList.contains("type-picker");
+  document.querySelectorAll(".type-picker, .rpe-picker").forEach(p => p.remove());
+  if (open) return;
+  const picker = document.createElement("div");
+  picker.className = "rpe-picker type-picker";
+  picker.innerHTML = `<span class="muted">${t("Type")}</span>` + SET_TYPES.map(([k, label]) =>
+    `<button data-stype="${k}" class="${set.set_type === k ? "active" : ""} ${k === "failure" ? "type-failure" : ""}">${k === "failure" ? "💀 " : ""}${k === "normal" ? t("Normale") : t(label)}</button>`).join("");
+  row.after(picker);
+  picker.querySelectorAll("[data-stype]").forEach(b => b.onclick = () => {
+    setSetType(row, set, b.dataset.stype);
+    persist();
+    saveLocalState();
+    picker.remove();
+  });
+}
+
 function setRowHtml(s, exIdx, sIdx) {
-  // i18n-keys: "échauf.", "drop", "échec"
   const badgeLabel = t({ normal: "—", warmup: "échauf.", dropset: "drop", failure: "échec" }[s.set_type]);
   return `
     <div class="set-row" data-ex="${exIdx}" data-set="${sIdx}">
