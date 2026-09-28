@@ -1000,5 +1000,9 @@ export default {
   "Importé": "Imported",
   "Perso": "Custom",
   "Type": "Type",
-  "Normale": "Normal"
+  "Normale": "Normal",
+  "Type des nouvelles séries": "Type of new sets",
+  "Échec": "Failure",
+  "Les nouvelles séries seront en échec": "New sets will be to failure",
+  "Les nouvelles séries seront normales": "New sets will be normal"
 };

@@ -1009,5 +1009,9 @@ export default {
   "Importé": "Zaimportowane",
   "Perso": "Własne",
   "Type": "Typ",
-  "Normale": "Normalna"
+  "Normale": "Normalna",
+  "Type des nouvelles séries": "Typ nowych serii",
+  "Échec": "Do upadku",
+  "Les nouvelles séries seront en échec": "Nowe serie będą do upadku",
+  "Les nouvelles séries seront normales": "Nowe serie będą normalne"
 };

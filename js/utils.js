@@ -48,6 +48,16 @@ export async function forceUpdate() {
   location.replace(location.pathname + "?refresh=" + Date.now() + location.hash);
 }
 
+// Type des nouvelles séries : « échec » par défaut (réglable dans Réglages
+// → Minuteur de repos). Un RPE < 10 la repasse en série normale.
+const LS_DEFAULT_SET_TYPE = "skullcrusher_default_set_type";
+export function defaultSetType() {
+  try { return localStorage.getItem(LS_DEFAULT_SET_TYPE) === "normal" ? "normal" : "failure"; } catch (_) { return "failure"; }
+}
+export function setDefaultSetType(type) {
+  try { localStorage.setItem(LS_DEFAULT_SET_TYPE, type === "normal" ? "normal" : "failure"); } catch (_) {}
+}
+
 // N'accepte comme image que les data URL d'image (photos de profil) ou les
 // URL https — jamais du texte qui pourrait sortir du `url('...')`.
 export function safeImageUrl(url) {

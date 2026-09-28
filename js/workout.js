@@ -2,7 +2,7 @@
 // ONGLET SÉANCE — démarrage, log de séries, minuteur de repos
 // ============================================================
 import * as db from "./db.js";
-import { toast, openModal, closeModal, fmtDateTime, debounce, fireRestEndNotification, esc } from "./utils.js";
+import { toast, openModal, closeModal, fmtDateTime, debounce, fireRestEndNotification, esc, defaultSetType } from "./utils.js";
 import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { parseMusicLink, openSpotifyPlayer, providerName, providerIcon } from "./music.js";
@@ -171,13 +171,13 @@ async function startWorkout(routineId, routine = null, triggerEl = null, planInf
         const targetCount = ex.target_sets || 3;
         const sets = lastSets.length
           ? Array.from({ length: targetCount }, (_, j) => ({
-              id: null, set_index: j + 1, set_type: "normal",
+              id: null, set_index: j + 1, set_type: defaultSetType(),
               // Charge visée de la routine (progression acceptée) en priorité.
               weight_kg: ex.target_kg ?? lastSets[j]?.weight_kg ?? null, reps: lastSets[j]?.reps ?? null,
               target_reps: ex.reps_target || "", done: false
             }))
           : Array.from({ length: targetCount }, (_, j) => ({
-              id: null, set_index: j + 1, set_type: "normal", weight_kg: ex.target_kg ?? null, reps: null,
+              id: null, set_index: j + 1, set_type: defaultSetType(), weight_kg: ex.target_kg ?? null, reps: null,
               target_reps: ex.reps_target || "", done: false
             }));
         return {
@@ -336,7 +336,7 @@ function drawExerciseList(el) {
     btn.onclick = () => {
       const exIdx = parseInt(btn.dataset.addSet, 10);
       const ex = currentWorkout.exercises[exIdx];
-      ex.sets.push({ id: null, set_index: ex.sets.length + 1, set_type: "normal", weight_kg: null, reps: null, done: false });
+      ex.sets.push({ id: null, set_index: ex.sets.length + 1, set_type: defaultSetType(), weight_kg: null, reps: null, done: false });
       saveLocalState();
       renderExerciseList(el);
     };
@@ -610,7 +610,7 @@ function addExerciseToWorkout(name, group, existing) {
     exercise_title: finalName,
     muscle_group: existing ? existing.muscle_group : group,
     rest_timer_seconds: restSecondsFor(finalName, existing?.rest_timer_seconds),
-    sets: [1, 2, 3].map(i => ({ id: null, set_index: i, set_type: "normal", weight_kg: null, reps: null, done: false }))
+    sets: [1, 2, 3].map(i => ({ id: null, set_index: i, set_type: defaultSetType(), weight_kg: null, reps: null, done: false }))
   };
   currentWorkout.exercises.push(ex);
   saveLocalState();
@@ -624,7 +624,7 @@ function addExerciseToWorkout(name, group, existing) {
   getLastSetsForExercise(finalName).then(lastSets => {
     const untouched = ex.sets.every(s => !s.id && !s.done && s.weight_kg == null && s.reps == null);
     if (!lastSets.length || !untouched || !currentWorkout || !currentWorkout.exercises.includes(ex)) return;
-    ex.sets = lastSets.map((s, i) => ({ id: null, set_index: i + 1, set_type: "normal", weight_kg: s.weight_kg ?? null, reps: s.reps ?? null, done: false }));
+    ex.sets = lastSets.map((s, i) => ({ id: null, set_index: i + 1, set_type: defaultSetType(), weight_kg: s.weight_kg ?? null, reps: s.reps ?? null, done: false }));
     saveLocalState();
     const list = document.getElementById("exercise-list");
     if (list) renderExerciseList(list);

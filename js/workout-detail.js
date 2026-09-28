@@ -2,7 +2,7 @@
 // DÉTAIL D'UNE SÉANCE — modale partagée entre Historique et Feed
 // ============================================================
 import * as db from "./db.js";
-import { openModal, closeModal, fmtDateTime, fmtDuration, estimate1RM, toast, esc, attachAutocomplete } from "./utils.js";
+import { openModal, closeModal, fmtDateTime, fmtDuration, estimate1RM, toast, esc, attachAutocomplete, defaultSetType } from "./utils.js";
 import { getUser } from "./auth.js";
 import { invalidate, getWorkouts, getExercises, getRoutines } from "./cache.js";
 import { songBlockHtml, bindSongLinks, spotifyEmbed, parseMusicLink, normalizePlaylistUrl, parseSongInput, SPOTIFY_ICON } from "./music.js";
@@ -400,7 +400,7 @@ async function openWorkoutEditor(workout, sets, body, onSaved, onCancel) {
       m.querySelectorAll("[data-add-set]").forEach(b => b.onclick = () => {
         read(); const ex = state.exercises[+b.dataset.addSet];
         const last = ex.sets[ex.sets.length - 1];
-        ex.sets.push({ id: null, set_type: "normal", weight_kg: last?.weight_kg ?? null, reps: last?.reps ?? null });
+        ex.sets.push({ id: null, set_type: defaultSetType(), weight_kg: last?.weight_kg ?? null, reps: last?.reps ?? null });
         draw();
       });
     };
@@ -413,7 +413,7 @@ async function openWorkoutEditor(workout, sets, body, onSaved, onCancel) {
       if (/[<>]/.test(name) || name.length > 80) { m.querySelector("#ed-error").textContent = t("Les caractères < et > ne sont pas autorisés."); return; }
       read();
       const known = library.find(e => e.name.toLowerCase() === name.toLowerCase());
-      state.exercises.push({ name: known ? known.name : name, isNew: !known, sets: [{ id: null, set_type: "normal", weight_kg: null, reps: null }] });
+      state.exercises.push({ name: known ? known.name : name, isNew: !known, sets: [{ id: null, set_type: defaultSetType(), weight_kg: null, reps: null }] });
       newEx.value = "";
       draw();
     };

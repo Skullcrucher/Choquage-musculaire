@@ -999,5 +999,9 @@ export default {
   "Importé": "Importe",
   "Perso": "Perso",
   "Type": "Tip",
-  "Normale": "Normal"
+  "Normale": "Normal",
+  "Type des nouvelles séries": "Tip bann nouvo seri",
+  "Échec": "Ekek",
+  "Les nouvelles séries seront en échec": "Bann nouvo seri pou an ekek",
+  "Les nouvelles séries seront normales": "Bann nouvo seri pou normal"
 };
