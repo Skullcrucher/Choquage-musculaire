@@ -1051,3 +1051,9 @@ body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var
 .origin-perso { background: var(--surface-raised); color: var(--text-dim); }
 .type-picker .type-failure { color: var(--red); }
 .type-picker .type-failure.active, .type-picker .type-failure:active { border-color: var(--red); }
+
+/* Rappel de séance ouverte */
+.forgot-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; background: rgba(245,179,1,0.10); border: 1px solid rgba(245,179,1,0.45); border-radius: var(--radius); padding: 10px 12px; margin: 0 0 12px; font-size: 13.5px; animation: fadeInUp 0.25s ease-out; }
+.forgot-text { flex: 1 1 200px; }
+.forgot-actions { display: flex; gap: 6px; }
+.forgot-actions .btn { width: auto; }

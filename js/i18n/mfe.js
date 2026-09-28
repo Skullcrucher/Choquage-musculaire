@@ -1003,5 +1003,18 @@ export default {
   "Type des nouvelles séries": "Tip bann nouvo seri",
   "Échec": "Ekek",
   "Les nouvelles séries seront en échec": "Bann nouvo seri pou an ekek",
-  "Les nouvelles séries seront normales": "Bann nouvo seri pou normal"
+  "Les nouvelles séries seront normales": "Bann nouvo seri pou normal",
+  "Rappel si la séance reste ouverte": "Rapel si seans-la res ouver",
+  "Après {t} sans nouvelle série": "Apre {t} san nouvo seri",
+  "Désactivé": "Dezaktive",
+  "Pour ne pas oublier de terminer une séance : un bandeau discret dans l'app et, si les notifications sont activées, une notification app fermée. Rien pendant que tu t'entraînes.": "Pou pa bliye termine enn seans: enn bander diskre dan app-la ek, si notifikasion aktive, enn notifikasion kan app-la ferme. Nanye pandan to pe antrenn.",
+  "Rappel désactivé": "Rapel dezaktive",
+  "Rappel enregistré": "Rapel anrezistre",
+  "Séance toujours ouverte": "Seans ankor ouver",
+  "« {title} » est ouverte sans nouvelle série depuis {min} min. Pense à la terminer (ou à l'annuler).": "« {title} » ouver san nouvo seri depi {min} min. Pans pou termine li (ouswa anil li).",
+  "{n} min": "{n} min",
+  "{h} h {m}": "{h}h{m}",
+  "« {title} » est toujours ouverte — aucune série depuis {idle}.": "« {title} » ankor ouver — pena seri depi {idle}.",
+  "Terminer": "Termine",
+  "Je continue": "Mo kontinye"
 };

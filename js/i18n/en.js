@@ -1004,5 +1004,18 @@ export default {
   "Type des nouvelles séries": "Type of new sets",
   "Échec": "Failure",
   "Les nouvelles séries seront en échec": "New sets will be to failure",
-  "Les nouvelles séries seront normales": "New sets will be normal"
+  "Les nouvelles séries seront normales": "New sets will be normal",
+  "Rappel si la séance reste ouverte": "Reminder if the workout stays open",
+  "Après {t} sans nouvelle série": "After {t} with no new set",
+  "Désactivé": "Off",
+  "Pour ne pas oublier de terminer une séance : un bandeau discret dans l'app et, si les notifications sont activées, une notification app fermée. Rien pendant que tu t'entraînes.": "So you don't forget to finish a workout: a discreet banner in the app and, if notifications are on, a notification when the app is closed. Nothing while you're training.",
+  "Rappel désactivé": "Reminder off",
+  "Rappel enregistré": "Reminder saved",
+  "Séance toujours ouverte": "Workout still open",
+  "« {title} » est ouverte sans nouvelle série depuis {min} min. Pense à la terminer (ou à l'annuler).": "“{title}” has been open with no new set for {min} min. Remember to finish it (or cancel it).",
+  "{n} min": "{n} min",
+  "{h} h {m}": "{h} h {m}",
+  "« {title} » est toujours ouverte — aucune série depuis {idle}.": "“{title}” is still open — no set for {idle}.",
+  "Terminer": "Finish",
+  "Je continue": "I'm still going"
 };

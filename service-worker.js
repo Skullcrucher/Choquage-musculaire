@@ -1,5 +1,5 @@
 // À incrémenter avec APP_VERSION (js/utils.js) à chaque mise en ligne.
-const CACHE_NAME = "skullcrusher-cache-v68";
+const CACHE_NAME = "skullcrusher-cache-v69";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -63,6 +63,7 @@ const APP_SHELL = [
   "./js/ratings.js",
   "./js/plan-share.js",
   "./js/plan-discover.js",
+  "./js/workout-reminder.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/logo.png",
@@ -117,9 +118,10 @@ self.addEventListener("push", (event) => {
     body: data.body || "C'est reparti pour la série suivante.",
     icon: "icons/icon-192.png",
     badge: "icons/icon-192.png",
-    tag: "skullcrusher-rest-timer",
+    // Rappel de séance ouverte : notification distincte de celle du repos.
+    tag: data.tag === "reminder" ? "skullcrusher-reminder" : "skullcrusher-rest-timer",
     renotify: true,
-    vibrate: [200, 100, 200]
+    vibrate: data.tag === "reminder" ? [100] : [200, 100, 200]
   }));
 });
 
