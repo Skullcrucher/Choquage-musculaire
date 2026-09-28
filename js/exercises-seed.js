@@ -64,3 +64,13 @@ export const EXERCISE_SEED = [
   ["Rameur", "Cardio"], ["Vélo Stationnaire", "Cardio"], ["Corde à Sauter", "Cardio"],
   ["Stairmaster / Escalier", "Cardio"], ["Assault Bike", "Cardio"]
 ];
+
+// Origine d'un exercice de la bibliothèque : « app » (liste standard
+// ci-dessus), « import » (créé par un import depuis une autre app : Hevy…),
+// « perso » (créé à la main par un utilisateur).
+const SEED_NAMES = new Set(EXERCISE_SEED.map(([n]) => n));
+export function exerciseOrigin(ex) {
+  if (SEED_NAMES.has(ex.name)) return "app";
+  if (ex.source === "import" || ex.is_custom === false) return "import";
+  return "perso";
+}

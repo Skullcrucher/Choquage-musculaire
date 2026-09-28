@@ -7,7 +7,7 @@ import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotifica
 import { firebaseConfig } from "./firebase-config.js";
 import { invalidateStatsCache } from "./stats.js";
 import { getExercises, invalidate } from "./cache.js";
-import { EXERCISE_SEED } from "./exercises-seed.js";
+import { EXERCISE_SEED, exerciseOrigin } from "./exercises-seed.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { getUser, signOutUser } from "./auth.js";
 import { openProfile, openProfileEditor } from "./profile.js";
@@ -577,7 +577,7 @@ async function renderExerciseLib(container) {
       <div class="list-row" data-ex="${ex.id}" data-ex-name="${esc(ex.name)}" data-ex-group="${esc(ex.muscle_group)}">
         <div>
           <div class="list-row-title">${esc(ex.name)}</div>
-          <div class="list-row-sub">${esc(t(ex.muscle_group))}</div>
+          <div class="list-row-sub">${esc(t(ex.muscle_group))} · <span class="origin-badge origin-${exerciseOrigin(ex)}">${{ app: "💀 " + t("App"), import: "📥 " + t("Importé"), perso: "✏️ " + t("Perso") }[exerciseOrigin(ex)]}</span></div>
         </div>
         ${db.canEditExercise(ex) ? `<button class="btn btn-sm btn-secondary" data-edit-ex="${ex.id}">${t("Modifier")}</button>` : ""}
       </div>

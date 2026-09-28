@@ -100,6 +100,7 @@ async function switchTab(tab) {
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   topbarTitle.textContent = TABS[tab].label();
   view.innerHTML = `<div class="empty-state"><span class="num">···</span>${t("Chargement")}</div>`;
+  view.scrollTop = 0; // #view est le conteneur qui défile (voir style.css)
   try {
     await Promise.race([
       TABS[tab].render(view),

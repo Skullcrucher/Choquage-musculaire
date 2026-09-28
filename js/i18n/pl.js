@@ -999,5 +999,13 @@ export default {
   "Excellent": "Świetnie",
   "Tu ne peux pas noter ta routine": "Nie możesz ocenić własnej rutyny",
   "Les mieux notées": "Najwyżej oceniane",
-  "Démarrer": "Rozpocznij"
+  "Démarrer": "Rozpocznij",
+  "Sélectionné (retirer)": "Wybrane (usuń)",
+  "Sélectionner": "Wybierz",
+  "{n} exercices ajoutés": "Dodano ćwiczenia: {n}",
+  "App": "Aplikacja",
+  "Importés": "Zaimportowane",
+  "Équivalent Skullcrusher : {name}": "Odpowiednik w Skullcrusher: {name}",
+  "Importé": "Zaimportowane",
+  "Perso": "Własne"
 };

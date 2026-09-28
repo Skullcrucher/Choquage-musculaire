@@ -989,5 +989,13 @@ export default {
   "Excellent": "Ekselan",
   "Tu ne peux pas noter ta routine": "To pa kapav donn not to prop routinn",
   "Les mieux notées": "Pli bon not",
-  "Démarrer": "Komanse"
+  "Démarrer": "Komanse",
+  "Sélectionné (retirer)": "Swazir (tire)",
+  "Sélectionner": "Swazir",
+  "{n} exercices ajoutés": "{n} lexersis azoute",
+  "App": "App",
+  "Importés": "Importe",
+  "Équivalent Skullcrusher : {name}": "Ekivalan Skullcrusher: {name}",
+  "Importé": "Importe",
+  "Perso": "Perso"
 };
