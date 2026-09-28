@@ -136,7 +136,13 @@ html, body { overflow: hidden; }
    « fixed »). Pas de 100vh/100dvh : dans l'app installée sur iPhone, ils
    peuvent valoir moins que l'écran (zones sûres, après le clavier) et
    laissaient une bande noire en bas. */
-body { position: fixed; top: 0; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; }
+/* --app-h : hauteur réelle de l'écran dans l'app installée sur iPhone
+   (voir index.html), où iOS annonce une zone plus courte de la hauteur de
+   la barre d'état — d'où une bande noire en bas. Les éléments du bas sont
+   placés dans le body (absolute), pas par rapport à cette zone trop courte. */
+html { height: var(--app-h, 100%); }
+body { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100%); display: flex; flex-direction: column; }
+body > .tabbar, body > .rest-timer, body > .toast, body > .modal-backdrop, body > #spotify-dock { position: absolute; }
 body > .topbar { flex: none; }
 body > .view {
   flex: 1 1 auto; min-height: 0;

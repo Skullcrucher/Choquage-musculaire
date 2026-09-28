@@ -11,6 +11,24 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Skullcrusher">
+<script>
+  // App installée sur iPhone : iOS annonce une fenêtre plus courte que
+  // l'écran (de la hauteur de la barre d'état), ce qui laissait une bande
+  // noire en bas. On donne à la page la vraie hauteur de l'écran.
+  (function () {
+    var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    var standalone = navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+    if (!ios || !standalone) return;
+    function fit() {
+      var portrait = !window.matchMedia || matchMedia("(orientation: portrait)").matches;
+      var h = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+      document.documentElement.style.setProperty("--app-h", Math.max(h, window.innerHeight) + "px");
+    }
+    fit();
+    window.addEventListener("orientationchange", function () { setTimeout(fit, 300); });
+    window.addEventListener("resize", fit);
+  })();
+</script>
 <link rel="stylesheet" href="css/style.css">
 <script src="js/vendor/papaparse.min.js"></script>
 <script src="js/vendor/chart.umd.js"></script>
