@@ -6,7 +6,7 @@ import { t, locale } from "./i18n.js";
 // Version affichée dans Réglages → À propos. À incrémenter avec
 // CACHE_NAME dans service-worker.js à chaque mise en ligne, pour voir d'un
 // coup d'œil si le téléphone utilise bien la dernière version.
-export const APP_VERSION = "67";
+export const APP_VERSION = "68";
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
@@ -46,6 +46,16 @@ export async function forceUpdate() {
     console.warn("[Skullcrusher] Mise à jour forcée incomplète :", e);
   }
   location.replace(location.pathname + "?refresh=" + Date.now() + location.hash);
+}
+
+// Type des nouvelles séries : « échec » par défaut (réglable dans Réglages
+// → Minuteur de repos). Un RPE < 10 la repasse en série normale.
+const LS_DEFAULT_SET_TYPE = "skullcrusher_default_set_type";
+export function defaultSetType() {
+  try { return localStorage.getItem(LS_DEFAULT_SET_TYPE) === "normal" ? "normal" : "failure"; } catch (_) { return "failure"; }
+}
+export function setDefaultSetType(type) {
+  try { localStorage.setItem(LS_DEFAULT_SET_TYPE, type === "normal" ? "normal" : "failure"); } catch (_) {}
 }
 
 // N'accepte comme image que les data URL d'image (photos de profil) ou les

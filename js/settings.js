@@ -3,11 +3,11 @@
 // ============================================================
 import * as db from "./db.js";
 import { importCsvFile } from "./import.js";
-import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl, APP_VERSION, healthNoteHtml, forceUpdate } from "./utils.js";
+import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl, APP_VERSION, healthNoteHtml, forceUpdate, defaultSetType, setDefaultSetType } from "./utils.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { invalidateStatsCache } from "./stats.js";
 import { getExercises, invalidate } from "./cache.js";
-import { EXERCISE_SEED } from "./exercises-seed.js";
+import { EXERCISE_SEED, exerciseOrigin } from "./exercises-seed.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { getUser, signOutUser } from "./auth.js";
 import { openProfile, openProfileEditor } from "./profile.js";
@@ -176,6 +176,11 @@ export async function renderReglages(container) {
           <span class="switch-track"></span>
         </label>
       </div>
+      <label>${t("Type des nouvelles séries")}</label>
+      <select id="default-set-type">
+        <option value="failure" ${defaultSetType() === "failure" ? "selected" : ""}>💀 ${t("Échec")}</option>
+        <option value="normal" ${defaultSetType() === "normal" ? "selected" : ""}>${t("Normale")}</option>
+      </select>
     </div>
 
     <div class="card">
@@ -293,6 +298,10 @@ export async function renderReglages(container) {
     if (btn.isConnected) { btn.disabled = false; btn.textContent = t("Supprimer toutes mes séances"); }
   };
 
+  container.querySelector("#default-set-type").onchange = (e) => {
+    setDefaultSetType(e.target.value);
+    toast(e.target.value === "failure" ? t("Les nouvelles séries seront en échec") : t("Les nouvelles séries seront normales"));
+  };
   container.querySelector("#rpe-toggle").onchange = (e) => {
     try { localStorage.setItem("skullcrusher_ask_rpe", e.target.checked ? "1" : "0"); } catch (_) {}
   };
@@ -577,7 +586,7 @@ async function renderExerciseLib(container) {
       <div class="list-row" data-ex="${ex.id}" data-ex-name="${esc(ex.name)}" data-ex-group="${esc(ex.muscle_group)}">
         <div>
           <div class="list-row-title">${esc(ex.name)}</div>
-          <div class="list-row-sub">${esc(t(ex.muscle_group))}</div>
+          <div class="list-row-sub">${esc(t(ex.muscle_group))} · <span class="origin-badge origin-${exerciseOrigin(ex)}">${{ app: "💀 " + t("App"), import: "📥 " + t("Importé"), perso: "✏️ " + t("Perso") }[exerciseOrigin(ex)]}</span></div>
         </div>
         ${db.canEditExercise(ex) ? `<button class="btn btn-sm btn-secondary" data-edit-ex="${ex.id}">${t("Modifier")}</button>` : ""}
       </div>

@@ -990,5 +990,19 @@ export default {
   "Excellent": "Excellent",
   "Tu ne peux pas noter ta routine": "You can't rate your own routine",
   "Les mieux notées": "Top rated",
-  "Démarrer": "Start"
+  "Démarrer": "Start",
+  "Sélectionné (retirer)": "Selected (remove)",
+  "Sélectionner": "Select",
+  "{n} exercices ajoutés": "{n} exercises added",
+  "App": "App",
+  "Importés": "Imported",
+  "Équivalent Skullcrusher : {name}": "Skullcrusher equivalent: {name}",
+  "Importé": "Imported",
+  "Perso": "Custom",
+  "Type": "Type",
+  "Normale": "Normal",
+  "Type des nouvelles séries": "Type of new sets",
+  "Échec": "Failure",
+  "Les nouvelles séries seront en échec": "New sets will be to failure",
+  "Les nouvelles séries seront normales": "New sets will be normal"
 };

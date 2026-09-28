@@ -100,6 +100,7 @@ async function switchTab(tab) {
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   topbarTitle.textContent = TABS[tab].label();
   view.innerHTML = `<div class="empty-state"><span class="num">···</span>${t("Chargement")}</div>`;
+  view.scrollTop = 0; // #view est le conteneur qui défile (voir style.css)
   try {
     await Promise.race([
       TABS[tab].render(view),
@@ -197,3 +198,17 @@ document.addEventListener("visibilitychange", () => {
     import("./update-check.js").then(m => m.checkForUpdate()).catch(() => null);
   }
 });
+
+// iPhone : à l'ouverture du clavier, Safari fait glisser toute la page
+// (même non défilable) et ne la remet pas toujours en place à la
+// fermeture — la barre d'onglets se retrouve alors au milieu de l'écran.
+// On la recale dès qu'aucun champ n'est plus en saisie.
+function resetPageScroll() {
+  const a = document.activeElement;
+  if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+  if (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop) {
+    window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0;
+  }
+}
+document.addEventListener("focusout", () => setTimeout(resetPageScroll, 60));
+window.visualViewport?.addEventListener("resize", () => setTimeout(resetPageScroll, 60));

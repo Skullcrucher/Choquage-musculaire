@@ -4,7 +4,10 @@
 //   - filtres par muscle et par matériel, exercices récents ;
 //   - aperçu avant d'ajouter : muscles sollicités, niveau, conseils,
 //     ton historique (meilleure 1RM, dernière série), vidéos ;
-//   - ajout de plusieurs exercices d'affilée, ou création d'un nouveau.
+//   - sélection de plusieurs exercices (un toucher sélectionne, un second
+//     désélectionne), ajoutés ensemble ; ou création d'un nouveau ;
+//   - origine de chaque exercice : bibliothèque Skullcrusher, importé
+//     d'une autre app (Hevy…) avec son équivalent Skullcrusher, ou perso.
 // ============================================================
 import * as db from "./db.js";
 import { openModal, closeModal, toast, esc, estimate1RM, fmtDate } from "./utils.js";
@@ -12,6 +15,8 @@ import { getExercises, getSetsForExercise } from "./cache.js";
 import { EXERCISE_GUIDES } from "./exercise-guides.js";
 import { GUIDE_TO_GROUP, guessMuscleGroup } from "./muscles.js";
 import { t, getLang } from "./i18n.js";
+import { exerciseOrigin as originOf } from "./exercises-seed.js";
+import { normName } from "./exercise-match.js";
 
 const LS_RECENT = "skullcrusher_recent_exercises";
 const RECENT_MAX = 15;
@@ -39,6 +44,13 @@ function equipmentOf(ex) {
   return "";
 }
 
+// Origine (exercises-seed.js) : bibliothèque Skullcrusher, importé ou perso.
+// i18n-keys: "App", "Importé", "Perso"
+const ORIGIN_LABEL = { app: "App", import: "Importé", perso: "Perso" };
+export function originBadge(o) {
+  return `<span class="origin-badge origin-${o}">${o === "app" ? "💀" : o === "import" ? "📥" : "✏️"} ${esc(t(ORIGIN_LABEL[o]))}</span>`;
+}
+
 // Groupes travaillés : celui de la bibliothèque + muscles principaux de la fiche.
 function groupsOf(ex) {
   const g = new Set([ex.muscle_group || "Autre"]);
@@ -46,7 +58,7 @@ function groupsOf(ex) {
   return g;
 }
 
-function previewHtml(ex) {
+function previewHtml(ex, selectedAlready = false) {
   const guide = EXERCISE_GUIDES[ex.name];
   const videoName = getLang() !== "fr" && guide?.en ? guide.en : ex.name;
   const videoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`${videoName} ${t("exercice musculation technique")}`)}`;
@@ -63,7 +75,7 @@ function previewHtml(ex) {
       <p class="muted pk-history" style="font-size:13px; margin:6px 0;">${t("Chargement…")}</p>
       <div class="btn-row">
         <a class="btn btn-secondary btn-sm" href="${videoUrl}" target="_blank" rel="noopener">▶ ${t("Vidéos")}</a>
-        <button class="btn btn-primary btn-sm" data-add="${esc(ex.name)}">＋ ${t("Ajouter à la séance")}</button>
+        <button class="btn ${selectedAlready ? "btn-secondary" : "btn-primary"} btn-sm" data-add="${esc(ex.name)}">${selectedAlready ? `✓ ${t("Sélectionné (retirer)")}` : `＋ ${t("Sélectionner")}`}</button>
       </div>
     </div>`;
 }
@@ -89,12 +101,29 @@ export async function openExercisePicker({ onAdd, title = t("Ajouter un exercice
   let search = null;
   try { search = await import("./exercise-search.js"); await search.loadAliases(); } catch (_) {}
   const recent = readRecent().filter(n => byName.has(n));
-  const state = { query: "", group: recent.length ? "__recent" : "", equipment: "", open: "" };
-  const added = [];
+  const state = { query: "", group: recent.length ? "__recent" : "", equipment: "", origin: "", open: "" };
+  // Exercices sélectionnés, dans l'ordre : { name, group, existing }.
+  const selected = [];
+  const isSelected = (name) => selected.some(s => s.name === name);
+  // Équivalent Skullcrusher d'un exercice importé (même nom une fois
+  // traduit / normalisé), pour guider le choix.
+  const seedByKey = new Map();
+  const keyOf = (n) => normName(search?.translateQuery ? search.translateQuery(n) : n);
+  library.filter(e => originOf(e) === "app").forEach(e => { const k = keyOf(e.name); if (!seedByKey.has(k)) seedByKey.set(k, e.name); });
+  const hasImported = library.some(e => originOf(e) === "import");
 
   const groupCounts = {};
   library.forEach(ex => groupsOf(ex).forEach(g => { groupCounts[g] = (groupCounts[g] || 0) + 1; }));
   const groups = db.EXO_GROUPS.filter(g => groupCounts[g]);
+
+  // Ajoute la sélection (bouton, ou fenêtre fermée d'un geste / retour).
+  let committed = false;
+  const commit = () => {
+    if (committed) return;
+    committed = true;
+    selected.forEach(sel => { onAdd(sel.name, sel.group, sel.existing); rememberExercise(sel.name); });
+    if (selected.length) toast(selected.length === 1 ? t("Ajouté : {name}", { name: selected[0].name }) : t("{n} exercices ajoutés", { n: selected.length }));
+  };
 
   openModal(`
     <h3 style="margin-bottom:8px;">${esc(title)}</h3>
@@ -106,26 +135,37 @@ export async function openExercisePicker({ onAdd, title = t("Ajouter un exercice
     </div>
     <div class="chip-row pk-scroll" id="pk-equip" style="margin-top:0;">
       ${EQUIPMENTS.map(e => `<div class="chip chip-sm" data-equip="${esc(e)}">${esc(t(e))}</div>`).join("")}
+      ${hasImported ? `<div class="chip chip-sm" data-origin="app">💀 ${t("App")}</div><div class="chip chip-sm" data-origin="import">📥 ${t("Importés")}</div>` : ""}
     </div>
     <div id="pk-list" class="pk-list"></div>
     <div id="pk-create"></div>
-    <button class="btn btn-secondary" id="pk-done" style="margin-top:10px;">${t("Terminé")}</button>
+    <div id="pk-selection" class="pk-selection"></div>
+    <button class="btn btn-secondary" id="pk-done" style="margin-top:10px;">${t("Fermer")}</button>
   `, (m) => {
     const list = m.querySelector("#pk-list");
     const input = m.querySelector("#ex-name");
 
-    const doAdd = (name, group, existing) => {
-      onAdd(name, group, existing);
-      rememberExercise(name);
-      added.push(name);
-      toast(t("Ajouté : {name}", { name }));
-      m.querySelector("#pk-done").textContent = `${t("Terminé")} (${added.length})`;
+    // Un toucher sélectionne, un second désélectionne.
+    const toggle = (name, group, existing) => {
+      const i = selected.findIndex(s => s.name === name);
+      if (i >= 0) selected.splice(i, 1);
+      else selected.push({ name, group, existing });
       draw();
+    };
+    const drawSelection = () => {
+      const done = m.querySelector("#pk-done");
+      done.textContent = selected.length ? `＋ ${t("Ajouter à la séance")} (${selected.length})` : t("Fermer");
+      done.classList.toggle("btn-primary", selected.length > 0);
+      done.classList.toggle("btn-secondary", !selected.length);
+      m.querySelector("#pk-selection").innerHTML = selected.length
+        ? `<div class="chip-row" style="margin:8px 0 0;">${selected.map(s => `<button class="chip chip-sm active" data-unsel="${esc(s.name)}" title="${t("Retirer")}">${esc(s.name)} ✕</button>`).join("")}</div>` : "";
+      m.querySelectorAll("[data-unsel]").forEach(b => b.onclick = () => toggle(b.dataset.unsel));
     };
 
     const draw = () => {
       m.querySelectorAll("[data-group]").forEach(c => c.classList.toggle("active", c.dataset.group === state.group && !state.query));
       m.querySelectorAll("[data-equip]").forEach(c => c.classList.toggle("active", c.dataset.equip === state.equipment));
+      m.querySelectorAll("[data-origin]").forEach(c => c.classList.toggle("active", c.dataset.origin === state.origin));
       let rows;
       if (state.query && search) rows = search.searchExercises(state.query, library.map(e => e.name), 400).map(r => ({ ex: byName.get(r.name), via: r.via }));
       else if (state.query) rows = library.filter(e => e.name.toLowerCase().includes(state.query.toLowerCase())).map(ex => ({ ex }));
@@ -134,23 +174,27 @@ export async function openExercisePicker({ onAdd, title = t("Ajouter un exercice
       if (!state.query && state.group && state.group !== "__recent") rows = rows.filter(r => groupsOf(r.ex).has(state.group));
       // Recherche par nom : dans toute la bibliothèque (le filtre muscle s'efface).
       if (state.equipment) rows = rows.filter(r => equipmentOf(r.ex) === state.equipment);
+      if (state.origin) rows = rows.filter(r => originOf(r.ex) === state.origin);
       const total = rows.length;
       rows = rows.slice(0, MAX_ROWS);
       list.innerHTML = rows.length ? rows.map(({ ex, via }) => {
         const guide = EXERCISE_GUIDES[ex.name];
         const sub = [t(ex.muscle_group || "Autre"), equipmentOf(ex) && t(equipmentOf(ex)), guide?.level && t(guide.level)].filter(Boolean).join(" · ");
         const isOpen = state.open === ex.name;
-        const done = added.includes(ex.name);
+        const done = isSelected(ex.name);
+        const origin = originOf(ex);
+        const twin = origin === "import" ? seedByKey.get(keyOf(ex.name)) : null;
         return `
-          <div class="pk-row ${isOpen ? "open" : ""}">
-            <div class="pk-main" data-toggle="${esc(ex.name)}">
-              <div class="pk-name">${esc(ex.name)}${via ? ` <span class="autocomplete-via">EN</span>` : ""}</div>
+          <div class="pk-row ${isOpen ? "open" : ""} ${done ? "selected" : ""}">
+            <div class="pk-main" data-add="${esc(ex.name)}">
+              <div class="pk-name">${esc(ex.name)}${via ? ` <span class="autocomplete-via">EN</span>` : ""} ${originBadge(origin)}</div>
               <div class="pk-sub">${esc(sub)}</div>
+              ${twin && twin !== ex.name ? `<div class="pk-twin">${t("Équivalent Skullcrusher : {name}", { name: esc(twin) })}</div>` : ""}
             </div>
             <button class="pk-info" data-toggle="${esc(ex.name)}" title="${t("Aperçu")}">${isOpen ? "▴" : "ⓘ"}</button>
-            <button class="pk-add ${done ? "done" : ""}" data-add="${esc(ex.name)}" title="${t("Ajouter à la séance")}">${done ? "✓" : "＋"}</button>
+            <button class="pk-add ${done ? "done" : ""}" data-add="${esc(ex.name)}" title="${done ? t("Retirer") : t("Sélectionner")}">${done ? "✓" : "＋"}</button>
           </div>
-          ${isOpen ? previewHtml(ex) : ""}`;
+          ${isOpen ? previewHtml(ex, done) : ""}`;
       }).join("") + (total > MAX_ROWS ? `<p class="muted" style="font-size:12px; text-align:center;">${t("{n} autres : affine la recherche.", { n: total - MAX_ROWS })}</p>` : "")
         : `<p class="muted" style="text-align:center; margin:14px 0;">${t("Aucun exercice trouvé.")}</p>`;
 
@@ -167,6 +211,7 @@ export async function openExercisePicker({ onAdd, title = t("Ajouter un exercice
           </div>
         </div>` : exact ? `<button class="btn btn-primary" id="confirm-add-ex" style="margin-top:8px;">＋ ${t("Ajouter « {name} »", { name: esc(exact.name) })}</button>` : "";
 
+      drawSelection();
       list.querySelectorAll("[data-toggle]").forEach(el => el.onclick = () => {
         state.open = state.open === el.dataset.toggle ? "" : el.dataset.toggle;
         draw();
@@ -177,12 +222,12 @@ export async function openExercisePicker({ onAdd, title = t("Ajouter un exercice
       list.querySelectorAll("[data-add]").forEach(el => el.onclick = (e) => {
         e.stopPropagation();
         const ex = byName.get(el.dataset.add);
-        if (ex) doAdd(ex.name, ex.muscle_group, ex);
+        if (ex) toggle(ex.name, ex.muscle_group, ex);
       });
       const confirmBtn = create.querySelector("#confirm-add-ex");
       if (confirmBtn) confirmBtn.onclick = () => {
-        if (exact) doAdd(exact.name, exact.muscle_group, exact);
-        else doAdd(q.slice(0, 80), create.querySelector("#ex-group").value, null);
+        if (exact) { if (!isSelected(exact.name)) toggle(exact.name, exact.muscle_group, exact); }
+        else if (!isSelected(q.slice(0, 80))) toggle(q.slice(0, 80), create.querySelector("#ex-group").value, null);
         input.value = ""; state.query = "";
         draw();
       };
@@ -195,10 +240,11 @@ export async function openExercisePicker({ onAdd, title = t("Ajouter un exercice
       draw();
     });
     m.querySelectorAll("[data-equip]").forEach(c => c.onclick = () => { state.equipment = state.equipment === c.dataset.equip ? "" : c.dataset.equip; state.open = ""; draw(); });
-    m.querySelector("#pk-done").onclick = closeModal;
+    m.querySelectorAll("[data-origin]").forEach(c => c.onclick = () => { state.origin = state.origin === c.dataset.origin ? "" : c.dataset.origin; state.open = ""; draw(); });
+    m.querySelector("#pk-done").onclick = () => { closeModal(); commit(); };
     draw();
     // Clavier ouvert d'office seulement avec une souris (sur téléphone il
     // cacherait la liste à parcourir par muscle).
     if (window.matchMedia?.("(pointer: fine)").matches) setTimeout(() => input.focus(), 50);
-  });
+  }, { onDismiss: commit });
 }

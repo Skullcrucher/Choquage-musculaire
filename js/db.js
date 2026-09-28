@@ -895,7 +895,7 @@ export async function importRows(rows, onProgress = () => {}) {
   for (const [id, r] of newExercises) {
     exerciseOps.push({ ref: doc(dbase, "exercises", id), data: {
       name: r.exercise_title, muscle_group: r.muscle_group_guess || "Autre", equipment: "",
-      is_custom: false, rest_timer_seconds: 90, created_by: uid
+      is_custom: false, source: "import", rest_timer_seconds: 90, created_by: uid
     } });
   }
   // Lots séparés des séances : un exercice créé entre-temps par quelqu'un

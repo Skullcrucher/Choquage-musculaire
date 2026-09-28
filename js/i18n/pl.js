@@ -999,5 +999,19 @@ export default {
   "Excellent": "Świetnie",
   "Tu ne peux pas noter ta routine": "Nie możesz ocenić własnej rutyny",
   "Les mieux notées": "Najwyżej oceniane",
-  "Démarrer": "Rozpocznij"
+  "Démarrer": "Rozpocznij",
+  "Sélectionné (retirer)": "Wybrane (usuń)",
+  "Sélectionner": "Wybierz",
+  "{n} exercices ajoutés": "Dodano ćwiczenia: {n}",
+  "App": "Aplikacja",
+  "Importés": "Zaimportowane",
+  "Équivalent Skullcrusher : {name}": "Odpowiednik w Skullcrusher: {name}",
+  "Importé": "Zaimportowane",
+  "Perso": "Własne",
+  "Type": "Typ",
+  "Normale": "Normalna",
+  "Type des nouvelles séries": "Typ nowych serii",
+  "Échec": "Do upadku",
+  "Les nouvelles séries seront en échec": "Nowe serie będą do upadku",
+  "Les nouvelles séries seront normales": "Nowe serie będą normalne"
 };
