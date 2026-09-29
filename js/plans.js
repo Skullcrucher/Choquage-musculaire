@@ -144,7 +144,7 @@ export async function todayPlanCard({ compact = false } = {}) {
   let body;
   let routine = null;
   if (pos.status === "upcoming") body = `<p class="muted" style="margin:0;">${t("Le plan commence dans {n} jour(s).", { n: pos.startsIn })}</p>`;
-  else if (pos.status === "done") body = `<p class="muted" style="margin:0;">🎉 ${t("Plan terminé ! Crée le suivant dans Routines → Plans.")}</p>`;
+  else if (pos.status === "done") body = `<p class="muted" style="margin:0;">🎉 ${t("Plan terminé ! Crée le suivant dans Séance → Plan en cours → Mes plans.")}</p>`;
   else {
     routine = routines.find(r => r.id === pos.routineId) || null;
     const already = routine && doneOn(workouts, new Date(), routine);
@@ -224,8 +224,8 @@ export async function planSessionsHtml() {
   const plan = plans.find(p => p.id === active);
   if (!plan) {
     return { html: plans.length
-      ? `<div class="empty-state"><span class="num">📅</span>${t("Aucun plan actif.")}<br><span class="muted">${t("Active un plan dans Séance → Routines → Plans.")}</span></div>`
-      : `<div class="empty-state"><span class="num">📅</span>${t("Pas encore de plan.")}<br><span class="muted">${t("Crée ou importe un plan dans Séance → Routines → Plans.")}</span></div>`, sessions: [] };
+      ? `<div class="empty-state"><span class="num">📅</span>${t("Aucun plan actif.")}<br><span class="muted">${t("Active un plan dans Séance → Plan en cours → Mes plans.")}</span></div>`
+      : `<div class="empty-state"><span class="num">📅</span>${t("Pas encore de plan.")}<br><span class="muted">${t("Crée ou importe un plan dans Séance → Plan en cours → Mes plans.")}</span></div>`, sessions: [] };
   }
   const [routines, workouts, card] = await Promise.all([getRoutines(), getWorkouts(), todayPlanCard({ compact: true })]);
   const pos = planPosition(plan);
@@ -296,7 +296,7 @@ export async function renderPlanTracking(content, { onOpenWorkout } = {}) {
   const [{ plans, active }, routines, workouts] = await Promise.all([getPlans(), getRoutines(), getWorkouts()]);
   if (!content.isConnected) return;
   if (!plans.length) {
-    content.innerHTML = `<div class="empty-state"><span class="num">📅</span>${t("Pas encore de plan.")}<br><span class="muted">${t("Crée ou importe un plan dans Routines → Plans.")}</span></div>`;
+    content.innerHTML = `<div class="empty-state"><span class="num">📅</span>${t("Pas encore de plan.")}<br><span class="muted">${t("Crée ou importe un plan dans Séance → Plan en cours → Mes plans.")}</span></div>`;
     return;
   }
   const plan = plans.find(p => p.id === trackedPlanId) || plans.find(p => p.id === active) || plans[plans.length - 1];

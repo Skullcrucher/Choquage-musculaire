@@ -4,6 +4,7 @@
 // Skullcrusher (programmes standards) et plans partagés (plan-discover.js)
 // ============================================================
 import * as db from "./db.js";
+import { icon } from "./icons.js";
 import { toast, openModal, closeModal, attachAutocomplete, esc, debounce } from "./utils.js";
 import { getExercises, getRoutines, invalidate } from "./cache.js";
 import { spotifyEmbed } from "./music.js";
@@ -43,8 +44,8 @@ export function setDiscoverMode(mode) { discoverMode = mode; }
 export async function renderDiscover(content, onLibraryChanged) {
   content.innerHTML = `
     <div class="discover-tabs">
-      <button class="start-tab ${discoverMode === "routines" ? "active" : ""}" data-dmode="routines">🏋️ ${t("Routines")}</button>
-      <button class="start-tab ${discoverMode === "plans" ? "active" : ""}" data-dmode="plans">📅 ${t("Plans")}</button>
+      <button class="start-tab ${discoverMode === "routines" ? "active" : ""}" data-dmode="routines">${icon("routines")}${t("Routines")}</button>
+      <button class="start-tab ${discoverMode === "plans" ? "active" : ""}" data-dmode="plans">${icon("plan")}${t("Plans")}</button>
     </div>
     <div id="discover-body"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>`;
   content.querySelectorAll("[data-dmode]").forEach(b => b.onclick = () => {

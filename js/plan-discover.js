@@ -34,7 +34,7 @@ export async function renderDiscoverPlans(content) {
     content.innerHTML = `
       <p class="muted" style="font-size:13px; margin:0 0 10px;">${t("Programmes Skullcrusher et plans partagés : ajoute-les à tes plans, ils s'affichent ensuite dans Séance → Depuis un plan.")}</p>
       ${list.map(p => planCard(p, ctx)).join("")}
-      ${list.some(p => !p.official) ? "" : `<p class="muted" style="font-size:13px;">${t("Partage tes propres plans depuis Routines → Plans.")}</p>`}`;
+      ${list.some(p => !p.official) ? "" : `<p class="muted" style="font-size:13px;">${t("Partage tes propres plans depuis Séance → Plan en cours → Mes plans.")}</p>`}`;
     content.querySelectorAll("[data-popen]").forEach(el => el.onclick = () => openPlanDetail(list.find(p => p.id === el.dataset.popen), ctx, draw));
     content.querySelectorAll("[data-prate]").forEach(b => b.onclick = (e) => { e.stopPropagation(); ratePlan(list.find(p => p.id === b.dataset.prate), ctx, draw); });
     content.querySelectorAll("[data-padd]").forEach(b => b.onclick = (e) => { e.stopPropagation(); addPlan(list.find(p => p.id === b.dataset.padd), ctx, b, draw); });
@@ -81,7 +81,7 @@ async function addPlan(p, ctx, btn, redraw, activate = false) {
   try {
     await addPlanFromTemplate(p, { activate });
     ctx.added.add(p.id);
-    toast(activate ? t("Plan ajouté et activé : il démarre lundi") : t("Plan ajouté à tes plans (Routines → Plans)"), 3000, { horns: true });
+    toast(activate ? t("Plan ajouté et activé : il démarre lundi") : t("Plan ajouté à tes plans (Séance → Plan en cours → Mes plans)"), 3000, { horns: true });
     redraw();
     return true;
   } catch (err) {
