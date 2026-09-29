@@ -63,8 +63,8 @@ function exercisesHtml(exs) {
 
 async function openGift(g, onChanged) {
   const isPlan = g.kind === "plan";
-  let schedule = "";
-  if (isPlan) schedule = (await import("./plan-share.js")).planScheduleHtml(g.data || {});
+  const ps = isPlan ? await import("./plan-share.js") : null;
+  const schedule = isPlan ? ps.planScheduleHtml(g.data || {}) : "";
   const routines = isPlan ? (g.data?.routines || []) : [g.data || {}];
   openModal(`
     <h3>${esc(g.name)}</h3>
@@ -76,6 +76,7 @@ async function openGift(g, onChanged) {
         ${isPlan ? `<div class="card-title" style="font-size:15px; margin-bottom:4px;">${esc(r.name)}</div>` : ""}
         <div style="font-size:13px; line-height:1.6;">${exercisesHtml(r.exercises)}</div>
       </div>`).join("")}
+    ${isPlan ? ps.startFieldHtml() : ""}
     <div class="btn-row" style="margin-top:14px;">
       <button class="btn btn-secondary" id="gift-refuse">${t("Refuser")}</button>
       <button class="btn btn-primary" id="gift-accept">＋ ${isPlan ? t("Ajouter à mes plans") : t("Ajouter à mes routines")}</button>
@@ -90,8 +91,7 @@ async function openGift(g, onChanged) {
       e.target.disabled = true;
       try {
         if (isPlan) {
-          const { addPlanFromTemplate } = await import("./plan-share.js");
-          await addPlanFromTemplate({ ...g.data, id: null, official: false, owner_name: g.from_name || "" });
+          await ps.addPlanFromTemplate({ ...g.data, id: null, official: false, owner_name: g.from_name || "" }, { start: ps.readStartField(m) });
         } else {
           await db.copyRoutine({ ...g.data, id: null, owner_uid: g.from_uid, owner_name: g.from_name || "" });
         }

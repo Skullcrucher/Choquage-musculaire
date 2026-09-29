@@ -258,7 +258,8 @@ export async function exportPlan() {
 
 const DOW_SHORT = (d) => new Date(2024, 0, d).toLocaleDateString(locale(), { weekday: "short" });
 
-export function openPlanImport(onDone) {
+export async function openPlanImport(onDone) {
+  const { active } = await getPlans();
   let parsed = null;
   openModal(`
     <h3>📥 ${t("Importer un plan d'entraînement")}</h3>
@@ -288,12 +289,12 @@ export function openPlanImport(onDone) {
     <input type="file" id="plan-file" accept=".csv,text/csv,text/plain">
     <div id="plan-preview" style="margin-top:10px;"></div>
     <label class="list-row" style="cursor:pointer; margin-top:6px;">
-      <span>${t("Remplacer mes routines et plans du même nom")}</span>
-      <input type="checkbox" id="plan-replace" checked style="width:auto;">
+      <span>${t("Remplacer mes routines et plans du même nom")}<small class="muted" style="display:block; font-weight:400;">${t("Les séances de tes autres plans ne sont jamais remplacées.")}</small></span>
+      <input type="checkbox" id="plan-replace" style="width:auto;">
     </label>
     <label class="list-row" id="plan-activate-row" style="cursor:pointer; display:none;">
-      <span>${t("Activer ce plan")}</span>
-      <input type="checkbox" id="plan-activate" checked style="width:auto;">
+      <span>${active ? t("Activer ce plan (remplace le plan en cours, qui reste dans tes plans)") : t("Activer ce plan")}</span>
+      <input type="checkbox" id="plan-activate" ${active ? "" : "checked"} style="width:auto;">
     </label>
     <div class="btn-row" style="margin-top:10px;">
       <button class="btn btn-secondary" id="plan-cancel">${t("Annuler")}</button>
@@ -376,9 +377,15 @@ export function openPlanImport(onDone) {
         await Promise.all([...fresh].map(([n, g]) => db.upsertExercise(n, g).catch(e => console.warn("[Skullcrusher] Exercice non ajouté", n, e))));
         if (fresh.size) invalidate("exercises");
         const mine = await getRoutines();
+        // Routines des autres plans : jamais remplacées (sinon le plan en
+        // cours changerait de contenu).
+        const { plans: curPlans } = await getPlans();
+        const replacedPlan = parsed.plan && replace ? curPlans.find(p => p.name.toLowerCase() === parsed.plan.name.toLowerCase()) : null;
+        const protectedIds = new Set(curPlans.filter(p => p !== replacedPlan).flatMap(p => (p.blocks || []).flatMap(b => Object.values(b.days || {}))));
+        const replaceable = mine.filter(x => !protectedIds.has(x.id));
         const idByName = {};
         for (const r of parsed.routines) {
-          const existing = replace ? mine.find(x => x.name.toLowerCase() === r.name.toLowerCase() && !x.source) || mine.find(x => x.name.toLowerCase() === r.name.toLowerCase()) : null;
+          const existing = replace ? replaceable.find(x => x.name.toLowerCase() === r.name.toLowerCase() && !x.source) || replaceable.find(x => x.name.toLowerCase() === r.name.toLowerCase()) : null;
           idByName[r.name] = await db.saveRoutine({
             ...r,
             description: r.description || existing?.description || "",

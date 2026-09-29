@@ -27,11 +27,17 @@ export function getPlans() {
     plansUid = uid;
     plansPromise = db.getPrivateData()
       .then(d => ({ plans: Array.isArray(d?.plans) ? d.plans : [], active: d?.active_plan_id || null }))
-      .catch(() => ({ plans: [], active: null }));
+      .catch((e) => { console.warn("[Skullcrusher] Lecture des plans", e); return { plans: [], active: null, failed: true }; });
   }
   return plansPromise;
 }
 export async function savePlans(plans, active) {
+  // Plans pas lus (hors ligne…) : la liste reçue est vide ou incomplète,
+  // l'enregistrer effacerait les plans existants.
+  if ((await plansPromise)?.failed) {
+    plansPromise = null;
+    throw new Error(t("Plans indisponibles pour le moment, réessaie"));
+  }
   await db.setPrivateData({ plans, active_plan_id: active || null });
   plansUid = db.getCurrentUser()?.uid || null;
   plansPromise = Promise.resolve({ plans, active: active || null });
@@ -194,7 +200,14 @@ export async function planRoutineIds() {
   return ids;
 }
 
-const matchesRoutine = (w, routine) => !!routine && (w.routine_id ? w.routine_id === routine.id : w.title === routine.name);
+// Une séance associée à la main (plan.links) ne compte que pour la routine
+// choisie ; sinon, même routine (ou même titre pour une séance libre).
+const matchesRoutine = (w, routine, plan) => {
+  if (!routine) return false;
+  const linked = plan?.links?.[w.id];
+  if (linked) return linked === routine.id;
+  return w.routine_id ? w.routine_id === routine.id : w.title === routine.name;
+};
 
 // Séances prévues dans la semaine du plan qui contient `date`, avec celles
 // déjà faites (une séance faite un autre jour de la semaine compte aussi).
@@ -205,12 +218,17 @@ export function weekSessions(plan, date, routines, workouts) {
     .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
   const used = new Set();
   const slots = cells.map(c => ({ ...c, workout: null }));
-  // D'abord les séances faites le jour prévu, puis les autres jours.
+  // D'abord les séances associées à la main, à leur case exacte.
+  slots.forEach(sl => {
+    const w = inWeek.find(x => !used.has(x.id) && plan.links?.[x.id] === sl.routine.id && plan.link_days?.[x.id] === dayStr(sl.date));
+    if (w) { sl.workout = w; sl.linked = true; used.add(w.id); }
+  });
+  // Puis les séances faites le jour prévu, puis les autres jours.
   for (const pass of [true, false]) {
     slots.forEach(sl => {
       if (sl.workout) return;
-      const w = inWeek.find(x => !used.has(x.id) && matchesRoutine(x, sl.routine) && (!pass || dayStr(new Date(x.start_time)) === dayStr(sl.date)));
-      if (w) { sl.workout = w; used.add(w.id); }
+      const w = inWeek.find(x => !used.has(x.id) && matchesRoutine(x, sl.routine, plan) && (!pass || dayStr(new Date(x.start_time)) === dayStr(sl.date)));
+      if (w) { sl.workout = w; sl.linked = !!plan.links?.[w.id]; used.add(w.id); }
     });
   }
   return slots.map(sl => ({ ...sl, done: !!sl.workout }));
@@ -341,11 +359,12 @@ export async function renderPlanTracking(content, { onOpenWorkout } = {}) {
         ${st.weeks.map(w => `
           <div class="plan-wrow ${w.state}">
             <div class="plan-wnum">S${w.n}<span>${esc(w.block?.name || "")}</span></div>
-            <div class="plan-wdays">${w.slots.map(s => `<span class="plan-wdot ${s.done ? "done" : w.state === "future" || (!s.past && !s.done) ? "todo" : "missed"}" title="${esc(s.routine.name)} · ${esc(dowLabel(s.dow, "long"))}">${s.done ? "✓" : esc(dowLabel(s.dow, "narrow"))}</span>`).join("") || `<span class="muted" style="font-size:12px;">${t("Repos")}</span>`}</div>
+            <div class="plan-wdays">${w.slots.map((s, si) => `<span class="plan-wdot ${s.done ? "done" : w.state === "future" || (!s.past && !s.done) ? "todo" : "missed"} ${w.state !== "future" ? "tap" : ""}" ${w.state !== "future" ? `data-slot="${w.n - 1}:${si}" role="button"` : ""} title="${esc(s.routine.name)} · ${esc(dowLabel(s.dow, "long"))}">${s.done ? (s.linked ? "🔗" : "✓") : esc(dowLabel(s.dow, "narrow"))}</span>`).join("") || `<span class="muted" style="font-size:12px;">${t("Repos")}</span>`}</div>
             <div class="plan-wcount">${w.state === "future" ? "" : `${w.done}/${w.slots.length}`}</div>
           </div>`).join("")}
       </div>
-      <p class="muted" style="font-size:12px; margin:8px 0 0;">✓ ${t("faite")} · <span style="color:var(--red);">■</span> ${t("manquée")} · <span style="opacity:.6;">■</span> ${t("à venir")}</p>
+      <p class="muted" style="font-size:12px; margin:8px 0 0;">✓ ${t("faite")} · 🔗 ${t("associée")} · <span style="color:var(--red);">■</span> ${t("manquée")} · <span style="opacity:.6;">■</span> ${t("à venir")}</p>
+      <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Touche une séance manquée pour y associer une séance déjà faite cette semaine-là.")}</p>
     </div>
     ${st.workouts.length ? `<h3 class="muted" style="margin:18px 0 6px;">${t("Séances du plan")}</h3>
       ${st.workouts.slice(0, 30).map(w => `
@@ -357,6 +376,71 @@ export async function renderPlanTracking(content, { onOpenWorkout } = {}) {
   content.querySelectorAll("[data-track]").forEach(c => c.onclick = () => { trackedPlanId = c.dataset.track; renderPlanTracking(content, { onOpenWorkout }); });
   content.querySelector("#share-plan").onclick = async () => (await import("./share-card.js")).openShareCard({ kind: "plan", planId: plan.id });
   content.querySelectorAll("[data-plan-w]").forEach(r => r.onclick = () => onOpenWorkout?.(st.workouts.find(w => w.id === r.dataset.planW)));
+  content.querySelectorAll("[data-slot]").forEach(d => d.onclick = () => {
+    const [wi, si] = d.dataset.slot.split(":").map(Number);
+    openSlotLink(plan, st.weeks[wi], st.weeks[wi].slots[si], workouts, {
+      onOpenWorkout,
+      onChanged: () => renderPlanTracking(content, { onOpenWorkout })
+    });
+  });
+}
+
+// Case d'une semaine du plan : associer une séance déjà faite cette
+// semaine-là (séance libre, autre routine, faite avant d'ajouter le plan…)
+// ou retirer l'association.
+function openSlotLink(plan, week, slot, workouts, { onOpenWorkout, onChanged }) {
+  const fmt = (w) => new Date(w.start_time).toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "short" });
+  const next = new Date(week.monday); next.setDate(week.monday.getDate() + 7);
+  const taken = new Set(week.slots.map(s => s.workout?.id).filter(Boolean));
+  const candidates = workouts.filter(w => w.end_time && w.start_time && !taken.has(w.id)
+    && new Date(w.start_time) >= week.monday && new Date(w.start_time) < next)
+    .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
+  const save = async (mutate) => {
+    const { plans, active } = await getPlans();
+    const cur = plans.find(p => p.id === plan.id);
+    if (!cur) return;
+    const links = { ...(cur.links || {}) }, days = { ...(cur.link_days || {}) };
+    mutate(links, days);
+    await savePlans(plans.map(p => p.id === cur.id ? { ...p, links, link_days: days } : p), active);
+  };
+  const head = `<h3>${esc(slot.routine.name)}</h3>
+    <p class="muted" style="margin-top:0;">${t("Semaine {n}", { n: week.n })} · ${esc(dowLabel(slot.dow, "long"))} ${slot.date.toLocaleDateString(locale(), { day: "numeric", month: "short" })}</p>`;
+  if (slot.done) {
+    openModal(`${head}
+      <div class="list-row"><div><div class="list-row-title">${slot.linked ? "🔗" : "✓"} ${esc(slot.workout.title)}</div><div class="list-row-sub">${esc(fmt(slot.workout))}</div></div></div>
+      <div class="btn-row" style="margin-top:12px;">
+        ${slot.linked ? `<button class="btn btn-secondary" id="sl-unlink">${t("Retirer l'association")}</button>` : ""}
+        <button class="btn btn-primary" id="sl-open">${t("Voir la séance")}</button>
+      </div>`, (m) => {
+      m.querySelector("#sl-open").onclick = () => { closeModal(); onOpenWorkout?.(slot.workout); };
+      const un = m.querySelector("#sl-unlink");
+      if (un) un.onclick = async () => {
+        un.disabled = true;
+        try { await save((links, days) => { delete links[slot.workout.id]; delete days[slot.workout.id]; }); closeModal(); toast(t("Association retirée")); onChanged(); }
+        catch (err) { toast(err.message || t("Impossible d'enregistrer")); un.disabled = false; }
+      };
+    });
+    return;
+  }
+  openModal(`${head}
+    <p style="font-size:14px;">${t("Associer une séance déjà faite cette semaine-là :")}</p>
+    ${candidates.length ? candidates.map(w => `
+      <div class="list-row" data-link="${esc(w.id)}" style="cursor:pointer;">
+        <div><div class="list-row-title">${esc(w.title)}</div><div class="list-row-sub">${esc(fmt(w))}${w.plan_id && w.plan_id !== plan.id ? " · " + t("autre plan") : ""}</div></div>
+        <span class="chip chip-sm">${t("Associer")}</span>
+      </div>`).join("") : `<p class="muted">${t("Aucune séance terminée libre cette semaine-là.")}</p>`}
+    <button class="btn btn-secondary" id="sl-close" style="margin-top:12px;">${t("Fermer")}</button>`, (m) => {
+    m.querySelector("#sl-close").onclick = closeModal;
+    m.querySelectorAll("[data-link]").forEach(r => r.onclick = async () => {
+      r.style.pointerEvents = "none";
+      try {
+        await save((links, days) => { links[r.dataset.link] = slot.routine.id; days[r.dataset.link] = dayStr(slot.date); });
+        closeModal();
+        toast(t("Séance associée au plan"));
+        onChanged();
+      } catch (err) { toast(err.message || t("Impossible d'enregistrer")); r.style.pointerEvents = ""; }
+    });
+  });
 }
 
 export async function renderPlans(content) {
