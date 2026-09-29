@@ -1022,5 +1022,14 @@ export default {
   "Mes plans": "Mo bann plan",
   "Mes plans et programmes": "Mo bann plan ek program",
   "Pas encore de routine : crée-la ci-dessous ou pioche dans Découvrir, ou démarre une séance vide.": "Pa ankor ena routinn: kre li anba ouswa swazir dan Dekouver, ouswa komans enn seans vid.",
-  "Gérer mes routines · Découvrir": "Zer mo bann routinn · Dekouver"
+  "Gérer mes routines · Découvrir": "Zer mo bann routinn · Dekouver",
+  "Pseudo, photo, profil public": "Psedo, foto, profil piblik",
+  "Profils signalés à traiter": "Profil siyale pou trete",
+  "Son du record, bande-son des séances": "Son rekor, lamizik bann seans",
+  "Sexe, âge, taille et poids": "Sex, laz, wotter ek pwa",
+  "Notifications, RPE, rappel, type de série": "Notifikasion, RPE, rapel, tip seri",
+  "Depuis Hevy": "Depi Hevy",
+  "Toutes tes séries en CSV": "Tou to bann seri an CSV",
+  "Version {v}, conditions, confidentialité": "Version {v}, kondision, konfidansialite",
+  "Exercices, muscles, doublons": "Lexersis, mis, doub"
 };

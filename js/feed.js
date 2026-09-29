@@ -8,7 +8,7 @@ import { openWorkoutDetail, partnersHtml } from "./workout-detail.js";
 import { renderFriends, countIncomingRequests } from "./friends.js";
 import { openProfile } from "./profile.js";
 import { songHtml, bindSongLinks, parseMusicLink, providerIcon } from "./music.js";
-import { icon } from "./icons.js";
+import { icon, segHtml } from "./icons.js";
 import { t, tn } from "./i18n.js";
 
 // Records, "son du record", playlist et bande-son d'une séance partagée.
@@ -66,12 +66,7 @@ function tonnageFun(kg) {
 export async function renderFeedTab(container) {
   container.innerHTML = `
     <h1 class="section-title">${t("Feed")} <img class="title-horns" src="icons/horns.png" alt=""></h1>
-    <div class="chip-row" id="feed-mode-chips" style="margin-bottom:14px;">
-      <div class="chip ${feedMode === "workouts" ? "active" : ""}" data-fmode="workouts">${icon("workouts")}${t("Séances")}</div>
-      <div class="chip ${feedMode === "challenges" ? "active" : ""}" data-fmode="challenges">${icon("trophy")}${t("Défis")}</div>
-      <div class="chip ${feedMode === "music" ? "active" : ""}" data-fmode="music">${icon("music")}${t("Son")}</div>
-      <div class="chip ${feedMode === "friends" ? "active" : ""}" data-fmode="friends">${icon("friends")}${t("Amis")}<span id="friend-req-count"></span></div>
-    </div>
+    ${segHtml([["workouts", t("Séances"), "workouts"], ["challenges", t("Défis"), "trophy"], ["music", t("Son"), "music"], ["friends", t("Amis"), "friends"]], feedMode, "data-fmode", { extra: { friends: `<span id="friend-req-count"></span>` } })}
     <div id="feed-body"></div>
   `;
   container.querySelectorAll("[data-fmode]").forEach(chip => {

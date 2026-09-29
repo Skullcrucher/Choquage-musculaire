@@ -2,7 +2,7 @@
 // ONGLET SÉANCE — démarrage, log de séries, minuteur de repos
 // ============================================================
 import * as db from "./db.js";
-import { icon } from "./icons.js";
+import { icon, segHtml } from "./icons.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce, fireRestEndNotification, esc, defaultSetType } from "./utils.js";
 import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
@@ -98,10 +98,7 @@ async function renderStartScreen(container) {
       <div class="muted">${weekCount > 1 ? t("séances bouclées") : t("séance bouclée")}</div>
     </div>
     <button class="btn btn-primary" id="start-empty">+ ${t("Démarrer une séance vide")}</button>
-    <div class="start-tabs" id="start-tabs">
-      <button class="start-tab ${startMode === "routine" ? "active" : ""}" data-smode="routine">${icon("routines")}${t("Routines")}</button>
-      <button class="start-tab ${startMode === "plan" ? "active" : ""}" data-smode="plan">${icon("plan")}${t("Plan en cours")}</button>
-    </div>
+    <div id="start-tabs">${segHtml([["routine", t("Routines"), "routines"], ["plan", t("Plan en cours"), "plan"]], startMode, "data-smode")}</div>
     <div id="start-body"></div>
   `;
   container.querySelector("#start-empty").onclick = (e) => startWorkout(null, null, e.currentTarget);

@@ -1023,5 +1023,14 @@ export default {
   "Mes plans": "My plans",
   "Mes plans et programmes": "My plans & programs",
   "Pas encore de routine : crée-la ci-dessous ou pioche dans Découvrir, ou démarre une séance vide.": "No routine yet: create one below or pick one in Discover, or start an empty workout.",
-  "Gérer mes routines · Découvrir": "Manage my routines · Discover"
+  "Gérer mes routines · Découvrir": "Manage my routines · Discover",
+  "Pseudo, photo, profil public": "Username, photo, public profile",
+  "Profils signalés à traiter": "Reported profiles to review",
+  "Son du record, bande-son des séances": "Record song, workout soundtrack",
+  "Sexe, âge, taille et poids": "Sex, age, height and weight",
+  "Notifications, RPE, rappel, type de série": "Notifications, RPE, reminder, set type",
+  "Depuis Hevy": "From Hevy",
+  "Toutes tes séries en CSV": "All your sets as CSV",
+  "Version {v}, conditions, confidentialité": "Version {v}, terms, privacy",
+  "Exercices, muscles, doublons": "Exercises, muscles, duplicates"
 };
