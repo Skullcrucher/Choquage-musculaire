@@ -1128,5 +1128,18 @@ export default {
   "Bibliothèque": "Biblioteka",
   "Mes plans et programmes (Biblio)": "Moje plany i programy (Biblioteka)",
   "Mes routines · Découvrir (Biblio)": "Moje rutyny · Odkrywaj (Biblioteka)",
-  "Progrès": "Postępy"
+  "Progrès": "Postępy",
+  "Aucune séance terminée depuis lundi.": "Brak ukończonych treningów od poniedziałku.",
+  "Datées dans le futur ({n})": "Z datą w przyszłości ({n})",
+  "Garder": "Zachowaj",
+  "Jamais terminées ({n})": "Nigdy nieukończone ({n})",
+  "Ouvertes puis abandonnées : elles ne comptent pas dans « Cette semaine ».": "Rozpoczęte i porzucone: nie liczą się w „Ten tydzień”.",
+  "Souvent un import avec une date mal lue : elles ne comptent pas cette semaine.": "Często import ze źle odczytaną datą: nie liczą się w tym tygodniu.",
+  "Supprimer ces {n} séance(s)": "Usuń te treningi ({n})",
+  "Supprimer {n} séance(s) ?": "Usunąć treningi ({n})?",
+  "Séances jamais terminées ou datées dans le futur. Elles seront effacées définitivement, avec leurs séries.": "Treningi nieukończone lub z datą w przyszłości. Zostaną trwale usunięte razem z seriami.",
+  "{n} séance(s) supprimée(s)": "Usunięte treningi: {n}",
+  "Séance vide": "Pusty trening",
+  "Aucune série n'a été faite : elle ne sera pas gardée dans ton historique.": "Nie wykonano żadnej serii: trening nie zostanie zapisany w historii.",
+  "Supprimer la séance vide": "Usuń pusty trening"
 };

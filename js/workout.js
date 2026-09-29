@@ -18,14 +18,109 @@ let restTimerEnd = null;
 const LS_KEY = "skullcrusher_active_workout_id";
 const LS_STATE_KEY = "skullcrusher_active_workout_state";
 const LS_REST_KEY = "skullcrusher_rest_timer_end";
+// Séances annulées dont la suppression a échoué (hors ligne) : réessayées.
+const LS_PENDING_DEL = "skullcrusher_pending_workout_deletes";
 
+// Séances bouclées cette semaine : terminées (end_time), commencées entre
+// lundi 0 h et maintenant. Les séances ouvertes puis jamais terminées et
+// les dates dans le futur (import mal daté) ne comptent pas.
 function countThisWeek(workouts) {
   const now = new Date();
   const day = (now.getDay() + 6) % 7; // lundi = 0
   const monday = new Date(now);
   monday.setHours(0, 0, 0, 0);
   monday.setDate(now.getDate() - day);
-  return workouts.filter(w => w.start_time && new Date(w.start_time) >= monday).length;
+  const ids = new Set();
+  for (const w of workouts) {
+    if (!w.end_time || !w.start_time) continue;
+    const start = new Date(w.start_time);
+    if (isNaN(start) || start < monday || start > now) continue;
+    ids.add(w.id);
+  }
+  return ids.size;
+}
+
+function queueWorkoutDelete(id) {
+  try {
+    const list = JSON.parse(localStorage.getItem(LS_PENDING_DEL) || "[]");
+    if (!list.includes(id)) list.push(id);
+    localStorage.setItem(LS_PENDING_DEL, JSON.stringify(list));
+  } catch (_) {}
+}
+
+// Nettoyage (une fois par ouverture de l'app) : suppressions en attente,
+// séances ouvertes puis jamais terminées sans aucune série (plus de 12 h,
+// pas la séance en cours) et séances « terminées » vides.
+let cleanupDone = false;
+async function cleanupAbandonedWorkouts(workouts) {
+  if (cleanupDone) return 0;
+  cleanupDone = true;
+  let removed = 0;
+  let pending = [];
+  try { pending = JSON.parse(localStorage.getItem(LS_PENDING_DEL) || "[]"); } catch (_) {}
+  const left = [];
+  for (const id of pending) {
+    try { await db.deleteWorkout(id); removed++; } catch (_) { left.push(id); }
+  }
+  try { localStorage.setItem(LS_PENDING_DEL, JSON.stringify(left)); } catch (_) {}
+  const activeId = localStorage.getItem(LS_KEY);
+  const candidates = workouts.filter(w => w.id !== activeId && !pending.includes(w.id) && (
+    (!w.end_time && Date.now() - new Date(w.start_time) > 12 * 3600e3) ||
+    (w.end_time && w.total_sets === 0)));
+  for (const w of candidates) {
+    try {
+      if (await db.workoutHasSets(w.id)) continue;
+      await db.deleteWorkout(w.id);
+      removed++;
+    } catch (e) { console.warn("[Skullcrusher] Nettoyage séance", w.id, e); }
+  }
+  if (removed) { invalidate("workouts", "sets"); console.log(`[Skullcrusher] ${removed} séance(s) annulée(s) ou vide(s) supprimée(s).`); }
+  return removed;
+}
+
+// Détail du compteur « Cette semaine » : séances comptées, et à part les
+// séances jamais terminées (ouvertes puis abandonnées) ou datées dans le
+// futur, qu'on peut supprimer.
+function openWeekDetail(workouts, onChanged) {
+  const now = new Date();
+  const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(now.getDate() - (now.getDay() + 6) % 7);
+  const activeId = localStorage.getItem(LS_KEY);
+  const when = (w) => { const d = new Date(w.start_time); return isNaN(d) ? String(w.start_time || "?") : fmtDateTime(w.start_time); };
+  const counted = workouts.filter(w => w.end_time && new Date(w.start_time) >= monday && new Date(w.start_time) <= now);
+  // Plus de 12 h sans être terminée : pas une séance en cours sur un autre appareil.
+  const unfinished = workouts.filter(w => !w.end_time && w.id !== activeId && !(Date.now() - new Date(w.start_time) < 12 * 3600e3));
+  const future = workouts.filter(w => w.end_time && new Date(w.start_time) > now);
+  const odd = [...unfinished, ...future];
+  const row = (w) => `<div class="list-row"><div><div class="list-row-title">${esc(w.title || t("Séance"))}</div><div class="list-row-sub">${esc(when(w))}${w.total_sets ? ` · ${w.total_sets} ${t("séries")}` : ""}</div></div></div>`;
+  openModal(`
+    <h3>${t("Cette semaine")}</h3>
+    ${counted.length ? counted.map(row).join("") : `<p class="muted">${t("Aucune séance terminée depuis lundi.")}</p>`}
+    ${unfinished.length ? `<div class="profile-section-title" style="margin-top:14px;">${t("Jamais terminées ({n})", { n: unfinished.length })}</div>
+      <p class="muted" style="font-size:12px; margin:0 0 4px;">${t("Ouvertes puis abandonnées : elles ne comptent pas dans « Cette semaine ».")}</p>
+      ${unfinished.slice(0, 30).map(row).join("")}` : ""}
+    ${future.length ? `<div class="profile-section-title" style="margin-top:14px;">${t("Datées dans le futur ({n})", { n: future.length })}</div>
+      <p class="muted" style="font-size:12px; margin:0 0 4px;">${t("Souvent un import avec une date mal lue : elles ne comptent pas cette semaine.")}</p>
+      ${future.slice(0, 30).map(row).join("")}` : ""}
+    ${odd.length ? `<button class="btn btn-danger" id="wk-clean" style="margin-top:12px;">${t("Supprimer ces {n} séance(s)", { n: odd.length })}</button>` : ""}
+    <button class="btn btn-secondary" id="wk-close" style="margin-top:8px;">${t("Fermer")}</button>
+  `, (m) => {
+    m.querySelector("#wk-close").onclick = closeModal;
+    const clean = m.querySelector("#wk-clean");
+    if (clean) clean.onclick = async () => {
+      if (!await confirmDanger({
+        title: t("Supprimer {n} séance(s) ?", { n: odd.length }),
+        message: t("Séances jamais terminées ou datées dans le futur. Elles seront effacées définitivement, avec leurs séries."),
+        cancelLabel: t("Garder"), confirmLabel: t("Supprimer définitivement")
+      })) return;
+      clean.disabled = true;
+      let done = 0;
+      for (const w of odd) { try { await db.deleteWorkout(w.id); done++; } catch (e) { console.warn("[Skullcrusher] Suppression", w.id, e); } }
+      invalidate("workouts", "sets");
+      closeModal();
+      toast(t("{n} séance(s) supprimée(s)", { n: done }));
+      onChanged();
+    };
+  });
 }
 
 function saveLocalState() {
@@ -79,8 +174,8 @@ async function renderStartScreen(container) {
   const weekCount = countThisWeek(workouts);
   container.innerHTML = `
     <h1 class="section-title">${t("Séance")}</h1>
-    <div class="card-hero">
-      <div class="muted" style="margin-bottom:2px;">${t("Cette semaine")}</div>
+    <div class="card-hero" id="week-hero" role="button" style="cursor:pointer;">
+      <div class="muted" style="margin-bottom:2px;">${t("Cette semaine")} ›</div>
       <span class="num" style="font-size:56px; color:var(--amber); display:block; line-height:1;">${weekCount}</span>
       <div class="muted">${weekCount > 1 ? t("séances bouclées") : t("séance bouclée")}</div>
     </div>
@@ -88,6 +183,8 @@ async function renderStartScreen(container) {
     <div id="start-tabs">${segHtml([["plan", t("Plan en cours"), "plan"], ["routine", t("Séance libre"), "workouts"]], startMode, "data-smode")}</div>
     <div id="start-body"></div>
   `;
+  container.querySelector("#week-hero").onclick = () => openWeekDetail(workouts, refreshAll);
+  cleanupAbandonedWorkouts(workouts).then(n => { if (n && container.isConnected && !currentWorkout) refreshAll(); });
   const body = container.querySelector("#start-body");
   import("./gifts.js").then(m => m.renderGiftInbox(container.querySelector("#gift-inbox"), refreshAll));
   const draw = () => {
@@ -388,10 +485,11 @@ function drawExerciseList(el) {
     kgInput.oninput = () => {
       set.weight_kg = kgInput.value ? parseFloat(kgInput.value) : null;
       set.auto_kg = false;
+      set.touched = true;
       persist();
       if (sIdx === 0) propagateFirstKg(el, exIdx, ex);
     };
-    repsInput.oninput = () => { set.reps = repsInput.value ? parseInt(repsInput.value, 10) : null; persist(); };
+    repsInput.oninput = () => { set.reps = repsInput.value ? parseInt(repsInput.value, 10) : null; set.touched = true; persist(); };
 
     // Type de série : choix direct (normale, échauffement, dégressive, échec).
     badge.onclick = () => showTypePicker(row, set, persist);
@@ -725,7 +823,24 @@ function renderRestTimerBar() {
   };
 }
 
+// Séries vraiment faites : enregistrées, validées ou saisies à la main
+// (pas les valeurs seulement pré-remplies depuis l'historique ou la routine).
+function realSetCount(w) {
+  return (w.exercises || []).reduce((n, ex) => n + ex.sets.filter(s => setHasData(s) && (s.id || s.done || s.touched)).length, 0);
+}
+
 async function finishWorkout() {
+  // Rien de fait : la séance n'est pas gardée (sinon elle compterait comme
+  // « bouclée » sans aucune série).
+  if (!realSetCount(currentWorkout)) {
+    const ok = await confirmDanger({
+      title: t("Séance vide"),
+      message: t("Aucune série n'a été faite : elle ne sera pas gardée dans ton historique."),
+      cancelLabel: t("Continuer la séance"), confirmLabel: t("Supprimer la séance vide")
+    });
+    if (ok) await discardCurrentWorkout();
+    return null;
+  }
   const loggedSets = currentWorkout.exercises.reduce((n, ex) => n + ex.sets.filter(s => s.weight_kg != null || s.reps != null).length, 0);
   const totalTonnage = Math.round(currentWorkout.exercises.reduce((sum, ex) =>
     sum + ex.sets.reduce((s, set) => s + (set.weight_kg || 0) * (set.reps || 0), 0), 0));
@@ -808,7 +923,15 @@ async function cancelWorkout() {
     confirmLabel: t("Supprimer définitivement")
   });
   if (!ok) return;
-  await db.deleteWorkout(currentWorkout.id);
+  await discardCurrentWorkout();
+}
+
+// Supprime la séance en cours (annulée ou vide). Hors ligne, la
+// suppression est mise de côté et refaite à la prochaine ouverture.
+async function discardCurrentWorkout() {
+  const id = currentWorkout.id;
+  try { await db.deleteWorkout(id); }
+  catch (e) { console.warn("[Skullcrusher] Suppression différée de la séance", id, e); queueWorkoutDelete(id); }
   stopPresence();
   clearReminder();
   localStorage.removeItem(LS_KEY);
