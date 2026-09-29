@@ -4,12 +4,17 @@
 // même si le cache HTTP du navigateur ou le CDN de GitHub Pages (10 min par
 // fichier) ont encore d'anciens exemplaires : sans ça, un module récent
 // pouvait importer un module ancien (« does not provide an export named… »).
-// Usage : node tools/stamp-version.mjs   (après avoir changé APP_VERSION)
+// Usage : node tools/stamp-version.mjs   (après avoir changé APP_VERSION et APP_BUILD)
 import fs from "fs";
 import path from "path";
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
-const version = fs.readFileSync(path.join(root, "js/utils.js"), "utf8").match(/APP_VERSION = "(\d+)"/)[1];
+const utils = fs.readFileSync(path.join(root, "js/utils.js"), "utf8");
+// Numéro interne (entier) : modules ?v=, cache, détection des mises à jour.
+const version = utils.match(/APP_BUILD = (\d+);/)[1];
+// Numéro affiché (0.xx.yy).
+const label = utils.match(/APP_VERSION = "(\d+\.\d{2}\.\d{2})"/)?.[1];
+if (!label) { console.error("APP_VERSION doit être au format 0.xx.yy (ex. 0.72.01)."); process.exit(1); }
 const sw = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 if (!sw.includes(`skullcrusher-cache-v${version}"`)) {
   console.error(`service-worker.js n'est pas en v${version} (CACHE_NAME) : mets-le à jour.`);
@@ -33,5 +38,7 @@ else if (html.includes('<script type="module" src="js/app.js"></script>')) html 
 else { console.error("Emplacement du script app.js introuvable dans index.html"); process.exit(1); }
 fs.writeFileSync(indexPath, html);
 // Dernière version publiée, lue par l'app pour proposer la mise à jour (update-check.js).
-fs.writeFileSync(path.join(root, "version.json"), JSON.stringify({ version }) + "\n");
-console.log(`index.html : v${version}, ${modules.length} modules versionnés.`);
+// "version" reste le numéro interne (entier) : les anciennes versions de
+// l'app le comparent tel quel ; "label" est le numéro affiché.
+fs.writeFileSync(path.join(root, "version.json"), JSON.stringify({ version: Number(version), label }) + "\n");
+console.log(`index.html : ${label} (build ${version}), ${modules.length} modules versionnés.`);
