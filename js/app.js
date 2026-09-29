@@ -10,16 +10,17 @@ import { initAuth, renderLoginGate, renderUnauthorizedGate, isAuthorized } from 
 import { t, translateStatic } from "./i18n.js";
 import { esc } from "./utils.js";
 
+// Chaque écran affiche son propre gros titre : la barre du haut garde
+// toujours le nom de l'app.
 const TABS = {
-  seance: { label: () => "Skullcrusher", render: renderSeance },
-  progres: { label: () => t("Progrès"), render: renderStats },
-  feed: { label: () => t("Feed"), render: renderFeedTab },
-  biblio: { label: () => t("Bibliothèque"), render: renderBiblio },
-  reglages: { label: () => t("Réglages"), render: renderReglages }
+  seance: { render: renderSeance },
+  progres: { render: renderStats },
+  feed: { render: renderFeedTab },
+  biblio: { render: renderBiblio },
+  reglages: { render: renderReglages }
 };
 
 const view = document.getElementById("view");
-const topbarTitle = document.getElementById("topbar-title");
 const tabbar = document.getElementById("tabbar");
 let activeTab = localStorage.getItem("skullcrusher_last_tab") || "seance";
 // Anciens onglets Historique et Stats : réunis dans Progrès.
@@ -100,7 +101,6 @@ async function switchTab(tab) {
   const myToken = ++renderToken;
   localStorage.setItem("skullcrusher_last_tab", tab);
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
-  topbarTitle.textContent = TABS[tab].label();
   view.innerHTML = `<div class="empty-state"><span class="num">···</span>${t("Chargement")}</div>`;
   view.scrollTop = 0; // #view est le conteneur qui défile (voir style.css)
   try {
