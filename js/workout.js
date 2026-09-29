@@ -97,10 +97,12 @@ async function renderStartScreen(container) {
       <span class="num" style="font-size:56px; color:var(--amber); display:block; line-height:1;">${weekCount}</span>
       <div class="muted">${weekCount > 1 ? t("séances bouclées") : t("séance bouclée")}</div>
     </div>
+    <div id="gift-inbox"></div>
     <div id="start-tabs">${segHtml([["plan", t("Plan en cours"), "plan"], ["routine", t("Séance libre"), "workouts"]], startMode, "data-smode")}</div>
     <div id="start-body"></div>
   `;
   const body = container.querySelector("#start-body");
+  import("./gifts.js").then(m => m.renderGiftInbox(container.querySelector("#gift-inbox"), refreshAll));
   const draw = () => {
     if (startMode === "plan") {
       body.innerHTML = (planView?.html || `<p class="muted">${t("Plan indisponible.")}</p>`) +
@@ -396,7 +398,12 @@ function drawExerciseList(el) {
     };
     const persist = debounce(savePersist, 500);
 
-    kgInput.oninput = () => { set.weight_kg = kgInput.value ? parseFloat(kgInput.value) : null; persist(); };
+    kgInput.oninput = () => {
+      set.weight_kg = kgInput.value ? parseFloat(kgInput.value) : null;
+      set.auto_kg = false;
+      persist();
+      if (sIdx === 0) propagateFirstKg(el, exIdx, ex);
+    };
     repsInput.oninput = () => { set.reps = repsInput.value ? parseInt(repsInput.value, 10) : null; persist(); };
 
     // Type de série : choix direct (normale, échauffement, dégressive, échec).
@@ -483,6 +490,22 @@ function showTypePicker(row, set, persist) {
     saveLocalState();
     picker.remove();
   });
+}
+
+// Poids saisi sur la 1re série : recopié sur les séries suivantes encore
+// vides (ou déjà recopiées), sans toucher à celles pré-remplies depuis
+// l'historique, saisies à la main, validées ou déjà enregistrées.
+function propagateFirstKg(el, exIdx, ex) {
+  const kg = ex.sets[0]?.weight_kg ?? null;
+  ex.sets.forEach((s, i) => {
+    if (i === 0 || s.done || s.id) return;
+    if (s.weight_kg != null && !s.auto_kg) return;
+    s.weight_kg = kg;
+    s.auto_kg = kg != null;
+    const input = el.querySelector(`.set-row[data-ex="${exIdx}"][data-set="${i}"] .input-kg`);
+    if (input) input.value = kg ?? "";
+  });
+  saveLocalState();
 }
 
 function setRowHtml(s, exIdx, sIdx) {
