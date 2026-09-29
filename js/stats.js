@@ -78,18 +78,24 @@ function inPeriod(iso, weeks) {
   return new Date(iso).getTime() >= Date.now() - weeks * 7 * 24 * 3600 * 1000;
 }
 
-// Onglet Stats : « Générale » (séances, muscles, exercices) et « Plan en
-// cours » (suivi du plan actif : avancement, assiduité, semaines).
-let statsTab = "general";
+// Onglet Progrès : « Historique » (calendrier et séances), « Stats »
+// (séances, muscles, exercices) et « Plan en cours » (suivi du plan actif).
+let statsTab = "history";
+try { const v = localStorage.getItem("skullcrusher_progress_tab"); if (["history", "general", "plan"].includes(v)) statsTab = v; } catch (_) {}
+export function setProgressTab(tab) { statsTab = tab; }
 export async function renderStats(container) {
   container.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-      <h1 class="section-title">${t("Statistiques")}</h1>
+      <h1 class="section-title">${t("Progrès")}</h1>
       ${statsTab === "general" ? `<button class="btn btn-sm btn-primary share-btn" id="share-stats" style="width:auto;">📸 ${t("Partager")}</button>` : ""}
     </div>
-    ${segHtml([["general", t("Générale"), "general"], ["plan", t("Plan en cours"), "plan"]], statsTab, "data-stab")}
+    ${segHtml([["history", t("Historique"), "history"], ["general", t("Stats"), "general"], ["plan", t("Plan en cours"), "plan"]], statsTab, "data-stab")}
     <div id="stats-tab-body"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>`;
-  container.querySelectorAll("[data-stab]").forEach(b => b.onclick = () => { statsTab = b.dataset.stab; renderStats(container); });
+  container.querySelectorAll("[data-stab]").forEach(b => b.onclick = () => {
+    statsTab = b.dataset.stab;
+    try { localStorage.setItem("skullcrusher_progress_tab", statsTab); } catch (_) {}
+    renderStats(container);
+  });
   const share = container.querySelector("#share-stats");
   if (share) share.onclick = async () =>
     (await import("./share-card.js")).openShareCard({ kind: "period", periodDays: state.periodWeeks ? (state.periodWeeks <= 4 ? 30 : state.periodWeeks <= 13 ? 91 : state.periodWeeks <= 26 ? 182 : 365) : null });
@@ -97,6 +103,8 @@ export async function renderStats(container) {
   if (statsTab === "plan") {
     const { openWorkoutDetail } = await import("./workout-detail.js");
     await (await import("./plans.js")).renderPlanTracking(body, { onOpenWorkout: (w) => w && openWorkoutDetail(w, () => renderStats(container)) });
+  } else if (statsTab === "history") {
+    await (await import("./history.js")).renderHistorique(body, { embedded: true });
   } else {
     await renderGeneralStats(body);
   }

@@ -123,7 +123,7 @@ export function startFieldHtml() {
     <label style="display:block; margin-top:12px;">${t("Début du plan")}
       <input type="date" id="plan-start-add" value="${nextMondayStr()}">
     </label>
-    <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Déjà commencé ? Mets une date passée, puis associe tes séances déjà faites dans Stats → Plan en cours.")}</p>`;
+    <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Déjà commencé ? Mets une date passée, puis associe tes séances déjà faites dans Progrès → Plan en cours.")}</p>`;
 }
 export const readStartField = (m) => /^\d{4}-\d{2}-\d{2}$/.test(m.querySelector("#plan-start-add")?.value || "") ? m.querySelector("#plan-start-add").value : null;
 
