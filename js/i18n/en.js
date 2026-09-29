@@ -1045,5 +1045,22 @@ export default {
   "Photo de profil": "Profile photo",
   "Prendre une photo": "Take a photo",
   "Galerie": "Gallery",
-  "Photo illisible, essaie une autre image": "Unreadable photo, try another image"
+  "Photo illisible, essaie une autre image": "Unreadable photo, try another image",
+  "Ajout impossible, réessaie": "Couldn't add it, try again",
+  "Ajouter à mes plans": "Add to my plans",
+  "Ajouter à mes routines": "Add to my routines",
+  "Envoi impossible, réessaie": "Couldn't send it, try again",
+  "Envoyer la routine « {name} »": "Send the routine “{name}”",
+  "Envoyer le plan « {name} »": "Send the plan “{name}”",
+  "Envoyer": "Send",
+  "Envoyé à {n} ami": "Sent to {n} friend",
+  "Envoyé à {n} amis": "Sent to {n} friends",
+  "Plan ajouté à tes plans": "Plan added to your plans",
+  "Plan envoyé par {name}": "Plan sent by {name}",
+  "Reçus": "Received",
+  "Routine ajoutée à ta bibliothèque": "Routine added to your library",
+  "Routine envoyée par {name}": "Routine sent by {name}",
+  "Tes amis reçoivent une copie (sans tes charges) dans « Reçus » et choisissent de l'ajouter ou non.": "Your friends get a copy (without your weights) in “Received” and choose whether to add it.",
+  "Voir": "View",
+  "un ami": "a friend"
 };

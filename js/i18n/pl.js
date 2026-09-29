@@ -1054,5 +1054,22 @@ export default {
   "Photo de profil": "Zdjęcie profilowe",
   "Prendre une photo": "Zrób zdjęcie",
   "Galerie": "Galeria",
-  "Photo illisible, essaie une autre image": "Nie można odczytać zdjęcia, spróbuj innego"
+  "Photo illisible, essaie une autre image": "Nie można odczytać zdjęcia, spróbuj innego",
+  "Ajout impossible, réessaie": "Nie udało się dodać, spróbuj ponownie",
+  "Ajouter à mes plans": "Dodaj do moich planów",
+  "Ajouter à mes routines": "Dodaj do moich rutyn",
+  "Envoi impossible, réessaie": "Nie udało się wysłać, spróbuj ponownie",
+  "Envoyer la routine « {name} »": "Wyślij rutynę „{name}”",
+  "Envoyer le plan « {name} »": "Wyślij plan „{name}”",
+  "Envoyer": "Wyślij",
+  "Envoyé à {n} ami": "Wysłano do {n} znajomego",
+  "Envoyé à {n} amis": "Wysłano do {n} znajomych",
+  "Plan ajouté à tes plans": "Plan dodany do twoich planów",
+  "Plan envoyé par {name}": "Plan wysłany przez {name}",
+  "Reçus": "Otrzymane",
+  "Routine ajoutée à ta bibliothèque": "Rutyna dodana do twojej biblioteki",
+  "Routine envoyée par {name}": "Rutyna wysłana przez {name}",
+  "Tes amis reçoivent une copie (sans tes charges) dans « Reçus » et choisissent de l'ajouter ou non.": "Znajomi dostają kopię (bez twoich ciężarów) w „Otrzymanych” i sami decydują, czy ją dodać.",
+  "Voir": "Zobacz",
+  "un ami": "znajomy"
 };

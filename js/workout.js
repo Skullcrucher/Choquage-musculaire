@@ -97,10 +97,12 @@ async function renderStartScreen(container) {
       <span class="num" style="font-size:56px; color:var(--amber); display:block; line-height:1;">${weekCount}</span>
       <div class="muted">${weekCount > 1 ? t("séances bouclées") : t("séance bouclée")}</div>
     </div>
+    <div id="gift-inbox"></div>
     <div id="start-tabs">${segHtml([["plan", t("Plan en cours"), "plan"], ["routine", t("Séance libre"), "workouts"]], startMode, "data-smode")}</div>
     <div id="start-body"></div>
   `;
   const body = container.querySelector("#start-body");
+  import("./gifts.js").then(m => m.renderGiftInbox(container.querySelector("#gift-inbox"), refreshAll));
   const draw = () => {
     if (startMode === "plan") {
       body.innerHTML = (planView?.html || `<p class="muted">${t("Plan indisponible.")}</p>`) +

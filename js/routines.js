@@ -50,6 +50,7 @@ async function renderMyRoutines(content) {
   const routines = all.filter(r => !planIds.has(r.id));
   const hidden = all.length - routines.length;
   content.innerHTML = `
+    <div id="gift-inbox"></div>
     <button class="btn btn-primary" id="new-routine">+ ${t("Nouvelle routine")}</button>
     <div class="btn-row" style="margin-top:8px;">
       <button class="btn btn-secondary btn-sm" id="import-plan">📥 ${t("Importer un plan")}</button>
@@ -72,9 +73,10 @@ async function renderMyRoutines(content) {
           ${r.vote_count ? `<span class="feed-muscle-badge">👍 ${r.vote_count}</span>` : ""}
           ${r.playlist_url ? `<span class="routine-badge">🎧 ${t("playlist")}</span>` : ""}
         </div>` : ""}
-        <div class="btn-row">
+        <div class="btn-row btn-row-wrap">
           <button class="btn btn-sm btn-secondary" data-edit="${esc(r.id)}">${t("Modifier")}</button>
           <button class="btn btn-sm btn-secondary" data-share="${esc(r.id)}">${t("Partager")}</button>
+          <button class="btn btn-sm btn-secondary" data-send="${esc(r.id)}">${t("Envoyer")}</button>
           <button class="btn btn-sm btn-danger" data-del="${esc(r.id)}">${t("Supprimer")}</button>
         </div>
       </div>
@@ -91,6 +93,15 @@ async function renderMyRoutines(content) {
   content.querySelectorAll("[data-share]").forEach(b => {
     b.onclick = (e) => { e.stopPropagation(); openShareModal(routines.find(r => r.id === b.dataset.share), refresh); };
   });
+  content.querySelectorAll("[data-send]").forEach(b => {
+    b.onclick = async (e) => {
+      e.stopPropagation();
+      const r = routines.find(x => x.id === b.dataset.send);
+      const { openSendModal, routineGiftData } = await import("./gifts.js");
+      openSendModal("routine", r.name, routineGiftData(r));
+    };
+  });
+  import("./gifts.js").then(m => m.renderGiftInbox(content.querySelector("#gift-inbox"), refresh));
   content.querySelectorAll("[data-del]").forEach(b => {
     b.onclick = async (e) => {
       e.stopPropagation();

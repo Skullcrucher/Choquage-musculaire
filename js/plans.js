@@ -364,6 +364,7 @@ export async function renderPlans(content) {
   if (!content.isConnected) return;
   const refresh = () => renderPlans(content);
   content.innerHTML = `
+    <div id="gift-inbox"></div>
     <button class="btn btn-primary" id="new-plan" ${routines.length ? "" : "disabled"}>+ ${t("Nouveau plan")}</button>
     <button class="btn btn-secondary" id="browse-programs" style="margin-top:8px;">⭐ ${t("Programmes prêts à l'emploi (PPL, split…)")}</button>
     ${routines.length ? "" : `<p class="muted">${t("Crée d'abord des routines : un plan les répartit sur les jours de la semaine.")}</p>`}
@@ -391,10 +392,11 @@ export async function renderPlans(content) {
           const rs = ids.map(id => routines.find(r => r.id === id)).filter(Boolean);
           return rs.length ? `<div class="plan-routines"><span class="muted">${t("Séances du plan :")}</span> ${rs.map(r => `<button class="chip chip-sm" data-redit="${esc(r.id)}">✏️ ${esc(r.name)}</button>`).join("")}</div>` : "";
         })()}
-        <div class="btn-row" style="margin-top:8px;">
+        <div class="btn-row btn-row-wrap" style="margin-top:8px;">
           <button class="btn btn-sm btn-secondary" data-activate="${esc(p.id)}">${p.id === active ? t("Désactiver") : t("Activer")}</button>
           <button class="btn btn-sm btn-secondary" data-pedit="${esc(p.id)}">${t("Modifier")}</button>
           <button class="btn btn-sm btn-secondary" data-pshare="${esc(p.id)}">${t("Partager")}</button>
+          <button class="btn btn-sm btn-secondary" data-psend="${esc(p.id)}">${t("Envoyer")}</button>
           ${pos.status !== "done" ? `<button class="btn btn-sm btn-secondary" data-pshift="${esc(p.id)}" title="${t("Décaler d'une semaine")}">⏭ +1 ${t("sem.")}</button>` : ""}
           <button class="btn btn-sm btn-danger" data-pdel="${esc(p.id)}">${t("Supprimer")}</button>
         </div>
@@ -410,6 +412,12 @@ export async function renderPlans(content) {
     const { openPlanShare } = await import("./plan-share.js");
     openPlanShare(plans.find(p => p.id === b.dataset.pshare), routines, refresh);
   });
+  content.querySelectorAll("[data-psend]").forEach(b => b.onclick = async () => {
+    const p = plans.find(x => x.id === b.dataset.psend);
+    const [{ planTemplateFrom }, { openSendModal }] = await Promise.all([import("./plan-share.js"), import("./gifts.js")]);
+    openSendModal("plan", p.name, planTemplateFrom(p, routines));
+  });
+  import("./gifts.js").then(m => m.renderGiftInbox(content.querySelector("#gift-inbox"), refresh));
   content.querySelectorAll("[data-redit]").forEach(b => b.onclick = async () => {
     const { openRoutineEditor } = await import("./routines.js");
     openRoutineEditor(routines.find(r => r.id === b.dataset.redit), async () => { invalidate("routines"); refresh(); });

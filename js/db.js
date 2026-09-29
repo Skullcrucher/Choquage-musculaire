@@ -572,6 +572,25 @@ export async function deleteSharedPlan(id) {
   await deleteDoc(doc(dbase, "shared_plans", id));
 }
 
+// ---------- Envois entre amis ----------
+// gifts/{id} : copie d'une routine ou d'un plan envoyée à un ami. Elle
+// attend dans sa boîte « Reçus » jusqu'à ce qu'il l'ajoute ou la refuse
+// (le document est alors supprimé).
+export async function sendGift(toUid, kind, name, data) {
+  await addDoc(collection(dbase, "gifts"), {
+    from_uid: requireUid(), from_name: await myPublicName(), to_uid: toUid,
+    kind, name: String(name || "").replace(/[<>]/g, "").slice(0, 80), data,
+    created_at: new Date().toISOString()
+  });
+}
+export async function listReceivedGifts() {
+  const snap = await getDocs(query(collection(dbase, "gifts"), where("to_uid", "==", requireUid()), limit(50)));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+}
+export async function deleteGift(id) {
+  await deleteDoc(doc(dbase, "gifts", id));
+}
+
 // ---------- Notes (1 à 5 étoiles) ----------
 // ratings/{cible}_{uid} ; cible = "routine_<id>" ou "plan_<id>" (plan
 // partagé ou programme Skullcrusher). La moyenne est calculée à la lecture.

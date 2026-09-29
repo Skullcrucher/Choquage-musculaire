@@ -1044,5 +1044,22 @@ export default {
   "Photo de profil": "Foto profil",
   "Prendre une photo": "Pran enn foto",
   "Galerie": "Galri",
-  "Photo illisible, essaie une autre image": "Foto pa lisib, esey enn lot imaz"
+  "Photo illisible, essaie une autre image": "Foto pa lisib, esey enn lot imaz",
+  "Ajout impossible, réessaie": "Pa kapav azoute, esey ankor",
+  "Ajouter à mes plans": "Azoute dan mo bann plan",
+  "Ajouter à mes routines": "Azoute dan mo bann rutinn",
+  "Envoi impossible, réessaie": "Pa kapav avoy, esey ankor",
+  "Envoyer la routine « {name} »": "Avoy rutinn « {name} »",
+  "Envoyer le plan « {name} »": "Avoy plan « {name} »",
+  "Envoyer": "Avoy",
+  "Envoyé à {n} ami": "Avoye ar {n} kamarad",
+  "Envoyé à {n} amis": "Avoye ar {n} kamarad",
+  "Plan ajouté à tes plans": "Plan azoute dan to bann plan",
+  "Plan envoyé par {name}": "Plan avoye par {name}",
+  "Reçus": "Resevwar",
+  "Routine ajoutée à ta bibliothèque": "Rutinn azoute dan to bibliotek",
+  "Routine envoyée par {name}": "Rutinn avoye par {name}",
+  "Tes amis reçoivent une copie (sans tes charges) dans « Reçus » et choisissent de l'ajouter ou non.": "To bann kamarad gagn enn kopi (san to bann pwa) dan « Resevwar » ek zot swazir si zot azout li.",
+  "Voir": "Get",
+  "un ami": "enn kamarad"
 };

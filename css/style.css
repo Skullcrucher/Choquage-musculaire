@@ -248,6 +248,8 @@ body > .view {
 }
 .btn-row { display: flex; gap: 8px; }
 .btn-row .btn { flex: 1; }
+.btn-row-wrap { flex-wrap: wrap; }
+.btn-row-wrap .btn { flex: 1 1 auto; }
 
 /* ---------- Inputs ---------- */
 input, select, textarea {

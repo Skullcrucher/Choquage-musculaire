@@ -78,6 +78,29 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.owner_uid == request.auth.uid;
     }
 
+    // Envois entre amis : une routine ou un plan copié dans la boîte
+    // « Reçus » d'un ami (amitié acceptée). Lus par l'expéditeur et le
+    // destinataire ; supprimés quand le destinataire l'ajoute ou le refuse.
+    function areFriends(a, b) {
+      let path = /databases/$(database)/documents/friendships/$(a < b ? a + '_' + b : b + '_' + a);
+      return exists(path) && get(path).data.status == 'accepted';
+    }
+    match /gifts/{giftId} {
+      allow read: if isSignedIn() && (resource.data.to_uid == request.auth.uid
+                    || resource.data.from_uid == request.auth.uid);
+      allow create: if isSignedIn()
+                    && request.resource.data.from_uid == request.auth.uid
+                    && request.resource.data.to_uid is string
+                    && request.resource.data.to_uid != request.auth.uid
+                    && areFriends(request.auth.uid, request.resource.data.to_uid)
+                    && request.resource.data.kind in ['routine', 'plan']
+                    && isSafeText(request.resource.data.name, 80)
+                    && isSafeText(request.resource.data.get('from_name', ''), 30)
+                    && request.resource.data.data is map;
+      allow delete: if isSignedIn() && (resource.data.to_uid == request.auth.uid
+                    || resource.data.from_uid == request.auth.uid);
+    }
+
     // Notes de routines et de plans (1 à 5 étoiles), une par personne et
     // par cible ; pas de note sur sa propre routine.
     function notOwnRoutine(target) {
