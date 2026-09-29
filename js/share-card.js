@@ -127,34 +127,29 @@ function drawCover(ctx, img, x, y, w, h) {
   ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, x, y, w, h);
 }
 
-// En-tête « profil » : avatar cerclé de rouge, pseudo, niveau · objectif ·
-// salle, pastille (date ou période). Sans pseudo : logo Skullcrusher.
+// En-tête « profil » : avatar cerclé de rouge (seulement s'il y a une photo
+// de profil), pseudo, niveau · objectif · salle, pastille (date ou période).
 function header(ctx, W, pad, assets, rightText, opts = {}, fmt = "story") {
   const size = fmt === "square" ? 118 : 138;
   const top = pad - 6;
   const cx = pad + size / 2, cy = top + size / 2;
-  // anneau lumineux
-  ctx.save();
-  ctx.shadowColor = "rgba(224,36,36,0.85)"; ctx.shadowBlur = 34;
-  ctx.beginPath(); ctx.arc(cx, cy, size / 2 + 6, 0, Math.PI * 2); ctx.fillStyle = C.red; ctx.fill();
-  ctx.restore();
-  ctx.beginPath(); ctx.arc(cx, cy, size / 2 + 1, 0, Math.PI * 2); ctx.fillStyle = C.bg; ctx.fill();
-  ctx.save();
-  ctx.beginPath(); ctx.arc(cx, cy, size / 2 - 5, 0, Math.PI * 2); ctx.clip();
-  if (opts.name && opts.avatar) drawCover(ctx, opts.avatar, cx - size / 2, cy - size / 2, size, size);
-  else if (opts.name) {
-    const g = ctx.createLinearGradient(0, cy - size / 2, 0, cy + size / 2);
-    g.addColorStop(0, "#2A2A2E"); g.addColorStop(1, "#161617");
-    ctx.fillStyle = g; ctx.fillRect(cx - size / 2, cy - size / 2, size, size);
-    font(ctx, size * 0.55, ANTON); ctx.fillStyle = C.red; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(opts.name.slice(0, 1).toUpperCase(), cx, cy + 4); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  } else {
-    ctx.fillStyle = "#161617"; ctx.fillRect(cx - size / 2, cy - size / 2, size, size);
-    if (assets.logo) { const h = size * 0.78, w = h * assets.logo.width / assets.logo.height; ctx.drawImage(assets.logo, cx - w / 2, cy - h / 2, w, h); }
+  // Avatar seulement s'il y a une vraie photo de profil : sinon rien,
+  // le texte prend toute la largeur.
+  const hasAvatar = !!(opts.name && opts.avatar);
+  if (hasAvatar) {
+    // anneau lumineux
+    ctx.save();
+    ctx.shadowColor = "rgba(224,36,36,0.85)"; ctx.shadowBlur = 34;
+    ctx.beginPath(); ctx.arc(cx, cy, size / 2 + 6, 0, Math.PI * 2); ctx.fillStyle = C.red; ctx.fill();
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(cx, cy, size / 2 + 1, 0, Math.PI * 2); ctx.fillStyle = C.bg; ctx.fill();
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, size / 2 - 5, 0, Math.PI * 2); ctx.clip();
+    drawCover(ctx, opts.avatar, cx - size / 2, cy - size / 2, size, size);
+    ctx.restore();
   }
-  ctx.restore();
   // pseudo + sous-titre
-  const tx = pad + size + 34, tw = W - pad - tx;
+  const tx = hasAvatar ? pad + size + 34 : pad, tw = W - pad - tx;
   const nameText = (opts.name || "Skullcrusher").toUpperCase();
   fitText(ctx, nameText, tx, top + size * 0.5, tw, fmt === "square" ? 60 : 70, ANTON, 400, C.text, "left", 34);
   const sub = opts.name ? opts.subtitle : "";
