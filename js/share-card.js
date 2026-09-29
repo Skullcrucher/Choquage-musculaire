@@ -1,13 +1,16 @@
 // ============================================================
 // IMAGES À PARTAGER (Instagram, TikTok, WhatsApp…) — dessinées dans le
 // style de l'app, au format vertical Story / Reel (9:16), post (4:5) ou
-// carré. Trois contenus : une séance, les stats d'une période, un exercice.
+// carré. Quatre contenus : une séance, les stats d'une période, un exercice,
+// l'état des lieux du plan en cours. En-tête « profil » (avatar, pseudo,
+// niveau · objectif · salle), photo facultative (profil, appareil photo ou
+// galerie) et signature « App Skullcrusher » avec l'icône de l'app.
 // « Partager » ouvre le menu de partage du téléphone (Instagram y apparaît
 // directement) ; « Enregistrer » télécharge l'image pour la galerie.
 // Aucun envoi à un serveur : l'image est fabriquée sur l'appareil.
 // ============================================================
 import * as db from "./db.js";
-import { openModal, closeModal, toast, esc, estimate1RM, isoWeek } from "./utils.js";
+import { openModal, closeModal, toast, esc, estimate1RM, isoWeek, safeImageUrl } from "./utils.js";
 import { getWorkouts, getSetsForPeriod, getSetsForExercise, getExercises } from "./cache.js";
 import { t, locale } from "./i18n.js";
 
@@ -41,8 +44,9 @@ function loadAssets() {
       document.fonts?.load(`700 40px ${INTER}`).catch(() => null),
       document.fonts?.load(`500 40px ${INTER}`).catch(() => null),
       loadImage("icons/logo.png"),
-      loadImage("icons/horns.png")
-    ]).then(([, , , logo, horns]) => ({ logo, horns }));
+      loadImage("icons/horns.png"),
+      loadImage("icons/icon-192.png")
+    ]).then(([, , , logo, horns, appIcon]) => ({ logo, horns, appIcon }));
   }
   return assetsPromise;
 }
@@ -116,26 +120,102 @@ function background(ctx, W, H, assets) {
   }
 }
 
-function header(ctx, W, pad, assets, rightText) {
-  const top = pad;
-  let x = pad;
-  if (assets.logo) {
-    const h = 86, w = h * assets.logo.width / assets.logo.height;
-    ctx.drawImage(assets.logo, x, top, w, h); x += w + 18;
-  }
-  font(ctx, 62, ANTON); ctx.fillStyle = C.red; ctx.textBaseline = "alphabetic";
-  ctx.fillText("SKULLCRUSHER", x, top + 70);
-  if (rightText) fitText(ctx, rightText, W - pad, top + 64, W * 0.34, 30, INTER, 600, C.dim, "right");
-  return top + 86;
+// Image dessinée en « cover » (recadrée pour remplir le cadre).
+function drawCover(ctx, img, x, y, w, h) {
+  const r = Math.max(w / img.width, h / img.height);
+  const sw = w / r, sh = h / r;
+  ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, x, y, w, h);
 }
 
+// En-tête « profil » : avatar cerclé de rouge, pseudo, niveau · objectif ·
+// salle, pastille (date ou période). Sans pseudo : logo Skullcrusher.
+function header(ctx, W, pad, assets, rightText, opts = {}, fmt = "story") {
+  const size = fmt === "square" ? 118 : 138;
+  const top = pad - 6;
+  const cx = pad + size / 2, cy = top + size / 2;
+  // anneau lumineux
+  ctx.save();
+  ctx.shadowColor = "rgba(224,36,36,0.85)"; ctx.shadowBlur = 34;
+  ctx.beginPath(); ctx.arc(cx, cy, size / 2 + 6, 0, Math.PI * 2); ctx.fillStyle = C.red; ctx.fill();
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(cx, cy, size / 2 + 1, 0, Math.PI * 2); ctx.fillStyle = C.bg; ctx.fill();
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, size / 2 - 5, 0, Math.PI * 2); ctx.clip();
+  if (opts.name && opts.avatar) drawCover(ctx, opts.avatar, cx - size / 2, cy - size / 2, size, size);
+  else if (opts.name) {
+    const g = ctx.createLinearGradient(0, cy - size / 2, 0, cy + size / 2);
+    g.addColorStop(0, "#2A2A2E"); g.addColorStop(1, "#161617");
+    ctx.fillStyle = g; ctx.fillRect(cx - size / 2, cy - size / 2, size, size);
+    font(ctx, size * 0.55, ANTON); ctx.fillStyle = C.red; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(opts.name.slice(0, 1).toUpperCase(), cx, cy + 4); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  } else {
+    ctx.fillStyle = "#161617"; ctx.fillRect(cx - size / 2, cy - size / 2, size, size);
+    if (assets.logo) { const h = size * 0.78, w = h * assets.logo.width / assets.logo.height; ctx.drawImage(assets.logo, cx - w / 2, cy - h / 2, w, h); }
+  }
+  ctx.restore();
+  // pseudo + sous-titre
+  const tx = pad + size + 34, tw = W - pad - tx;
+  const nameText = (opts.name || "Skullcrusher").toUpperCase();
+  fitText(ctx, nameText, tx, top + size * 0.5, tw, fmt === "square" ? 60 : 70, ANTON, 400, C.text, "left", 34);
+  const sub = opts.name ? opts.subtitle : "";
+  if (sub) fitText(ctx, sub, tx, top + size * 0.5 + 44, tw, 28, INTER, 600, C.dim, "left", 18);
+  let bottom = top + size + 10;
+  if (rightText) {
+    font(ctx, 24, INTER, 800);
+    const label = rightText.toUpperCase();
+    const lw = Math.min(ctx.measureText(label).width + 36, tw);
+    const ly = top + size * 0.5 + (sub ? 64 : 22);
+    rr(ctx, tx, ly, lw, 42, 21); ctx.fillStyle = C.redSoft; ctx.fill(); ctx.strokeStyle = "rgba(224,36,36,0.6)"; ctx.lineWidth = 2; ctx.stroke();
+    fitText(ctx, label, tx + 18, ly + 29, lw - 36, 24, INTER, 800, C.text, "left", 14);
+    bottom = Math.max(bottom, ly + 42 + 12); // la pastille ne doit pas mordre sur la suite
+  }
+  return bottom;
+}
+
+// Photo (prise sur le moment, galerie ou profil) : grand cadre recadré,
+// bordure rouge, dégradé vers le fond. Une petite photo (profil) est
+// affichée en portrait rond plutôt qu'agrandie et floue.
+function photoBlock(ctx, x, y, w, h, img) {
+  if (Math.max(img.width, img.height) < 500) {
+    const d = Math.min(h, w) * 0.92, cx = x + w / 2, cy = y + h / 2;
+    ctx.save(); ctx.shadowColor = "rgba(224,36,36,0.8)"; ctx.shadowBlur = 50;
+    ctx.beginPath(); ctx.arc(cx, cy, d / 2 + 8, 0, Math.PI * 2); ctx.fillStyle = C.red; ctx.fill(); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, d / 2, 0, Math.PI * 2); ctx.clip(); drawCover(ctx, img, cx - d / 2, cy - d / 2, d, d); ctx.restore();
+    return y + h;
+  }
+  ctx.save();
+  ctx.shadowColor = "rgba(224,36,36,0.55)"; ctx.shadowBlur = 40;
+  rr(ctx, x, y, w, h, 34); ctx.fillStyle = C.surface; ctx.fill();
+  ctx.restore();
+  ctx.save(); rr(ctx, x, y, w, h, 34); ctx.clip();
+  drawCover(ctx, img, x, y, w, h);
+  const g = ctx.createLinearGradient(0, y + h * 0.55, 0, y + h);
+  g.addColorStop(0, "rgba(11,11,12,0)"); g.addColorStop(1, "rgba(11,11,12,0.75)");
+  ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  ctx.restore();
+  rr(ctx, x, y, w, h, 34); ctx.lineWidth = 4; ctx.strokeStyle = C.red; ctx.stroke();
+  return y + h;
+}
+// Photo sous l'en-tête (si choisie) ; renvoie le nouveau y.
+function withPhoto(ctx, y, W, pad, d, fmt) {
+  if (!d.opts.photo) return y;
+  return photoBlock(ctx, pad, y + 26, W - pad * 2, photoH(fmt), d.opts.photo) + 6;
+}
+// Hauteur du cadre photo selon le format.
+const photoH = (fmt) => fmt === "story" ? 600 : fmt === "post" ? 290 : 195;
+
+// Signature : icône de l'app + « App Skullcrusher ».
 function footer(ctx, W, H, pad, assets, note) {
   const y = H - pad;
-  ctx.fillStyle = C.line; ctx.fillRect(pad, y - 70, W - pad * 2, 2);
-  if (assets.horns) { const h = 44, w = h * assets.horns.width / assets.horns.height; ctx.drawImage(assets.horns, pad, y - 50, w, h); }
-  font(ctx, 28, INTER, 600); ctx.fillStyle = C.text;
-  ctx.fillText(t("Fait avec Skullcrusher"), pad + 40, y - 17);
-  if (note) fitText(ctx, note, W - pad, y - 17, W * 0.45, 22, INTER, 500, C.dim, "right", 16);
+  ctx.fillStyle = C.line; ctx.fillRect(pad, y - 86, W - pad * 2, 2);
+  const s = 60, iy = y - 66;
+  if (assets.appIcon) {
+    ctx.save(); rr(ctx, pad, iy, s, s, 15); ctx.clip(); ctx.drawImage(assets.appIcon, pad, iy, s, s); ctx.restore();
+    rr(ctx, pad, iy, s, s, 15); ctx.lineWidth = 2; ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.stroke();
+  }
+  font(ctx, 20, INTER, 700); ctx.fillStyle = C.dim; ctx.fillText("APP", pad + s + 18, iy + 24);
+  font(ctx, 34, ANTON); ctx.fillStyle = C.text; ctx.fillText("SKULLCRUSHER", pad + s + 18, iy + 58);
+  if (note) fitText(ctx, note, W - pad, y - 24, W * 0.45, 22, INTER, 500, C.dim, "right", 16);
 }
 
 function tile(ctx, x, y, w, h, value, label, accent = false) {
@@ -284,11 +364,14 @@ async function exerciseData(name, days) {
 function renderWorkout(ctx, W, H, d, assets, fmt) {
   const pad = 70, inner = W - pad * 2;
   const compact = fmt !== "story";
-  let y = header(ctx, W, pad, assets, new Date(d.w.start_time).toLocaleDateString(locale(), { day: "numeric", month: "long", year: "numeric" }));
-  y += compact ? 60 : 110;
+  let y = header(ctx, W, pad, assets, new Date(d.w.start_time).toLocaleDateString(locale(), { day: "numeric", month: "long", year: "numeric" }), d.opts, fmt);
+  y = withPhoto(ctx, y, W, pad, d, fmt);
+  const tight = compact && d.opts.photo;
+  y += tight ? 64 : compact ? 70 : 100;
   font(ctx, 30, INTER, 700); ctx.fillStyle = C.red; ctx.fillText(t("SÉANCE TERMINÉE").toUpperCase(), pad, y); y += 20;
-  y += wrapText(ctx, String(d.w.title || "").toUpperCase(), pad, y + (compact ? 92 : 118), inner, compact ? 92 : 118, ANTON, 400, C.text, 2) + 8;
-  const sub = [d.opts.name, d.opts.partners?.length ? t("avec {names}", { names: d.opts.partners.join(", ") }) : ""].filter(Boolean).join(" · ");
+  const ts = tight ? 72 : compact ? 92 : 118;
+  y += wrapText(ctx, String(d.w.title || "").toUpperCase(), pad, y + ts, inner, ts, ANTON, 400, C.text, tight ? 1 : 2) + 8;
+  const sub = d.opts.partners?.length ? t("avec {names}", { names: d.opts.partners.join(", ") }) : "";
   if (sub) { fitText(ctx, sub, pad, y + 30, inner, 34, INTER, 600, C.dim); y += 50; }
   y += compact ? 24 : 44;
   const hero = [
@@ -297,9 +380,9 @@ function renderWorkout(ctx, W, H, d, assets, fmt) {
     { value: fmtMinutes(d.minutes), label: t("durée") }
   ];
   if (d.opts.kcal) hero.push({ value: `${nf(d.opts.kcal)}`, label: "kcal" });
-  y = tiles(ctx, pad, y, inner, compact ? 190 : 230, hero) + (compact ? 40 : 64);
+  y = tiles(ctx, pad, y, inner, tight ? 160 : compact ? 190 : 230, hero) + (compact ? 40 : 64);
 
-  const footerTop = H - pad - 90;
+  const footerTop = H - pad - 100;
   const room = () => footerTop - y;
   if (d.records.length && room() > 200) {
     y = sectionTitle(ctx, `🏆 ${t("Records")}`, pad, y + 30) + 16;
@@ -342,17 +425,20 @@ function heatmap(ctx, x, y, W, d) {
 function renderPeriod(ctx, W, H, d, assets, fmt, label) {
   const pad = 70, inner = W - pad * 2;
   const compact = fmt !== "story";
-  let y = header(ctx, W, pad, assets, d.opts.name || "");
-  y += compact ? 60 : 110;
+  let y = header(ctx, W, pad, assets, new Date().toLocaleDateString(locale(), { day: "numeric", month: "long", year: "numeric" }), d.opts, fmt);
+  y = withPhoto(ctx, y, W, pad, d, fmt);
+  const tight = compact && d.opts.photo;
+  y += tight ? 64 : compact ? 70 : 100;
   font(ctx, 30, INTER, 700); ctx.fillStyle = C.red; ctx.fillText(t("MON BILAN").toUpperCase(), pad, y); y += 20;
-  y += wrapText(ctx, label.toUpperCase(), pad, y + (compact ? 96 : 124), inner, compact ? 96 : 124, ANTON, 400, C.text, 2) + (compact ? 30 : 56);
-  const h = compact ? 180 : 220;
+  const ts = tight ? 76 : compact ? 96 : 124;
+  y += wrapText(ctx, label.toUpperCase(), pad, y + ts, inner, ts, ANTON, 400, C.text, tight ? 1 : 2) + (compact ? 30 : 56);
+  const h = tight ? 160 : compact ? 180 : 220;
   y = tiles(ctx, pad, y, inner, h, [
     { value: String(d.count), label: t("séances"), accent: true },
     ...(d.opts.showWeights ? [{ value: fmtLoad(d.tonnage), label: t("soulevés") }] : [{ value: String(d.sets), label: t("séries") }]),
     { value: fmtMinutes(d.minutes), label: t("d'entraînement") }
   ]) + (compact ? 34 : 56);
-  const footerTop = H - pad - 90;
+  const footerTop = H - pad - 100;
   const room = () => footerTop - y;
   if (fmt === "story" && d.days && d.days <= 91 && room() > 520) {
     y = sectionTitle(ctx, t("Régularité"), pad, y + 30) + 24;
@@ -397,10 +483,13 @@ function lineChart(ctx, x, y, w, h, series) {
 function renderExercise(ctx, W, H, d, assets, fmt, periodLabel) {
   const pad = 70, inner = W - pad * 2;
   const compact = fmt !== "story";
-  let y = header(ctx, W, pad, assets, periodLabel);
-  y += compact ? 60 : 110;
+  let y = header(ctx, W, pad, assets, periodLabel, d.opts, fmt);
+  y = withPhoto(ctx, y, W, pad, d, fmt);
+  const tight = compact && d.opts.photo;
+  y += tight ? 64 : compact ? 70 : 100;
   font(ctx, 30, INTER, 700); ctx.fillStyle = C.red; ctx.fillText(t("MA PROGRESSION").toUpperCase(), pad, y); y += 20;
-  y += wrapText(ctx, d.name.toUpperCase(), pad, y + (compact ? 88 : 112), inner, compact ? 88 : 112, ANTON, 400, C.text, 2) + (compact ? 30 : 56);
+  const ts = tight ? 70 : compact ? 88 : 112;
+  y += wrapText(ctx, d.name.toUpperCase(), pad, y + ts, inner, ts, ANTON, 400, C.text, tight ? 1 : 2) + (compact ? 30 : 56);
   const hero = d.opts.showWeights
     ? [{ value: d.best1rm ? `${nf(d.best1rm)} kg` : "—", label: t("1RM estimée"), accent: true },
        { value: d.best ? `${nf(d.best.weight_kg, 1)}×${d.best.reps}` : "—", label: t("meilleure série") },
@@ -408,8 +497,8 @@ function renderExercise(ctx, W, H, d, assets, fmt, periodLabel) {
     : [{ value: d.progress != null ? `${d.progress > 0 ? "+" : ""}${d.progress}%` : "—", label: t("progression"), accent: true },
        { value: String(d.sessions), label: t("séances") },
        { value: String(d.sets.length), label: t("séries") }];
-  y = tiles(ctx, pad, y, inner, compact ? 180 : 220, hero) + (compact ? 30 : 50);
-  const footerTop = H - pad - 90;
+  y = tiles(ctx, pad, y, inner, tight ? 160 : compact ? 180 : 220, hero) + (compact ? 30 : 50);
+  const footerTop = H - pad - 100;
   const chartH = Math.min(fmt === "story" ? 560 : fmt === "post" ? 330 : 200, footerTop - y - (fmt === "story" ? 220 : 60));
   if (chartH > 120 && d.series.length >= 2) {
     y = sectionTitle(ctx, d.byMonth ? t("1RM estimée par mois") : t("1RM estimée par semaine"), pad, y + 30) + 20;
@@ -425,19 +514,95 @@ function renderExercise(ctx, W, H, d, assets, fmt, periodLabel) {
   footer(ctx, W, H, pad, assets, d.opts.showWeights ? t("1RM estimée (formule d'Epley) : valeur indicative") : "");
 }
 
+// ---------- État des lieux du plan en cours ----------
+function renderPlan(ctx, W, H, d, assets, fmt) {
+  const pad = 70, inner = W - pad * 2;
+  const compact = fmt !== "story";
+  const { plan, pos, st } = d;
+  const status = pos.status === "upcoming" ? t("À venir") : pos.status === "done" ? t("Terminé") : t("Semaine {w}/{total}", { w: pos.week, total: pos.total });
+  let y = header(ctx, W, pad, assets, status, d.opts, fmt);
+  y = withPhoto(ctx, y, W, pad, d, fmt);
+  const tight = compact && d.opts.photo;
+  y += tight ? 64 : compact ? 70 : 100;
+  font(ctx, 30, INTER, 700); ctx.fillStyle = C.red; ctx.fillText(t("MON PLAN").toUpperCase(), pad, y); y += 20;
+  const ts = tight ? 70 : compact ? 86 : 108;
+  y += wrapText(ctx, String(plan.name || "").toUpperCase(), pad, y + ts, inner, ts, ANTON, 400, C.text, tight ? 1 : 2) + (compact ? 22 : 34);
+  // Barre d'avancement
+  const pct = pos.status === "done" ? 100 : pos.status === "upcoming" ? 0 : Math.round((pos.week - 1) / pos.total * 100);
+  const bh = compact ? 30 : 38;
+  rr(ctx, pad, y, inner, bh, bh / 2); ctx.fillStyle = "rgba(255,255,255,0.08)"; ctx.fill();
+  if (pct > 0) {
+    const g = ctx.createLinearGradient(pad, 0, pad + inner, 0);
+    g.addColorStop(0, C.red); g.addColorStop(1, C.green);
+    ctx.save(); ctx.shadowColor = "rgba(224,36,36,0.6)"; ctx.shadowBlur = 18;
+    rr(ctx, pad, y, Math.max(bh, inner * pct / 100), bh, bh / 2); ctx.fillStyle = g; ctx.fill(); ctx.restore();
+  }
+  y += bh + 40;
+  const block = pos.block?.name ? `${pos.block.name} · ` : "";
+  fitText(ctx, `${block}${t("Avancement du plan")}`, pad, y, inner * 0.7, 28, INTER, 600, C.dim);
+  fitText(ctx, `${pct} %`, pad + inner, y, inner * 0.3, 40, ANTON, 400, C.text, "right");
+  y += compact ? 36 : 50;
+  y = tiles(ctx, pad, y, inner, tight ? 160 : compact ? 180 : 220, [
+    { value: `${st.done}/${st.planned}`, label: t("séances faites"), accent: true },
+    { value: st.adherence == null ? "—" : `${st.adherence}%`, label: t("assiduité") },
+    { value: String(st.streak), label: t("sem. complètes") }
+  ]) + (compact ? 30 : 50);
+  const footerTop = H - pad - 100;
+  const room = () => footerTop - y;
+  // Semaine par semaine : une ligne par semaine (faites, manquées, à venir).
+  const weeks = st.weeks;
+  const rowH = compact ? 50 : 62;
+  if (room() > rowH * 2 + 80) {
+    y = sectionTitle(ctx, t("Semaine par semaine"), pad, y + 30) + 22;
+    const maxRows = Math.floor((room() - (fmt === "story" && d.opts.showWeights ? 240 : 10)) / rowH);
+    // Semaines autour de la semaine en cours si tout ne tient pas.
+    const cur = Math.max(0, weeks.findIndex(w => w.state === "current"));
+    const start = Math.max(0, Math.min(cur - Math.floor(maxRows / 2), weeks.length - maxRows));
+    const shown = weeks.slice(start, start + Math.max(1, maxRows));
+    const cell = rowH - 14;
+    shown.forEach((w, i) => {
+      const ry = y + i * rowH;
+      if (w.state === "current") { rr(ctx, pad - 10, ry - 7, inner + 20, rowH, 14); ctx.fillStyle = "rgba(224,36,36,0.12)"; ctx.fill(); }
+      fitText(ctx, `S${w.n}`, pad, ry + cell * 0.72, 90, 32, ANTON, 400, w.state === "future" ? C.dim : C.text);
+      w.slots.forEach((sl, j) => {
+        const cx = pad + 110 + j * (cell + 12);
+        rr(ctx, cx, ry, cell, cell, 10);
+        ctx.fillStyle = sl.done ? C.green : w.state === "future" || (!sl.past && !sl.done) ? "rgba(255,255,255,0.07)" : "rgba(224,36,36,0.45)";
+        ctx.fill();
+        if (sl.done) { font(ctx, cell * 0.6, INTER, 800); ctx.fillStyle = C.bg; ctx.textAlign = "center"; ctx.fillText("✓", cx + cell / 2, ry + cell * 0.72); ctx.textAlign = "left"; }
+      });
+      if (w.state !== "future") fitText(ctx, `${w.done}/${w.slots.length}`, pad + inner, ry + cell * 0.72, 120, 28, INTER, 700, C.dim, "right");
+    });
+    y += shown.length * rowH + 20;
+  }
+  if (fmt === "story" && d.opts.showWeights && room() > 220) {
+    tiles(ctx, pad, y + 20, inner, 180, [
+      { value: fmtLoad(st.tonnage), label: t("soulevés") },
+      { value: nf(st.sets), label: t("séries") },
+      { value: st.minutes >= 60 ? `${Math.floor(st.minutes / 60)} h` : `${nf(st.minutes)} min`, label: t("d'entraînement") }
+    ]);
+  }
+  footer(ctx, W, H, pad, assets, "");
+}
+
 // ---------- Fenêtre de partage ----------
-// kind : "workout" (séance), "period" (bilan d'une période), "exercise".
-export async function openShareCard({ kind, workout = null, exercise = null, partners = [], periodDays = 30 }) {
+// kind : "workout" (séance), "period" (bilan d'une période), "exercise",
+// "plan" (état des lieux du plan en cours).
+export async function openShareCard({ kind, workout = null, exercise = null, partners = [], periodDays = 30, planId = null }) {
   const me = db.getCurrentUser()?.uid;
   const [profile, assets] = await Promise.all([db.getProfile(me).catch(() => null), loadAssets()]);
   const name = profile?.display_name || "";
-  const state = { fmt: "story", showWeights: true, showName: true, showKcal: false, period: kind === "exercise" ? "all" : (PERIOD_CHOICES.find(p => p.days === periodDays)?.key || "30") };
+  const avatarSrc = safeImageUrl(profile?.photo_data_url || "");
+  const avatar = avatarSrc ? await loadImage(avatarSrc) : null;
+  // i18n-keys: "Débutant", "Intermédiaire", "Avancé", "Force", "Hypertrophie", "Endurance", "Sèche / perte de poids", "Remise en forme"
+  const subtitle = [db.ROUTINE_LEVELS[profile?.level], db.ROUTINE_GOALS[profile?.goal], profile?.gym].filter(Boolean).join(" · ");
+  const state = { fmt: "story", showWeights: true, showName: true, showKcal: false, photoMode: "none", photoImg: null, period: kind === "exercise" ? "all" : (PERIOD_CHOICES.find(p => p.days === periodDays)?.key || "30") };
   let kcal = null;
   if (kind === "workout") {
     try { const { getBody, workoutCalories } = await import("./calories.js"); kcal = workoutCalories(workout, await getBody())?.kcal || null; } catch (_) {}
   }
   const periodChoice = () => PERIOD_CHOICES.find(p => p.key === state.period);
-  const title = kind === "workout" ? t("Partager ma séance") : kind === "period" ? t("Partager mon bilan") : t("Partager ma progression");
+  const title = kind === "workout" ? t("Partager ma séance") : kind === "period" ? t("Partager mon bilan") : kind === "plan" ? t("Partager l'état de mon plan") : t("Partager ma progression");
   let blob = null, dataCache = {};
 
   openModal(`
@@ -445,9 +610,17 @@ export async function openShareCard({ kind, workout = null, exercise = null, par
     <div class="chip-row" id="sc-formats" style="margin:0 0 6px;">
       ${Object.entries(FORMATS).map(([k, f]) => `<div class="chip" data-fmt="${k}">${esc(t(f.label))} <span class="muted" style="font-size:11px;">${f.ratio}</span></div>`).join("")}
     </div>
-    ${kind !== "workout" ? `<div class="chip-row pk-scroll" id="sc-periods" style="margin:0 0 6px;">
+    ${kind !== "workout" && kind !== "plan" ? `<div class="chip-row pk-scroll" id="sc-periods" style="margin:0 0 6px;">
       ${PERIOD_CHOICES.map(p => `<div class="chip chip-sm" data-period="${p.key}">${esc(t(p.label))}</div>`).join("")}
     </div>` : ""}
+    <div class="chip-row pk-scroll" id="sc-photo" style="margin:0 0 6px;">
+      <div class="chip chip-sm" data-photo="none">${t("Sans photo")}</div>
+      ${avatar ? `<div class="chip chip-sm" data-photo="profile">👤 ${t("Photo de profil")}</div>` : ""}
+      <div class="chip chip-sm" data-photo="camera">📷 ${t("Prendre une photo")}</div>
+      <div class="chip chip-sm" data-photo="gallery">🖼️ ${t("Galerie")}</div>
+    </div>
+    <input type="file" id="sc-cam" accept="image/*" capture="environment" hidden>
+    <input type="file" id="sc-gal" accept="image/*" hidden>
     <div class="share-preview"><canvas id="sc-canvas"></canvas><div class="share-loading" id="sc-loading">${t("Préparation…")}</div></div>
     <div class="share-options">
       <label><input type="checkbox" id="sc-weights" checked> ${t("Afficher les charges")}</label>
@@ -468,12 +641,19 @@ export async function openShareCard({ kind, workout = null, exercise = null, par
       const f = FORMATS[state.fmt];
       canvas.width = f.w; canvas.height = f.h;
       const ctx = canvas.getContext("2d");
-      const opts = { name: state.showName ? name : "", showWeights: state.showWeights, kcal: state.showKcal ? kcal : null, partners: state.showName ? partners : [] };
+      const photo = state.photoMode === "profile" ? avatar : (state.photoMode === "camera" || state.photoMode === "gallery") ? state.photoImg : null;
+      const opts = { name: state.showName ? name : "", avatar, subtitle, photo, showWeights: state.showWeights, kcal: state.showKcal ? kcal : null, partners: state.showName ? partners : [] };
       try {
         background(ctx, f.w, f.h, assets);
         if (kind === "workout") {
           dataCache.w = dataCache.w || await workoutData(workout, opts);
           renderWorkout(ctx, f.w, f.h, { ...dataCache.w, opts }, assets, state.fmt);
+        } else if (kind === "plan") {
+          if (!dataCache.plan) {
+            const { planShareData } = await import("./plans.js");
+            dataCache.plan = await planShareData(planId);
+          }
+          if (dataCache.plan) renderPlan(ctx, f.w, f.h, { ...dataCache.plan, opts }, assets, state.fmt);
         } else if (kind === "period") {
           const p = periodChoice();
           dataCache[p.key] = dataCache[p.key] || await periodData(p.days);
@@ -491,16 +671,37 @@ export async function openShareCard({ kind, workout = null, exercise = null, par
       }
       m.querySelectorAll("[data-fmt]").forEach(c => c.classList.toggle("active", c.dataset.fmt === state.fmt));
       m.querySelectorAll("[data-period]").forEach(c => c.classList.toggle("active", c.dataset.period === state.period));
+      m.querySelectorAll("[data-photo]").forEach(c => c.classList.toggle("active", c.dataset.photo === state.photoMode));
       canvas.style.aspectRatio = `${f.w} / ${f.h}`;
       blob = await new Promise(res => canvas.toBlob(res, "image/png"));
       loading.style.display = "none";
     };
     m.querySelectorAll("[data-fmt]").forEach(c => c.onclick = () => { state.fmt = c.dataset.fmt; draw(); });
     m.querySelectorAll("[data-period]").forEach(c => c.onclick = () => { state.period = c.dataset.period; draw(); });
+    // Photo : aucune, profil, prise sur le moment ou galerie (reste sur l'appareil).
+    const pickPhoto = (input, mode) => {
+      input.value = "";
+      input.onchange = async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        const img = await loadImage(url);
+        if (!img) { toast(t("Photo illisible, essaie une autre image")); return; }
+        state.photoImg = img; state.photoMode = mode;
+        draw();
+      };
+      input.click();
+    };
+    m.querySelectorAll("[data-photo]").forEach(c => c.onclick = () => {
+      const mode = c.dataset.photo;
+      if (mode === "camera") return pickPhoto(m.querySelector("#sc-cam"), "camera");
+      if (mode === "gallery") return pickPhoto(m.querySelector("#sc-gal"), "gallery");
+      state.photoMode = mode; draw();
+    });
     m.querySelector("#sc-weights").onchange = (e) => { state.showWeights = e.target.checked; draw(); };
     m.querySelector("#sc-name").onchange = (e) => { state.showName = e.target.checked; draw(); };
     const kc = m.querySelector("#sc-kcal"); if (kc) kc.onchange = (e) => { state.showKcal = e.target.checked; draw(); };
-    const fileName = () => `skullcrusher-${kind === "workout" ? "seance" : kind === "period" ? "bilan" : "progression"}-${state.fmt}.png`;
+    const fileName = () => `skullcrusher-${kind === "workout" ? "seance" : kind === "period" ? "bilan" : kind === "plan" ? "plan" : "progression"}-${state.fmt}.png`;
     m.querySelector("#sc-save").onclick = () => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);

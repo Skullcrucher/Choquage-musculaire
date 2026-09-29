@@ -1045,5 +1045,14 @@ export default {
   "Séance libre": "Wolny trening",
   "Séance vide": "Pusty trening",
   "Ajoute tes exercices au fur et à mesure": "Dodawaj ćwiczenia na bieżąco",
-  "Pas encore de routine : crée-en une ou pioche dans Découvrir ci-dessous.": "Brak rutyn: utwórz ją lub wybierz w Odkrywaj poniżej."
+  "Pas encore de routine : crée-en une ou pioche dans Découvrir ci-dessous.": "Brak rutyn: utwórz ją lub wybierz w Odkrywaj poniżej.",
+  "Partager l'état de mon plan": "Udostępnij postęp planu",
+  "À venir": "Nadchodzący",
+  "MON PLAN": "MÓJ PLAN",
+  "sem. complètes": "pełne tyg.",
+  "Sans photo": "Bez zdjęcia",
+  "Photo de profil": "Zdjęcie profilowe",
+  "Prendre une photo": "Zrób zdjęcie",
+  "Galerie": "Galeria",
+  "Photo illisible, essaie une autre image": "Nie można odczytać zdjęcia, spróbuj innego"
 };

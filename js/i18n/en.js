@@ -1036,5 +1036,14 @@ export default {
   "Séance libre": "Free workout",
   "Séance vide": "Empty workout",
   "Ajoute tes exercices au fur et à mesure": "Add your exercises as you go",
-  "Pas encore de routine : crée-en une ou pioche dans Découvrir ci-dessous.": "No routine yet: create one or pick one in Discover below."
+  "Pas encore de routine : crée-en une ou pioche dans Découvrir ci-dessous.": "No routine yet: create one or pick one in Discover below.",
+  "Partager l'état de mon plan": "Share my plan progress",
+  "À venir": "Upcoming",
+  "MON PLAN": "MY PLAN",
+  "sem. complètes": "full weeks",
+  "Sans photo": "No photo",
+  "Photo de profil": "Profile photo",
+  "Prendre une photo": "Take a photo",
+  "Galerie": "Gallery",
+  "Photo illisible, essaie une autre image": "Unreadable photo, try another image"
 };

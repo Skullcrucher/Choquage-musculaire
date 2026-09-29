@@ -1035,5 +1035,14 @@ export default {
   "Séance libre": "Seans lib",
   "Séance vide": "Seans vid",
   "Ajoute tes exercices au fur et à mesure": "Azout to bann lexersis pli divan",
-  "Pas encore de routine : crée-en une ou pioche dans Découvrir ci-dessous.": "Pa ankor ena routinn: kre enn ouswa swazir dan Dekouver anba."
+  "Pas encore de routine : crée-en une ou pioche dans Découvrir ci-dessous.": "Pa ankor ena routinn: kre enn ouswa swazir dan Dekouver anba.",
+  "Partager l'état de mon plan": "Partaz leta mo plan",
+  "À venir": "Pe vini",
+  "MON PLAN": "MO PLAN",
+  "sem. complètes": "semenn konple",
+  "Sans photo": "San foto",
+  "Photo de profil": "Foto profil",
+  "Prendre une photo": "Pran enn foto",
+  "Galerie": "Galri",
+  "Photo illisible, essaie une autre image": "Foto pa lisib, esey enn lot imaz"
 };

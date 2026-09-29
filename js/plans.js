@@ -291,6 +291,14 @@ function planStats(plan, routines, workouts) {
   };
 }
 
+// Données de l'image « état des lieux du plan » (share-card.js).
+export async function planShareData(planId = null) {
+  const [{ plans, active }, routines, workouts] = await Promise.all([getPlans(), getRoutines(), getWorkouts()]);
+  const plan = plans.find(p => p.id === (planId || active)) || plans.find(p => p.id === active) || plans[plans.length - 1];
+  if (!plan) return null;
+  return { plan, pos: planPosition(plan), st: planStats(plan, routines, workouts) };
+}
+
 let trackedPlanId = null;
 export async function renderPlanTracking(content, { onOpenWorkout } = {}) {
   const [{ plans, active }, routines, workouts] = await Promise.all([getPlans(), getRoutines(), getWorkouts()]);
@@ -325,6 +333,7 @@ export async function renderPlanTracking(content, { onOpenWorkout } = {}) {
         <div class="stat-box"><span class="num">${st.minutes >= 60 ? Math.floor(st.minutes / 60) + " h" : nf(st.minutes) + " min"}</span><span class="lbl">${t("d'entraînement")}</span></div>
       </div>
       <p class="muted" style="font-size:12px; margin:8px 0 0;">${t("Assiduité = séances faites / séances prévues jusqu'à aujourd'hui.")}</p>
+      <button class="btn btn-primary share-btn" id="share-plan" style="margin-top:12px;">📸 ${t("Partager l'état de mon plan")}</button>
     </div>
     <div class="card">
       <div class="card-title">${t("Semaine par semaine")}</div>
@@ -346,6 +355,7 @@ export async function renderPlanTracking(content, { onOpenWorkout } = {}) {
         </div>`).join("")}` : ""}
   `;
   content.querySelectorAll("[data-track]").forEach(c => c.onclick = () => { trackedPlanId = c.dataset.track; renderPlanTracking(content, { onOpenWorkout }); });
+  content.querySelector("#share-plan").onclick = async () => (await import("./share-card.js")).openShareCard({ kind: "plan", planId: plan.id });
   content.querySelectorAll("[data-plan-w]").forEach(r => r.onclick = () => onOpenWorkout?.(st.workouts.find(w => w.id === r.dataset.planW)));
 }
 
