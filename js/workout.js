@@ -23,21 +23,33 @@ const LS_PENDING_DEL = "skullcrusher_pending_workout_deletes";
 
 // Séances bouclées cette semaine : terminées (end_time), commencées entre
 // lundi 0 h et maintenant. Les séances ouvertes puis jamais terminées et
-// les dates dans le futur (import mal daté) ne comptent pas.
-function countThisWeek(workouts) {
+// les dates dans le futur (import mal daté) ne comptent pas. Deux séances
+// qui se chevauchent dans le temps (même séance importée ou ajoutée deux
+// fois) ne comptent qu'une fois.
+function weekWorkouts(workouts) {
   const now = new Date();
-  const day = (now.getDay() + 6) % 7; // lundi = 0
   const monday = new Date(now);
   monday.setHours(0, 0, 0, 0);
-  monday.setDate(now.getDate() - day);
-  const ids = new Set();
-  for (const w of workouts) {
-    if (!w.end_time || !w.start_time) continue;
+  monday.setDate(now.getDate() - (now.getDay() + 6) % 7);
+  const list = workouts.filter(w => {
+    if (!w.end_time || !w.start_time) return false;
     const start = new Date(w.start_time);
-    if (isNaN(start) || start < monday || start > now) continue;
-    ids.add(w.id);
+    return !isNaN(start) && start >= monday && start <= now;
+  }).sort((a, b) => keepScore(b) - keepScore(a) || new Date(a.start_time) - new Date(b.start_time));
+  const counted = [], duplicates = [];
+  for (const w of list) {
+    const s0 = new Date(w.start_time), e0 = Math.max(+new Date(w.end_time), +s0 + 60e3);
+    const twin = counted.find(c => s0 < Math.max(+new Date(c.end_time), +new Date(c.start_time) + 60e3) && e0 > new Date(c.start_time));
+    if (twin) duplicates.push({ w, twin }); else counted.push(w);
   }
-  return ids.size;
+  counted.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+  return { monday, now, counted, duplicates };
+}
+// En cas de doublon, on garde d'abord la séance faite dans l'app depuis
+// une routine ou un plan, puis celle faite dans l'app, puis l'import.
+const keepScore = (w) => (w.plan_id || w.routine_id ? 2 : 0) + (w.imported_at ? 0 : 1);
+function countThisWeek(workouts) {
+  return weekWorkouts(workouts).counted.length;
 }
 
 function queueWorkoutDelete(id) {
@@ -66,7 +78,9 @@ async function cleanupAbandonedWorkouts(workouts) {
   const activeId = localStorage.getItem(LS_KEY);
   const candidates = workouts.filter(w => w.id !== activeId && !pending.includes(w.id) && (
     (!w.end_time && Date.now() - new Date(w.start_time) > 12 * 3600e3) ||
-    (w.end_time && w.total_sets === 0)));
+    // Terminées sans série enregistrée (avant la 0.78.02, « Terminer »
+    // gardait une séance dont les valeurs n'étaient que pré-remplies).
+    (w.end_time && (w.total_sets === 0 || (!w.imported_at && Date.now() - new Date(w.start_time) < 30 * 86400e3)))));
   for (const w of candidates) {
     try {
       if (await db.workoutHasSets(w.id)) continue;
@@ -82,11 +96,9 @@ async function cleanupAbandonedWorkouts(workouts) {
 // séances jamais terminées (ouvertes puis abandonnées) ou datées dans le
 // futur, qu'on peut supprimer.
 function openWeekDetail(workouts, onChanged) {
-  const now = new Date();
-  const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(now.getDate() - (now.getDay() + 6) % 7);
+  const { now, counted, duplicates } = weekWorkouts(workouts);
   const activeId = localStorage.getItem(LS_KEY);
   const when = (w) => { const d = new Date(w.start_time); return isNaN(d) ? String(w.start_time || "?") : fmtDateTime(w.start_time); };
-  const counted = workouts.filter(w => w.end_time && new Date(w.start_time) >= monday && new Date(w.start_time) <= now);
   // Plus de 12 h sans être terminée : pas une séance en cours sur un autre appareil.
   const unfinished = workouts.filter(w => !w.end_time && w.id !== activeId && !(Date.now() - new Date(w.start_time) < 12 * 3600e3));
   const future = workouts.filter(w => w.end_time && new Date(w.start_time) > now);
@@ -94,7 +106,10 @@ function openWeekDetail(workouts, onChanged) {
   const row = (w) => `<div class="list-row"><div><div class="list-row-title">${esc(w.title || t("Séance"))}</div><div class="list-row-sub">${esc(when(w))}${w.total_sets ? ` · ${w.total_sets} ${t("séries")}` : ""}</div></div></div>`;
   openModal(`
     <h3>${t("Cette semaine")}</h3>
-    ${counted.length ? counted.map(row).join("") : `<p class="muted">${t("Aucune séance terminée depuis lundi.")}</p>`}
+    ${counted.length ? counted.map(w => `<div data-open="${esc(w.id)}" style="cursor:pointer;">${row(w)}</div>`).join("") + `<p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Touche une séance pour la voir, la modifier ou la supprimer.")}</p>` : `<p class="muted">${t("Aucune séance terminée depuis lundi.")}</p>`}
+    ${duplicates.length ? `<div class="profile-section-title" style="margin-top:14px;">${t("En double ({n})", { n: duplicates.length })}</div>
+      <p class="muted" style="font-size:12px; margin:0 0 4px;">${t("Même créneau qu'une autre séance (import ou ajout manuel en plus) : comptée une seule fois. Touche-la pour la voir ou la supprimer.")}</p>
+      ${duplicates.map(({ w, twin }) => `<div data-dup="${esc(w.id)}" style="cursor:pointer;">${row(w).replace("</div></div></div>", ` · ${esc(t("comme « {title} »", { title: twin.title || "" }))}</div></div></div>`)}</div>`).join("")}` : ""}
     ${unfinished.length ? `<div class="profile-section-title" style="margin-top:14px;">${t("Jamais terminées ({n})", { n: unfinished.length })}</div>
       <p class="muted" style="font-size:12px; margin:0 0 4px;">${t("Ouvertes puis abandonnées : elles ne comptent pas dans « Cette semaine ».")}</p>
       ${unfinished.slice(0, 30).map(row).join("")}` : ""}
@@ -105,6 +120,13 @@ function openWeekDetail(workouts, onChanged) {
     <button class="btn btn-secondary" id="wk-close" style="margin-top:8px;">${t("Fermer")}</button>
   `, (m) => {
     m.querySelector("#wk-close").onclick = closeModal;
+    m.querySelectorAll("[data-dup], [data-open]").forEach(el => el.onclick = async () => {
+      const id = el.dataset.dup || el.dataset.open;
+      const w = duplicates.find(d => d.w.id === id)?.w || counted.find(c => c.id === id);
+      if (!w) return;
+      closeModal();
+      (await import("./workout-detail.js")).openWorkoutDetail(w, () => { invalidate("workouts", "sets"); onChanged(); });
+    });
     const clean = m.querySelector("#wk-clean");
     if (clean) clean.onclick = async () => {
       if (!await confirmDanger({

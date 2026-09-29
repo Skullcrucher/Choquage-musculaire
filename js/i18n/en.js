@@ -1132,5 +1132,9 @@ export default {
   "{n} séance(s) supprimée(s)": "{n} workout(s) deleted",
   "Séance vide": "Empty workout",
   "Aucune série n'a été faite : elle ne sera pas gardée dans ton historique.": "No set was done: it won't be kept in your history.",
-  "Supprimer la séance vide": "Delete the empty workout"
+  "Supprimer la séance vide": "Delete the empty workout",
+  "En double ({n})": "Duplicates ({n})",
+  "Même créneau qu'une autre séance (import ou ajout manuel en plus) : comptée une seule fois. Touche-la pour la voir ou la supprimer.": "Same time slot as another workout (extra import or manual add): counted once. Tap it to view or delete it.",
+  "comme « {title} »": "like “{title}”",
+  "Touche une séance pour la voir, la modifier ou la supprimer.": "Tap a workout to view, edit or delete it."
 };
