@@ -12,8 +12,8 @@ import { t, locale } from "./i18n.js";
 //     worker (CACHE_NAME dans service-worker.js doit valoir
 //     skullcrusher-cache-v<APP_BUILD>).
 // Puis : node tools/stamp-version.mjs
-export const APP_VERSION = "0.76.00";
-export const APP_BUILD = 78;
+export const APP_VERSION = "0.77.00";
+export const APP_BUILD = 79;
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
@@ -98,6 +98,33 @@ export function closeModal() {
   document.querySelectorAll(".modal-backdrop:not([data-locked])").forEach(el => el.remove());
   if (document.querySelector(".modal-backdrop")) document.body.style.overflow = "hidden";
   window.dispatchEvent(new Event("sc:modal-close"));
+}
+
+// Avertissement avant une action qui arrête ou supprime quelque chose en
+// cours (séance, routine du plan, plan actif). Se superpose à une fenêtre
+// déjà ouverte sans la fermer. Résout true si l'utilisateur confirme.
+// Le bouton par défaut (en rouge plein) est celui qui ANNULE l'action.
+export function confirmDanger({ title, message = "", items = [], confirmLabel, cancelLabel }) {
+  return new Promise((resolve) => {
+    const backdrop = openModal(`
+      <div class="danger-confirm">
+        <div class="danger-icon">⚠️</div>
+        <h3>${title}</h3>
+        ${message ? `<p>${message}</p>` : ""}
+        ${items.length ? `<ul>${items.map(i => `<li>${i}</li>`).join("")}</ul>` : ""}
+        <button class="btn btn-primary" data-dc="keep">${cancelLabel || t("Annuler")}</button>
+        <button class="btn btn-danger" data-dc="go" style="margin-top:8px;">${confirmLabel || t("Confirmer")}</button>
+      </div>`, null, { locked: true });
+    const done = (ok) => {
+      backdrop.remove();
+      if (!document.querySelector(".modal-backdrop")) document.body.style.overflow = "";
+      window.dispatchEvent(new Event("sc:modal-close"));
+      resolve(ok);
+    };
+    backdrop.addEventListener("click", (e) => { if (e.target === backdrop) done(false); });
+    backdrop.querySelector('[data-dc="keep"]').onclick = () => done(false);
+    backdrop.querySelector('[data-dc="go"]').onclick = () => done(true);
+  });
 }
 
 export function fmtDate(iso, opts = {}) {

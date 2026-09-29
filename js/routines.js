@@ -3,7 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { icon, segHtml } from "./icons.js";
-import { toast, openModal, closeModal, attachAutocomplete, esc } from "./utils.js";
+import { toast, openModal, closeModal, attachAutocomplete, esc, confirmDanger } from "./utils.js";
 import { getExercises, getRoutines, invalidate } from "./cache.js";
 import { renderDiscover } from "./routine-discover.js";
 import { guessMuscleGroup } from "./muscles.js";
@@ -105,11 +105,31 @@ async function renderMyRoutines(content) {
   content.querySelectorAll("[data-del]").forEach(b => {
     b.onclick = async (e) => {
       e.stopPropagation();
-      if (!confirm(t("Supprimer cette routine ?"))) return;
+      const r = routines.find(x => x.id === b.dataset.del);
+      if (!await confirmRoutineDelete(r)) return;
       await db.deleteRoutine(b.dataset.del);
       invalidate("routines");
       await refresh();
     };
+  });
+}
+
+// Suppression d'une routine : dit ce qu'elle arrête (plan en cours, séance
+// en cours, autres plans) et rappelle qu'il n'y a pas de corbeille.
+async function confirmRoutineDelete(r) {
+  if (!r) return false;
+  const usage = await (await import("./plans.js")).routineUsage(r.id).catch(() => ({ active: null, days: [], others: [] }));
+  let inWorkout = false;
+  try { inWorkout = JSON.parse(localStorage.getItem("skullcrusher_active_workout_state") || "null")?.routine_id === r.id; } catch (_) {}
+  const items = [
+    ...(inWorkout ? [t("Une séance est en cours avec cette routine")] : []),
+    ...(usage.active ? [t("Elle fait partie de ton plan en cours « {plan} » ({days}) : ces séances disparaîtront du plan", { plan: esc(usage.active.name), days: esc(usage.days.join(", ")) })] : []),
+    ...usage.others.map(n => t("Utilisée dans le plan « {plan} »", { plan: esc(n) }))
+  ];
+  return confirmDanger({
+    title: items.length ? t("Supprimer une routine en cours d'utilisation ?") : t("Supprimer « {name} » ?", { name: esc(r.name) }),
+    message: (items.length ? `<b>${esc(r.name)}</b> — ` : "") + t("Elle sera effacée définitivement (pas de corbeille). Tes séances passées restent dans l'historique."),
+    items, cancelLabel: t("Garder la routine"), confirmLabel: t("Supprimer définitivement")
   });
 }
 

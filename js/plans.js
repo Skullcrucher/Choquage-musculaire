@@ -10,7 +10,7 @@
 // depuis la routine prévue (routine_id), ou porte son nom, ce jour-là.
 // ============================================================
 import * as db from "./db.js";
-import { toast, openModal, closeModal, esc, healthNoteHtml } from "./utils.js";
+import { toast, openModal, closeModal, esc, healthNoteHtml, confirmDanger } from "./utils.js";
 import { getRoutines, getWorkouts, invalidate } from "./cache.js";
 import { t, locale } from "./i18n.js";
 
@@ -309,6 +309,24 @@ function planStats(plan, routines, workouts) {
   };
 }
 
+// « Semaine 3/8 · 7 séances faites » (avertissements avant suppression).
+function planProgressLine(plan, routines, workouts) {
+  const pos = planPosition(plan);
+  const st = planStats(plan, routines, workouts);
+  const where = pos.status === "running" ? t("Semaine {w}/{total}", { w: pos.week, total: pos.total })
+    : pos.status === "upcoming" ? t("Pas encore commencé") : t("Terminé");
+  return `${where} · ${t("{n} séance(s) faite(s)", { n: st.done })}`;
+}
+
+// Où une routine est utilisée : plan en cours (jours), autres plans.
+export async function routineUsage(routineId) {
+  const { plans, active } = await getPlans();
+  const usedIn = plans.filter(p => (p.blocks || []).some(b => Object.values(b.days || {}).includes(routineId)));
+  const act = usedIn.find(p => p.id === active) || null;
+  const days = act ? [...new Set(act.blocks.flatMap(b => Object.entries(b.days || {}).filter(([, id]) => id === routineId).map(([d]) => +d)))].sort() : [];
+  return { active: act, days: days.map(d => dowLabel(d, "long")), others: usedIn.filter(p => p.id !== active).map(p => p.name) };
+}
+
 // Données de l'image « état des lieux du plan » (share-card.js).
 export async function planShareData(planId = null) {
   const [{ plans, active }, routines, workouts] = await Promise.all([getPlans(), getRoutines(), getWorkouts()]);
@@ -509,6 +527,18 @@ export async function renderPlans(content) {
   content.querySelectorAll("[data-pedit]").forEach(b => b.onclick = () => openPlanEditor(plans.find(p => p.id === b.dataset.pedit), routines, refresh));
   content.querySelectorAll("[data-activate]").forEach(b => b.onclick = async () => {
     const id = b.dataset.activate;
+    const cur = plans.find(p => p.id === active);
+    if (active === id && !await confirmDanger({
+      title: t("Désactiver ton plan en cours ?"),
+      message: t("« {plan} » ne s'affichera plus dans l'onglet Séance. Il reste dans tes plans avec son avancement : tu pourras le réactiver.", { plan: esc(cur?.name || "") }),
+      cancelLabel: t("Garder mon plan en cours"), confirmLabel: t("Désactiver")
+    })) return;
+    if (cur && active !== id && !await confirmDanger({
+      title: t("Remplacer ton plan en cours ?"),
+      message: t("« {plan} » ne sera plus ton plan en cours. Il reste dans tes plans avec son avancement : tu pourras le réactiver.", { plan: esc(cur.name) }),
+      items: [planProgressLine(cur, routines, workouts)],
+      cancelLabel: t("Garder mon plan en cours"), confirmLabel: t("Activer « {plan} »", { plan: esc(plans.find(p => p.id === id)?.name || "") })
+    })) return;
     await savePlans(plans, active === id ? null : id);
     toast(active === id ? t("Plan désactivé") : t("Plan activé : il s'affiche dans l'onglet Séance"));
     refresh();
@@ -520,9 +550,14 @@ export async function renderPlans(content) {
     refresh();
   });
   content.querySelectorAll("[data-pdel]").forEach(b => b.onclick = async () => {
-    if (!confirm(t("Supprimer ce plan ? Tes routines et tes séances sont conservées."))) return;
     const id = b.dataset.pdel;
     const gone = plans.find(p => p.id === id);
+    if (!await confirmDanger({
+      title: id === active ? t("Supprimer ton plan en cours ?") : t("Supprimer ce plan ?"),
+      message: t("Le plan et son suivi (semaines, séances associées) seront effacés définitivement. Tes routines et tes séances sont conservées."),
+      items: [esc(gone?.name || ""), ...(id === active ? [planProgressLine(gone, routines, workouts)] : [])],
+      cancelLabel: t("Garder le plan"), confirmLabel: t("Supprimer définitivement")
+    })) return;
     if (gone?.shared_id) await db.deleteSharedPlan(gone.shared_id).catch(() => null);
     await savePlans(plans.filter(p => p.id !== id), active === id ? null : active);
     refresh();
@@ -594,6 +629,26 @@ function openPlanEditor(plan, routines, onSaved) {
       if (!state.name) { toast(t("Donne un nom au plan")); return; }
       if (!state.blocks.some(b => Object.keys(b.days).length)) { toast(t("Place au moins une routine dans la semaine")); return; }
       if (totalWeeks(state) > 104) { toast(t("104 semaines maximum")); return; }
+      // Plan en cours modifié : prévenir si des séances en disparaissent
+      // ou si la date de début change (le suivi est recalculé).
+      if (state.id) {
+        const { plans: before, active: act } = await getPlans();
+        const old = before.find(p => p.id === state.id);
+        if (old && state.id === act) {
+          const ids = (pl) => new Set((pl.blocks || []).flatMap(b => Object.values(b.days || {})).filter(Boolean));
+          const now = ids(state);
+          const removed = [...ids(old)].filter(id => !now.has(id)).map(id => routines.find(r => r.id === id)?.name).filter(Boolean);
+          const items = [
+            ...removed.map(n => t("« {routine} » n'est plus dans le plan", { routine: esc(n) })),
+            ...(old.start_date !== state.start_date ? [t("Nouvelle date de début : le suivi des semaines est recalculé")] : [])
+          ];
+          if (items.length && !await confirmDanger({
+            title: t("Modifier ton plan en cours ?"),
+            message: t("Ces changements touchent ton plan en cours :"),
+            items, cancelLabel: t("Revenir à l'édition"), confirmLabel: t("Enregistrer quand même")
+          })) return;
+        }
+      }
       e.target.disabled = true;
       try {
         const { plans, active } = await getPlans();
