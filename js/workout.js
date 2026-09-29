@@ -53,31 +53,18 @@ export async function renderSeance(container) {
     if (currentWorkout.presence === undefined) currentWorkout.presence = presenceDefault();
     renderActiveWorkout(container);
   } else {
-    manageMode = null; // ouverture de l'onglet : toujours sur l'écran de départ
     await renderStartScreen(container);
   }
 }
 
 const LS_START_MODE = "skullcrusher_start_mode"; // "routine" | "plan"
-// Vue « gestion » (mes routines, Découvrir, plans) ouverte depuis un onglet.
-let manageMode = null; // null | "mine" | "plans"
 
 // Écran Séance sans séance en cours : deux onglets, « Routines » (démarrer
 // une routine) et « Plan en cours » (séances de la semaine du plan actif).
-// Le suivi détaillé du plan est dans Stats → Plan en cours.
+// Le suivi détaillé du plan est dans Progrès → Plan en cours ; routines
+// et plans se gèrent dans l'onglet Biblio.
 async function renderStartScreen(container) {
   const refreshAll = () => renderStartScreen(container);
-  if (manageMode) {
-    container.innerHTML = `
-      <button class="btn btn-secondary btn-sm back-link" id="manage-back" style="width:auto; margin-bottom:10px;">← ${t("Retour")}</button>
-      <h1 class="section-title">${manageMode === "plans" ? t("Mes plans") : t("Routines")}</h1>
-      <div id="manage-body"></div>`;
-    container.querySelector("#manage-back").onclick = () => { manageMode = null; refreshAll(); };
-    const routines = await import("./routines.js");
-    routines.setRoutinesMode(manageMode === "plans" ? "plans" : "mine");
-    await routines.renderRoutines(container.querySelector("#manage-body"));
-    return;
-  }
   const [allRoutines, workouts, planView, planIds] = await Promise.all([
     getRoutines(), getWorkouts(),
     import("./plans.js").then(m => m.planSessionsHtml()).catch(e => { console.warn("[Skullcrusher] Plan indisponible", e); return null; }),
@@ -106,7 +93,7 @@ async function renderStartScreen(container) {
   const draw = () => {
     if (startMode === "plan") {
       body.innerHTML = (planView?.html || `<p class="muted">${t("Plan indisponible.")}</p>`) +
-        `<button class="btn btn-secondary" id="manage-plans" style="margin-top:12px;">${icon("gear")}${t("Mes plans et programmes")}</button>`;
+        `<button class="btn btn-secondary" id="manage-plans" style="margin-top:12px;">${icon("gear")}${t("Mes plans et programmes (Biblio)")}</button>`;
       if (planView?.card?.bind) planView.card.bind(body, refreshAll);
       body.querySelectorAll("[data-plan-session]").forEach(el => {
         const s = planView.sessions[+el.dataset.planSession];
@@ -115,7 +102,7 @@ async function renderStartScreen(container) {
           startWorkout(s.routine.id, s.routine, e.currentTarget, { plan_id: planView.plan.id, plan_week: planView.week });
         };
       });
-      body.querySelector("#manage-plans").onclick = () => { manageMode = "plans"; refreshAll(); };
+      body.querySelector("#manage-plans").onclick = async () => (await import("./library.js")).openBiblio("plans");
     } else {
       // Séance libre : séance vide, ou une de ses routines.
       body.innerHTML = `
@@ -131,12 +118,12 @@ async function renderStartScreen(container) {
           </div>
         `).join("")}
         ${routines.length === 0 ? `<p class="muted">${t("Pas encore de routine : crée-en une ou pioche dans Découvrir ci-dessous.")}</p>` : ""}
-        <button class="btn btn-secondary" id="manage-routines" style="margin-top:4px;">${icon("gear")}${t("Gérer mes routines · Découvrir")}</button>`;
+        <button class="btn btn-secondary" id="manage-routines" style="margin-top:4px;">${icon("gear")}${t("Mes routines · Découvrir (Biblio)")}</button>`;
       body.querySelector("#start-empty").onclick = (e) => startWorkout(null, null, e.currentTarget);
       body.querySelectorAll("[data-start-routine]").forEach(el => {
         el.onclick = (e) => startWorkout(el.dataset.startRoutine, routines.find(r => r.id === el.dataset.startRoutine), e.currentTarget);
       });
-      body.querySelector("#manage-routines").onclick = () => { manageMode = "mine"; refreshAll(); };
+      body.querySelector("#manage-routines").onclick = async () => (await import("./library.js")).openBiblio("mine");
     }
   };
   container.querySelectorAll("[data-smode]").forEach(b => b.onclick = () => {

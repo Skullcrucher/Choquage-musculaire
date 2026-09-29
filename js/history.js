@@ -15,10 +15,13 @@ let selectedDay = null;
 // Initiales des jours (lundi → dimanche) dans la langue de l'app.
 const DOW = Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(locale(), { weekday: "narrow" }));
 
-export async function renderHistorique(container) {
+// embedded : dans l'onglet Progrès (sans titre, sous les onglets du haut).
+let histContainer = null, histEmbedded = false;
+export async function renderHistorique(container, { embedded = false } = {}) {
+  histContainer = container; histEmbedded = embedded;
   workoutsCache = await getWorkouts();
   container.innerHTML = `
-    <h1 class="section-title">${t("Historique")}</h1>
+    ${embedded ? "" : `<h1 class="section-title">${t("Historique")}</h1>`}
     <div id="hist-content"></div>
   `;
   renderMine(container.querySelector("#hist-content"));
@@ -110,7 +113,7 @@ function renderList(container) {
   wrap.querySelectorAll("[data-w]").forEach(el => {
     el.onclick = () => openWorkoutDetail(
       list.find(w => w.id === el.dataset.w),
-      () => renderHistorique(document.getElementById("view"))
+      () => renderHistorique(histContainer?.isConnected ? histContainer : document.getElementById("view"), { embedded: histEmbedded && histContainer?.isConnected })
     );
   });
 }

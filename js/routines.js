@@ -15,7 +15,7 @@ export function setRoutinesMode(mode) { routinesMode = mode; }
 
 export async function renderRoutines(container) {
   container.innerHTML = `
-    ${segHtml([["mine", t("Mes routines"), "routines"], ["discover", t("Découvrir"), "discover"], ["plans", t("Plans"), "plan"]], routinesMode, "data-rmode")}
+    ${segHtml([["mine", t("Mes routines"), "routines"], ["plans", t("Mes plans"), "plan"], ["discover", t("Découvrir"), "discover"]], routinesMode, "data-rmode")}
     <div id="routines-content"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>
   `;
   container.querySelectorAll("[data-rmode]").forEach(chip => {
@@ -57,7 +57,7 @@ async function renderMyRoutines(content) {
       ${all.length ? `<button class="btn btn-secondary btn-sm" id="export-plan">📤 ${t("Exporter en CSV")}</button>` : ""}
     </div>
     <div style="height:14px"></div>
-    ${hidden ? `<p class="muted" style="font-size:13px; margin:-4px 0 12px;">📅 ${t("{n} séance(s) de plan rangée(s) dans l'onglet Plans.", { n: hidden })}</p>` : ""}
+    ${hidden ? `<p class="muted" style="font-size:13px; margin:-4px 0 12px;">📅 ${t("{n} séance(s) de plan rangée(s) dans « Mes plans ».", { n: hidden })}</p>` : ""}
     ${routines.length === 0 ? `<div class="empty-state"><span class="num">▤</span>${t("Pas encore de routine.")}<br><span class="muted">${t("Crée la tienne ou pioche dans l'onglet Découvrir.")}</span></div>` : ""}
     ${routines.map(r => `
       <div class="card" data-routine="${esc(r.id)}">

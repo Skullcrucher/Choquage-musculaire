@@ -2,9 +2,9 @@
 // POINT D'ENTRÉE — authentification puis routage entre onglets
 // ============================================================
 import { renderSeance } from "./workout.js";
-import { renderHistorique } from "./history.js";
 import { renderFeedTab } from "./feed.js";
 import { renderStats } from "./stats.js";
+import { renderBiblio } from "./library.js";
 import { renderReglages } from "./settings.js";
 import { initAuth, renderLoginGate, renderUnauthorizedGate, isAuthorized } from "./auth.js";
 import { t, translateStatic } from "./i18n.js";
@@ -12,9 +12,9 @@ import { esc } from "./utils.js";
 
 const TABS = {
   seance: { label: () => "Skullcrusher", render: renderSeance },
-  historique: { label: () => t("Historique"), render: renderHistorique },
+  progres: { label: () => t("Progrès"), render: renderStats },
   feed: { label: () => t("Feed"), render: renderFeedTab },
-  stats: { label: () => t("Statistiques"), render: renderStats },
+  biblio: { label: () => t("Bibliothèque"), render: renderBiblio },
   reglages: { label: () => t("Réglages"), render: renderReglages }
 };
 
@@ -22,6 +22,8 @@ const view = document.getElementById("view");
 const topbarTitle = document.getElementById("topbar-title");
 const tabbar = document.getElementById("tabbar");
 let activeTab = localStorage.getItem("skullcrusher_last_tab") || "seance";
+// Anciens onglets Historique et Stats : réunis dans Progrès.
+if (activeTab === "historique" || activeTab === "stats") activeTab = "progres";
 if (!TABS[activeTab]) activeTab = "seance";
 let renderToken = 0;
 

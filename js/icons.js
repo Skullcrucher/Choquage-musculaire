@@ -24,6 +24,7 @@ const PATHS = {
  "info": "<circle cx=\"12\" cy=\"12\" r=\"9.5\"/><path d=\"M12 11v6M12 7v.5\"/>",
  "flag": "<path d=\"M5 21.5V3M5 4h12l-2.5 4.5L17 13H5\"/>",
  "book": "<path d=\"M4 4h6a2 2 0 0 1 2 2v15a2 2 0 0 0-2-2H4zM20 4h-6a2 2 0 0 0-2 2v15a2 2 0 0 1 2-2h6z\"/>",
+ "history": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"16\"/><path d=\"M3 10h18M8 2.5v5M16 2.5v5M8.5 13l-2 5.5M12.5 13l-2 5.5M16.5 13l-2 5.5\"/>",
  "chevron": "<path d=\"M9 5l7 7-7 7\"/>"
 };
 
