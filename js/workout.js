@@ -2,6 +2,7 @@
 // ONGLET SÉANCE — démarrage, log de séries, minuteur de repos
 // ============================================================
 import * as db from "./db.js";
+import { icon } from "./icons.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce, fireRestEndNotification, esc, defaultSetType } from "./utils.js";
 import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
@@ -98,8 +99,8 @@ async function renderStartScreen(container) {
     </div>
     <button class="btn btn-primary" id="start-empty">+ ${t("Démarrer une séance vide")}</button>
     <div class="start-tabs" id="start-tabs">
-      <button class="start-tab ${startMode === "routine" ? "active" : ""}" data-smode="routine">📋 ${t("Routines")}</button>
-      <button class="start-tab ${startMode === "plan" ? "active" : ""}" data-smode="plan">📅 ${t("Plan en cours")}</button>
+      <button class="start-tab ${startMode === "routine" ? "active" : ""}" data-smode="routine">${icon("routines")}${t("Routines")}</button>
+      <button class="start-tab ${startMode === "plan" ? "active" : ""}" data-smode="plan">${icon("plan")}${t("Plan en cours")}</button>
     </div>
     <div id="start-body"></div>
   `;
@@ -108,7 +109,7 @@ async function renderStartScreen(container) {
   const draw = () => {
     if (startMode === "plan") {
       body.innerHTML = (planView?.html || `<p class="muted">${t("Plan indisponible.")}</p>`) +
-        `<button class="btn btn-secondary" id="manage-plans" style="margin-top:12px;">⚙️ ${t("Mes plans et programmes")}</button>`;
+        `<button class="btn btn-secondary" id="manage-plans" style="margin-top:12px;">${icon("gear")}${t("Mes plans et programmes")}</button>`;
       if (planView?.card?.bind) planView.card.bind(body, refreshAll);
       body.querySelectorAll("[data-plan-session]").forEach(el => {
         const s = planView.sessions[+el.dataset.planSession];
@@ -127,7 +128,7 @@ async function renderStartScreen(container) {
           </div>
         `).join("")}
         ${routines.length === 0 ? `<p class="muted">${t("Pas encore de routine : crée-la ci-dessous ou pioche dans Découvrir, ou démarre une séance vide.")}</p>` : ""}
-        <button class="btn btn-secondary" id="manage-routines" style="margin-top:4px;">⚙️ ${t("Gérer mes routines · Découvrir")}</button>`;
+        <button class="btn btn-secondary" id="manage-routines" style="margin-top:4px;">${icon("gear")}${t("Gérer mes routines · Découvrir")}</button>`;
       body.querySelectorAll("[data-start-routine]").forEach(el => {
         el.onclick = (e) => startWorkout(el.dataset.startRoutine, routines.find(r => r.id === el.dataset.startRoutine), e.currentTarget);
       });

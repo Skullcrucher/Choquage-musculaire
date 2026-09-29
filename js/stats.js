@@ -12,6 +12,7 @@
 import { isoWeek, estimate1RM, esc, healthNoteHtml } from "./utils.js";
 import { getExercises, getWorkouts, getSetsForPeriod, getSetsForExercise, invalidate, onAllSetsProgress } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
+import { icon } from "./icons.js";
 import { t, locale } from "./i18n.js";
 import { getBody, workoutCalories } from "./calories.js";
 
@@ -87,8 +88,8 @@ export async function renderStats(container) {
       ${statsTab === "general" ? `<button class="btn btn-sm btn-primary share-btn" id="share-stats" style="width:auto;">📸 ${t("Partager")}</button>` : ""}
     </div>
     <div class="start-tabs" style="margin-top:0;">
-      <button class="start-tab ${statsTab === "general" ? "active" : ""}" data-stab="general">📊 ${t("Générale")}</button>
-      <button class="start-tab ${statsTab === "plan" ? "active" : ""}" data-stab="plan">📅 ${t("Plan en cours")}</button>
+      <button class="start-tab ${statsTab === "general" ? "active" : ""}" data-stab="general">${icon("general")}${t("Générale")}</button>
+      <button class="start-tab ${statsTab === "plan" ? "active" : ""}" data-stab="plan">${icon("plan")}${t("Plan en cours")}</button>
     </div>
     <div id="stats-tab-body"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>`;
   container.querySelectorAll("[data-stab]").forEach(b => b.onclick = () => { statsTab = b.dataset.stab; renderStats(container); });

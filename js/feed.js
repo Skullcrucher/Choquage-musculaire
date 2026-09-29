@@ -8,6 +8,7 @@ import { openWorkoutDetail, partnersHtml } from "./workout-detail.js";
 import { renderFriends, countIncomingRequests } from "./friends.js";
 import { openProfile } from "./profile.js";
 import { songHtml, bindSongLinks, parseMusicLink, providerIcon } from "./music.js";
+import { icon } from "./icons.js";
 import { t, tn } from "./i18n.js";
 
 // Records, "son du record", playlist et bande-son d'une séance partagée.
@@ -66,10 +67,10 @@ export async function renderFeedTab(container) {
   container.innerHTML = `
     <h1 class="section-title">${t("Feed")} <img class="title-horns" src="icons/horns.png" alt=""></h1>
     <div class="chip-row" id="feed-mode-chips" style="margin-bottom:14px;">
-      <div class="chip ${feedMode === "workouts" ? "active" : ""}" data-fmode="workouts">${t("Séances")}</div>
-      <div class="chip ${feedMode === "challenges" ? "active" : ""}" data-fmode="challenges">🏆 ${t("Défis")}</div>
-      <div class="chip ${feedMode === "music" ? "active" : ""}" data-fmode="music">🎧 ${t("Son")}</div>
-      <div class="chip ${feedMode === "friends" ? "active" : ""}" data-fmode="friends">👥 ${t("Amis")}<span id="friend-req-count"></span></div>
+      <div class="chip ${feedMode === "workouts" ? "active" : ""}" data-fmode="workouts">${icon("workouts")}${t("Séances")}</div>
+      <div class="chip ${feedMode === "challenges" ? "active" : ""}" data-fmode="challenges">${icon("trophy")}${t("Défis")}</div>
+      <div class="chip ${feedMode === "music" ? "active" : ""}" data-fmode="music">${icon("music")}${t("Son")}</div>
+      <div class="chip ${feedMode === "friends" ? "active" : ""}" data-fmode="friends">${icon("friends")}${t("Amis")}<span id="friend-req-count"></span></div>
     </div>
     <div id="feed-body"></div>
   `;

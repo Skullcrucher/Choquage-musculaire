@@ -2,6 +2,7 @@
 // ROUTINES — mes routines (création, partage) + Découvrir
 // ============================================================
 import * as db from "./db.js";
+import { icon } from "./icons.js";
 import { toast, openModal, closeModal, attachAutocomplete, esc } from "./utils.js";
 import { getExercises, getRoutines, invalidate } from "./cache.js";
 import { renderDiscover } from "./routine-discover.js";
@@ -15,9 +16,9 @@ export function setRoutinesMode(mode) { routinesMode = mode; }
 export async function renderRoutines(container) {
   container.innerHTML = `
     <div class="chip-row" id="routine-mode-chips" style="margin-bottom:14px;">
-      <div class="chip ${routinesMode === "mine" ? "active" : ""}" data-rmode="mine">${t("Mes routines")}</div>
-      <div class="chip ${routinesMode === "discover" ? "active" : ""}" data-rmode="discover">🔎 ${t("Découvrir")}</div>
-      <div class="chip ${routinesMode === "plans" ? "active" : ""}" data-rmode="plans">📅 ${t("Plans")}</div>
+      <div class="chip ${routinesMode === "mine" ? "active" : ""}" data-rmode="mine">${icon("routines")}${t("Mes routines")}</div>
+      <div class="chip ${routinesMode === "discover" ? "active" : ""}" data-rmode="discover">${icon("discover")}${t("Découvrir")}</div>
+      <div class="chip ${routinesMode === "plans" ? "active" : ""}" data-rmode="plans">${icon("plan")}${t("Plans")}</div>
     </div>
     <div id="routines-content"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>
   `;

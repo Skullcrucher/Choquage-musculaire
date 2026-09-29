@@ -52,6 +52,9 @@
   --radius: 6px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Marge sous la barre d'onglets : la zone de la barre d'accueil de
+     l'iPhone, un peu rognée pour ne pas laisser un grand vide. */
+  --tabbar-pad: max(6px, calc(var(--safe-bottom) - 16px));
 }
 
 * { box-sizing: border-box; }
@@ -303,7 +306,7 @@ label {
   display: none;
   background: var(--surface);
   border-top: 1px solid var(--border);
-  padding-bottom: var(--safe-bottom);
+  padding-bottom: var(--tabbar-pad);
 }
 .tab-btn {
   flex: 1;
@@ -314,24 +317,25 @@ label {
   background: none;
   border: none;
   color: var(--text-dim);
-  padding: 10px 0 8px;
+  padding: 10px 0 4px;
   cursor: pointer;
   transition: transform 0.1s, color 0.15s;
   position: relative;
 }
 .tab-btn:active { transform: scale(0.9); }
-.tab-icon { width: 23px; height: 23px; flex-shrink: 0; }
+.tab-icon { width: 25px; height: 25px; flex-shrink: 0; }
 .tab-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
 .tab-btn.active { color: var(--amber); }
+/* Style « Acier » : barre rouge lumineuse au-dessus de l'onglet actif. */
 .tab-btn.active::before {
   content: "";
   position: absolute;
-  top: 3px;
-  width: 4px; height: 4px;
-  border-radius: 50%;
+  top: -1px;
+  width: 30px; height: 3px;
   background: var(--amber);
-  box-shadow: 0 0 6px var(--amber);
+  box-shadow: 0 0 10px var(--amber);
 }
+.tab-btn.active .tab-icon { filter: drop-shadow(0 0 6px rgba(224,36,36,0.55)); }
 
 /* ---------- Onglet Feed, mis en valeur en permanence ---------- */
 .tab-btn.featured { color: var(--amber); }
@@ -431,7 +435,7 @@ label {
 /* ---------- Rest timer ---------- */
 .rest-timer {
   position: fixed;
-  bottom: calc(64px + var(--safe-bottom));
+  bottom: calc(64px + var(--tabbar-pad));
   left: 16px; right: 16px;
   z-index: 25;
   background: var(--amber);
@@ -504,7 +508,7 @@ label {
 /* ---------- Toast ---------- */
 .toast {
   position: fixed;
-  bottom: calc(76px + var(--safe-bottom));
+  bottom: calc(76px + var(--tabbar-pad));
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: var(--surface-raised);
@@ -849,7 +853,7 @@ canvas { max-width: 100%; }
 #spotify-dock {
   position: fixed;
   left: 8px; right: 8px;
-  bottom: calc(68px + var(--safe-bottom));
+  bottom: calc(68px + var(--tabbar-pad));
   z-index: 24;
   background: var(--surface);
   border: 1px solid var(--border, rgba(255,255,255,0.12));
@@ -869,7 +873,7 @@ canvas { max-width: 100%; }
   font-size: 14px; text-decoration: none; cursor: pointer;
 }
 body.has-spotify-dock #view { padding-bottom: calc(var(--dock-h, 0px) + 90px); }
-body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var(--safe-bottom)); }
+body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var(--tabbar-pad)); }
 
 /* ---------- Plans d'entraînement ---------- */
 .plan-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
@@ -1067,3 +1071,9 @@ body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var
 .forgot-text { flex: 1 1 200px; }
 .forgot-actions { display: flex; gap: 6px; }
 .forgot-actions .btn { width: auto; }
+
+/* Icônes « Acier » des onglets et pastilles (js/icons.js) */
+.ico { width: 1.15em; height: 1.15em; vertical-align: -0.2em; margin-right: 6px; flex-shrink: 0; }
+.chip .ico { width: 1.05em; height: 1.05em; margin-right: 5px; }
+.start-tab.active .ico, .chip.active .ico { filter: drop-shadow(0 0 3px rgba(0,0,0,0.25)); }
+.btn .ico { margin-right: 8px; }

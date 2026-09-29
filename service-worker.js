@@ -64,6 +64,7 @@ const APP_SHELL = [
   "./js/plan-share.js",
   "./js/plan-discover.js",
   "./js/workout-reminder.js",
+  "./js/icons.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/logo.png",
