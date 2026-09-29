@@ -1031,5 +1031,9 @@ export default {
   "Depuis Hevy": "Depi Hevy",
   "Toutes tes séries en CSV": "Tou to bann seri an CSV",
   "Version {v}, conditions, confidentialité": "Version {v}, kondision, konfidansialite",
-  "Exercices, muscles, doublons": "Lexersis, mis, doub"
+  "Exercices, muscles, doublons": "Lexersis, mis, doub",
+  "Séance libre": "Seans lib",
+  "Séance vide": "Seans vid",
+  "Ajoute tes exercices au fur et à mesure": "Azout to bann lexersis pli divan",
+  "Pas encore de routine : crée-en une ou pioche dans Découvrir ci-dessous.": "Pa ankor ena routinn: kre enn ouswa swazir dan Dekouver anba."
 };
