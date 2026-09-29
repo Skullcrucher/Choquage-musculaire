@@ -1144,5 +1144,6 @@ export default {
   "Supprimer la séance vide": "Usuń pusty trening",
   "En double ({n})": "Duplikaty ({n})",
   "Même créneau qu'une autre séance (import ou ajout manuel en plus) : comptée une seule fois. Touche-la pour la voir ou la supprimer.": "Ten sam czas co inny trening (dodatkowy import lub ręczne dodanie): liczony raz. Dotknij, aby zobaczyć lub usunąć.",
-  "comme « {title} »": "jak „{title}”"
+  "comme « {title} »": "jak „{title}”",
+  "Touche une séance pour la voir, la modifier ou la supprimer.": "Dotknij treningu, aby go zobaczyć, zmienić lub usunąć."
 };
