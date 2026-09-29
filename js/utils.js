@@ -3,10 +3,17 @@
 // ============================================================
 import { t, locale } from "./i18n.js";
 
-// Version affichée dans Réglages → À propos. À incrémenter avec
-// CACHE_NAME dans service-worker.js à chaque mise en ligne, pour voir d'un
-// coup d'œil si le téléphone utilise bien la dernière version.
-export const APP_VERSION = "72";
+// Version de l'app, à changer à CHAQUE mise en ligne :
+//   APP_VERSION : numéro affiché, format 0.xx.yy — xx = nouvelles
+//     fonctionnalités, yy = corrections (0.72.01, 0.72.02, puis 0.73.00…) ;
+//   APP_BUILD : numéro interne, +1 à chaque mise en ligne, sans jamais
+//     revenir en arrière. Il sert à détecter les mises à jour
+//     (version.json), à versionner les modules et le cache du service
+//     worker (CACHE_NAME dans service-worker.js doit valoir
+//     skullcrusher-cache-v<APP_BUILD>).
+// Puis : node tools/stamp-version.mjs
+export const APP_VERSION = "0.72.01";
+export const APP_BUILD = 73;
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
