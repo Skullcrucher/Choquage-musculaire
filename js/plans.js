@@ -10,7 +10,7 @@
 // depuis la routine prévue (routine_id), ou porte son nom, ce jour-là.
 // ============================================================
 import * as db from "./db.js";
-import { toast, openModal, closeModal, esc, healthNoteHtml } from "./utils.js";
+import { toast, openModal, closeModal, esc, healthNoteHtml, confirmDanger } from "./utils.js";
 import { getRoutines, getWorkouts, invalidate } from "./cache.js";
 import { t, locale } from "./i18n.js";
 
@@ -27,11 +27,17 @@ export function getPlans() {
     plansUid = uid;
     plansPromise = db.getPrivateData()
       .then(d => ({ plans: Array.isArray(d?.plans) ? d.plans : [], active: d?.active_plan_id || null }))
-      .catch(() => ({ plans: [], active: null }));
+      .catch((e) => { console.warn("[Skullcrusher] Lecture des plans", e); return { plans: [], active: null, failed: true }; });
   }
   return plansPromise;
 }
 export async function savePlans(plans, active) {
+  // Plans pas lus (hors ligne…) : la liste reçue est vide ou incomplète,
+  // l'enregistrer effacerait les plans existants.
+  if ((await plansPromise)?.failed) {
+    plansPromise = null;
+    throw new Error(t("Plans indisponibles pour le moment, réessaie"));
+  }
   await db.setPrivateData({ plans, active_plan_id: active || null });
   plansUid = db.getCurrentUser()?.uid || null;
   plansPromise = Promise.resolve({ plans, active: active || null });
@@ -194,7 +200,14 @@ export async function planRoutineIds() {
   return ids;
 }
 
-const matchesRoutine = (w, routine) => !!routine && (w.routine_id ? w.routine_id === routine.id : w.title === routine.name);
+// Une séance associée à la main (plan.links) ne compte que pour la routine
+// choisie ; sinon, même routine (ou même titre pour une séance libre).
+const matchesRoutine = (w, routine, plan) => {
+  if (!routine) return false;
+  const linked = plan?.links?.[w.id];
+  if (linked) return linked === routine.id;
+  return w.routine_id ? w.routine_id === routine.id : w.title === routine.name;
+};
 
 // Séances prévues dans la semaine du plan qui contient `date`, avec celles
 // déjà faites (une séance faite un autre jour de la semaine compte aussi).
@@ -205,12 +218,17 @@ export function weekSessions(plan, date, routines, workouts) {
     .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
   const used = new Set();
   const slots = cells.map(c => ({ ...c, workout: null }));
-  // D'abord les séances faites le jour prévu, puis les autres jours.
+  // D'abord les séances associées à la main, à leur case exacte.
+  slots.forEach(sl => {
+    const w = inWeek.find(x => !used.has(x.id) && plan.links?.[x.id] === sl.routine.id && plan.link_days?.[x.id] === dayStr(sl.date));
+    if (w) { sl.workout = w; sl.linked = true; used.add(w.id); }
+  });
+  // Puis les séances faites le jour prévu, puis les autres jours.
   for (const pass of [true, false]) {
     slots.forEach(sl => {
       if (sl.workout) return;
-      const w = inWeek.find(x => !used.has(x.id) && matchesRoutine(x, sl.routine) && (!pass || dayStr(new Date(x.start_time)) === dayStr(sl.date)));
-      if (w) { sl.workout = w; used.add(w.id); }
+      const w = inWeek.find(x => !used.has(x.id) && matchesRoutine(x, sl.routine, plan) && (!pass || dayStr(new Date(x.start_time)) === dayStr(sl.date)));
+      if (w) { sl.workout = w; sl.linked = !!plan.links?.[w.id]; used.add(w.id); }
     });
   }
   return slots.map(sl => ({ ...sl, done: !!sl.workout }));
@@ -291,6 +309,24 @@ function planStats(plan, routines, workouts) {
   };
 }
 
+// « Semaine 3/8 · 7 séances faites » (avertissements avant suppression).
+function planProgressLine(plan, routines, workouts) {
+  const pos = planPosition(plan);
+  const st = planStats(plan, routines, workouts);
+  const where = pos.status === "running" ? t("Semaine {w}/{total}", { w: pos.week, total: pos.total })
+    : pos.status === "upcoming" ? t("Pas encore commencé") : t("Terminé");
+  return `${where} · ${t("{n} séance(s) faite(s)", { n: st.done })}`;
+}
+
+// Où une routine est utilisée : plan en cours (jours), autres plans.
+export async function routineUsage(routineId) {
+  const { plans, active } = await getPlans();
+  const usedIn = plans.filter(p => (p.blocks || []).some(b => Object.values(b.days || {}).includes(routineId)));
+  const act = usedIn.find(p => p.id === active) || null;
+  const days = act ? [...new Set(act.blocks.flatMap(b => Object.entries(b.days || {}).filter(([, id]) => id === routineId).map(([d]) => +d)))].sort() : [];
+  return { active: act, days: days.map(d => dowLabel(d, "long")), others: usedIn.filter(p => p.id !== active).map(p => p.name) };
+}
+
 // Données de l'image « état des lieux du plan » (share-card.js).
 export async function planShareData(planId = null) {
   const [{ plans, active }, routines, workouts] = await Promise.all([getPlans(), getRoutines(), getWorkouts()]);
@@ -341,11 +377,12 @@ export async function renderPlanTracking(content, { onOpenWorkout } = {}) {
         ${st.weeks.map(w => `
           <div class="plan-wrow ${w.state}">
             <div class="plan-wnum">S${w.n}<span>${esc(w.block?.name || "")}</span></div>
-            <div class="plan-wdays">${w.slots.map(s => `<span class="plan-wdot ${s.done ? "done" : w.state === "future" || (!s.past && !s.done) ? "todo" : "missed"}" title="${esc(s.routine.name)} · ${esc(dowLabel(s.dow, "long"))}">${s.done ? "✓" : esc(dowLabel(s.dow, "narrow"))}</span>`).join("") || `<span class="muted" style="font-size:12px;">${t("Repos")}</span>`}</div>
+            <div class="plan-wdays">${w.slots.map((s, si) => `<span class="plan-wdot ${s.done ? "done" : w.state === "future" || (!s.past && !s.done) ? "todo" : "missed"} ${w.state !== "future" ? "tap" : ""}" ${w.state !== "future" ? `data-slot="${w.n - 1}:${si}" role="button"` : ""} title="${esc(s.routine.name)} · ${esc(dowLabel(s.dow, "long"))}">${s.done ? (s.linked ? "🔗" : "✓") : esc(dowLabel(s.dow, "narrow"))}</span>`).join("") || `<span class="muted" style="font-size:12px;">${t("Repos")}</span>`}</div>
             <div class="plan-wcount">${w.state === "future" ? "" : `${w.done}/${w.slots.length}`}</div>
           </div>`).join("")}
       </div>
-      <p class="muted" style="font-size:12px; margin:8px 0 0;">✓ ${t("faite")} · <span style="color:var(--red);">■</span> ${t("manquée")} · <span style="opacity:.6;">■</span> ${t("à venir")}</p>
+      <p class="muted" style="font-size:12px; margin:8px 0 0;">✓ ${t("faite")} · 🔗 ${t("associée")} · <span style="color:var(--red);">■</span> ${t("manquée")} · <span style="opacity:.6;">■</span> ${t("à venir")}</p>
+      <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Touche une séance manquée pour y associer une séance déjà faite cette semaine-là.")}</p>
     </div>
     ${st.workouts.length ? `<h3 class="muted" style="margin:18px 0 6px;">${t("Séances du plan")}</h3>
       ${st.workouts.slice(0, 30).map(w => `
@@ -357,6 +394,71 @@ export async function renderPlanTracking(content, { onOpenWorkout } = {}) {
   content.querySelectorAll("[data-track]").forEach(c => c.onclick = () => { trackedPlanId = c.dataset.track; renderPlanTracking(content, { onOpenWorkout }); });
   content.querySelector("#share-plan").onclick = async () => (await import("./share-card.js")).openShareCard({ kind: "plan", planId: plan.id });
   content.querySelectorAll("[data-plan-w]").forEach(r => r.onclick = () => onOpenWorkout?.(st.workouts.find(w => w.id === r.dataset.planW)));
+  content.querySelectorAll("[data-slot]").forEach(d => d.onclick = () => {
+    const [wi, si] = d.dataset.slot.split(":").map(Number);
+    openSlotLink(plan, st.weeks[wi], st.weeks[wi].slots[si], workouts, {
+      onOpenWorkout,
+      onChanged: () => renderPlanTracking(content, { onOpenWorkout })
+    });
+  });
+}
+
+// Case d'une semaine du plan : associer une séance déjà faite cette
+// semaine-là (séance libre, autre routine, faite avant d'ajouter le plan…)
+// ou retirer l'association.
+function openSlotLink(plan, week, slot, workouts, { onOpenWorkout, onChanged }) {
+  const fmt = (w) => new Date(w.start_time).toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "short" });
+  const next = new Date(week.monday); next.setDate(week.monday.getDate() + 7);
+  const taken = new Set(week.slots.map(s => s.workout?.id).filter(Boolean));
+  const candidates = workouts.filter(w => w.end_time && w.start_time && !taken.has(w.id)
+    && new Date(w.start_time) >= week.monday && new Date(w.start_time) < next)
+    .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
+  const save = async (mutate) => {
+    const { plans, active } = await getPlans();
+    const cur = plans.find(p => p.id === plan.id);
+    if (!cur) return;
+    const links = { ...(cur.links || {}) }, days = { ...(cur.link_days || {}) };
+    mutate(links, days);
+    await savePlans(plans.map(p => p.id === cur.id ? { ...p, links, link_days: days } : p), active);
+  };
+  const head = `<h3>${esc(slot.routine.name)}</h3>
+    <p class="muted" style="margin-top:0;">${t("Semaine {n}", { n: week.n })} · ${esc(dowLabel(slot.dow, "long"))} ${slot.date.toLocaleDateString(locale(), { day: "numeric", month: "short" })}</p>`;
+  if (slot.done) {
+    openModal(`${head}
+      <div class="list-row"><div><div class="list-row-title">${slot.linked ? "🔗" : "✓"} ${esc(slot.workout.title)}</div><div class="list-row-sub">${esc(fmt(slot.workout))}</div></div></div>
+      <div class="btn-row" style="margin-top:12px;">
+        ${slot.linked ? `<button class="btn btn-secondary" id="sl-unlink">${t("Retirer l'association")}</button>` : ""}
+        <button class="btn btn-primary" id="sl-open">${t("Voir la séance")}</button>
+      </div>`, (m) => {
+      m.querySelector("#sl-open").onclick = () => { closeModal(); onOpenWorkout?.(slot.workout); };
+      const un = m.querySelector("#sl-unlink");
+      if (un) un.onclick = async () => {
+        un.disabled = true;
+        try { await save((links, days) => { delete links[slot.workout.id]; delete days[slot.workout.id]; }); closeModal(); toast(t("Association retirée")); onChanged(); }
+        catch (err) { toast(err.message || t("Impossible d'enregistrer")); un.disabled = false; }
+      };
+    });
+    return;
+  }
+  openModal(`${head}
+    <p style="font-size:14px;">${t("Associer une séance déjà faite cette semaine-là :")}</p>
+    ${candidates.length ? candidates.map(w => `
+      <div class="list-row" data-link="${esc(w.id)}" style="cursor:pointer;">
+        <div><div class="list-row-title">${esc(w.title)}</div><div class="list-row-sub">${esc(fmt(w))}${w.plan_id && w.plan_id !== plan.id ? " · " + t("autre plan") : ""}</div></div>
+        <span class="chip chip-sm">${t("Associer")}</span>
+      </div>`).join("") : `<p class="muted">${t("Aucune séance terminée libre cette semaine-là.")}</p>`}
+    <button class="btn btn-secondary" id="sl-close" style="margin-top:12px;">${t("Fermer")}</button>`, (m) => {
+    m.querySelector("#sl-close").onclick = closeModal;
+    m.querySelectorAll("[data-link]").forEach(r => r.onclick = async () => {
+      r.style.pointerEvents = "none";
+      try {
+        await save((links, days) => { links[r.dataset.link] = slot.routine.id; days[r.dataset.link] = dayStr(slot.date); });
+        closeModal();
+        toast(t("Séance associée au plan"));
+        onChanged();
+      } catch (err) { toast(err.message || t("Impossible d'enregistrer")); r.style.pointerEvents = ""; }
+    });
+  });
 }
 
 export async function renderPlans(content) {
@@ -425,6 +527,18 @@ export async function renderPlans(content) {
   content.querySelectorAll("[data-pedit]").forEach(b => b.onclick = () => openPlanEditor(plans.find(p => p.id === b.dataset.pedit), routines, refresh));
   content.querySelectorAll("[data-activate]").forEach(b => b.onclick = async () => {
     const id = b.dataset.activate;
+    const cur = plans.find(p => p.id === active);
+    if (active === id && !await confirmDanger({
+      title: t("Désactiver ton plan en cours ?"),
+      message: t("« {plan} » ne s'affichera plus dans l'onglet Séance. Il reste dans tes plans avec son avancement : tu pourras le réactiver.", { plan: esc(cur?.name || "") }),
+      cancelLabel: t("Garder mon plan en cours"), confirmLabel: t("Désactiver")
+    })) return;
+    if (cur && active !== id && !await confirmDanger({
+      title: t("Remplacer ton plan en cours ?"),
+      message: t("« {plan} » ne sera plus ton plan en cours. Il reste dans tes plans avec son avancement : tu pourras le réactiver.", { plan: esc(cur.name) }),
+      items: [planProgressLine(cur, routines, workouts)],
+      cancelLabel: t("Garder mon plan en cours"), confirmLabel: t("Activer « {plan} »", { plan: esc(plans.find(p => p.id === id)?.name || "") })
+    })) return;
     await savePlans(plans, active === id ? null : id);
     toast(active === id ? t("Plan désactivé") : t("Plan activé : il s'affiche dans l'onglet Séance"));
     refresh();
@@ -436,9 +550,14 @@ export async function renderPlans(content) {
     refresh();
   });
   content.querySelectorAll("[data-pdel]").forEach(b => b.onclick = async () => {
-    if (!confirm(t("Supprimer ce plan ? Tes routines et tes séances sont conservées."))) return;
     const id = b.dataset.pdel;
     const gone = plans.find(p => p.id === id);
+    if (!await confirmDanger({
+      title: id === active ? t("Supprimer ton plan en cours ?") : t("Supprimer ce plan ?"),
+      message: t("Le plan et son suivi (semaines, séances associées) seront effacés définitivement. Tes routines et tes séances sont conservées."),
+      items: [esc(gone?.name || ""), ...(id === active ? [planProgressLine(gone, routines, workouts)] : [])],
+      cancelLabel: t("Garder le plan"), confirmLabel: t("Supprimer définitivement")
+    })) return;
     if (gone?.shared_id) await db.deleteSharedPlan(gone.shared_id).catch(() => null);
     await savePlans(plans.filter(p => p.id !== id), active === id ? null : active);
     refresh();
@@ -510,6 +629,26 @@ function openPlanEditor(plan, routines, onSaved) {
       if (!state.name) { toast(t("Donne un nom au plan")); return; }
       if (!state.blocks.some(b => Object.keys(b.days).length)) { toast(t("Place au moins une routine dans la semaine")); return; }
       if (totalWeeks(state) > 104) { toast(t("104 semaines maximum")); return; }
+      // Plan en cours modifié : prévenir si des séances en disparaissent
+      // ou si la date de début change (le suivi est recalculé).
+      if (state.id) {
+        const { plans: before, active: act } = await getPlans();
+        const old = before.find(p => p.id === state.id);
+        if (old && state.id === act) {
+          const ids = (pl) => new Set((pl.blocks || []).flatMap(b => Object.values(b.days || {})).filter(Boolean));
+          const now = ids(state);
+          const removed = [...ids(old)].filter(id => !now.has(id)).map(id => routines.find(r => r.id === id)?.name).filter(Boolean);
+          const items = [
+            ...removed.map(n => t("« {routine} » n'est plus dans le plan", { routine: esc(n) })),
+            ...(old.start_date !== state.start_date ? [t("Nouvelle date de début : le suivi des semaines est recalculé")] : [])
+          ];
+          if (items.length && !await confirmDanger({
+            title: t("Modifier ton plan en cours ?"),
+            message: t("Ces changements touchent ton plan en cours :"),
+            items, cancelLabel: t("Revenir à l'édition"), confirmLabel: t("Enregistrer quand même")
+          })) return;
+        }
+      }
       e.target.disabled = true;
       try {
         const { plans, active } = await getPlans();

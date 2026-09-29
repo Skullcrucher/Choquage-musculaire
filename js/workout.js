@@ -3,7 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { icon, segHtml } from "./icons.js";
-import { toast, openModal, closeModal, fmtDateTime, debounce, fireRestEndNotification, esc, defaultSetType } from "./utils.js";
+import { toast, openModal, closeModal, fmtDateTime, debounce, fireRestEndNotification, esc, defaultSetType, confirmDanger } from "./utils.js";
 import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { parseMusicLink, openSpotifyPlayer, providerName, providerIcon } from "./music.js";
@@ -804,7 +804,23 @@ async function finishWorkout() {
 }
 
 async function cancelWorkout() {
-  if (!confirm(t("Supprimer cette séance et toutes ses séries ?"))) return;
+  const exs = currentWorkout.exercises || [];
+  const logged = exs.reduce((n, ex) => n + ex.sets.filter(s => setHasData(s) && !(s.auto_kg && s.reps == null)).length, 0);
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(currentWorkout.start_time)) / 60000));
+  const ok = await confirmDanger({
+    title: t("Supprimer la séance en cours ?"),
+    message: logged
+      ? t("Elle sera effacée définitivement : rien ne sera gardé dans ton historique, tes stats ni ton plan.")
+      : t("Elle sera effacée définitivement."),
+    items: logged ? [
+      esc(currentWorkout.title),
+      tn(exs.length, "{n} exercice", "{n} exercices") + " · " + tn(logged, "{n} série saisie", "{n} séries saisies"),
+      t("Commencée il y a {n} min", { n: minutes })
+    ] : [],
+    cancelLabel: t("Continuer la séance"),
+    confirmLabel: t("Supprimer définitivement")
+  });
+  if (!ok) return;
   await db.deleteWorkout(currentWorkout.id);
   stopPresence();
   clearReminder();

@@ -7,7 +7,7 @@ import * as db from "./db.js";
 import { toast, openModal, closeModal, esc } from "./utils.js";
 import { officialPlans } from "./programs.js";
 import { ratingKey, score, starsHtml, openRatingModal } from "./ratings.js";
-import { planScheduleHtml, addPlanFromTemplate } from "./plan-share.js";
+import { planScheduleHtml, addPlanFromTemplate, startFieldHtml, readStartField } from "./plan-share.js";
 import { getPlans } from "./plans.js";
 import { t } from "./i18n.js";
 
@@ -75,13 +75,13 @@ function ratePlan(p, ctx, redraw) {
   });
 }
 
-async function addPlan(p, ctx, btn, redraw, activate = false) {
+async function addPlan(p, ctx, btn, redraw, activate = false, start = null) {
   if (!p) return;
   btn.disabled = true;
   try {
-    await addPlanFromTemplate(p, { activate });
+    await addPlanFromTemplate(p, { activate, start });
     ctx.added.add(p.id);
-    toast(activate ? t("Plan ajouté et activé : il démarre lundi") : t("Plan ajouté à tes plans (Séance → Plan en cours → Mes plans)"), 3000, { horns: true });
+    toast(activate ? t("Plan ajouté et activé") : t("Plan ajouté à tes plans (Séance → Plan en cours → Mes plans)"), 3000, { horns: true });
     redraw();
     return true;
   } catch (err) {
@@ -111,9 +111,9 @@ function openPlanDetail(p, ctx, redraw) {
           <div class="list-row-title" style="font-size:14px;">${esc(e.exercise_name)}</div>
           <div class="list-row-meta">${esc(e.target_sets)} × ${esc(e.reps_target)}</div>
         </div>`).join("")}`).join("")}
-    ${mine ? "" : `
+    ${mine ? "" : `${startFieldHtml()}
       <label class="list-row" style="cursor:pointer; margin-top:12px;">
-        <span>${t("Activer ce plan (il démarre lundi)")}</span>
+        <span>${t("Activer ce plan (remplace le plan en cours, qui reste dans tes plans)")}</span>
         <input type="checkbox" id="pd-activate" style="width:auto;">
       </label>`}
     <div class="btn-row" style="margin-top:12px;">
@@ -128,7 +128,7 @@ function openPlanDetail(p, ctx, redraw) {
     if (rateBtn) rateBtn.onclick = () => { closeModal(); ratePlan(p, ctx, redraw); };
     const addBtn = m.querySelector("#pd-add");
     if (addBtn) addBtn.onclick = async () => {
-      if (await addPlan(p, ctx, addBtn, redraw, m.querySelector("#pd-activate")?.checked)) closeModal();
+      if (await addPlan(p, ctx, addBtn, redraw, m.querySelector("#pd-activate")?.checked, readStartField(m))) closeModal();
     };
   });
 }

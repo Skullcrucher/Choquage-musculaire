@@ -111,7 +111,23 @@ export async function openPlanShare(plan, routines, onDone = () => {}) {
 }
 
 // ---------- Ajouter un plan partagé / un programme à ses plans ----------
-export async function addPlanFromTemplate(tpl, { activate = false } = {}) {
+// Date de début au choix à l'ajout d'un plan : lundi prochain par défaut,
+// ou une date passée si on l'avait déjà commencé.
+export function nextMondayStr() {
+  const start = mondayOf(new Date());
+  if (dowOf(new Date()) > 1) start.setDate(start.getDate() + 7);
+  return dayStr(start);
+}
+export function startFieldHtml() {
+  return `
+    <label style="display:block; margin-top:12px;">${t("Début du plan")}
+      <input type="date" id="plan-start-add" value="${nextMondayStr()}">
+    </label>
+    <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Déjà commencé ? Mets une date passée, puis associe tes séances déjà faites dans Stats → Plan en cours.")}</p>`;
+}
+export const readStartField = (m) => /^\d{4}-\d{2}-\d{2}$/.test(m.querySelector("#plan-start-add")?.value || "") ? m.querySelector("#plan-start-add").value : null;
+
+export async function addPlanFromTemplate(tpl, { activate = false, start: startDate = null } = {}) {
   const { plans, active } = await getPlans();
   if (plans.length >= MAX_PLANS) throw new Error(t("{n} plans maximum", { n: MAX_PLANS }));
   const ids = {};
@@ -121,11 +137,9 @@ export async function addPlanFromTemplate(tpl, { activate = false } = {}) {
       exercises: (r.exercises || []).map(e => ({ ...e }))
     });
   }
-  // Début : lundi prochain (ou aujourd'hui si on est lundi).
-  const start = mondayOf(new Date());
-  if (dowOf(new Date()) > 1) start.setDate(start.getDate() + 7);
+  // Début : date choisie, sinon lundi prochain (ou aujourd'hui si on est lundi).
   const plan = {
-    id: "p" + Date.now().toString(36), name: String(tpl.name || "").slice(0, 60), start_date: dayStr(start),
+    id: "p" + Date.now().toString(36), name: String(tpl.name || "").slice(0, 60), start_date: startDate || nextMondayStr(),
     created_at: new Date().toISOString(),
     source: { id: tpl.id, owner_name: tpl.owner_name || "", official: !!tpl.official },
     blocks: (tpl.blocks || []).map(b => ({
