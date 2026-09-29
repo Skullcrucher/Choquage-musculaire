@@ -1041,5 +1041,9 @@ export default {
   "Depuis Hevy": "Z Hevy",
   "Toutes tes séries en CSV": "Wszystkie serie w CSV",
   "Version {v}, conditions, confidentialité": "Wersja {v}, warunki, prywatność",
-  "Exercices, muscles, doublons": "Ćwiczenia, mięśnie, duplikaty"
+  "Exercices, muscles, doublons": "Ćwiczenia, mięśnie, duplikaty",
+  "Séance libre": "Wolny trening",
+  "Séance vide": "Pusty trening",
+  "Ajoute tes exercices au fur et à mesure": "Dodawaj ćwiczenia na bieżąco",
+  "Pas encore de routine : crée-en une ou pioche dans Découvrir ci-dessous.": "Brak rutyn: utwórz ją lub wybierz w Odkrywaj poniżej."
 };

@@ -1032,5 +1032,9 @@ export default {
   "Depuis Hevy": "From Hevy",
   "Toutes tes séries en CSV": "All your sets as CSV",
   "Version {v}, conditions, confidentialité": "Version {v}, terms, privacy",
-  "Exercices, muscles, doublons": "Exercises, muscles, duplicates"
+  "Exercices, muscles, doublons": "Exercises, muscles, duplicates",
+  "Séance libre": "Free workout",
+  "Séance vide": "Empty workout",
+  "Ajoute tes exercices au fur et à mesure": "Add your exercises as you go",
+  "Pas encore de routine : crée-en une ou pioche dans Découvrir ci-dessous.": "No routine yet: create one or pick one in Discover below."
 };
