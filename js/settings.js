@@ -2,6 +2,7 @@
 // ONGLET RÉGLAGES — import CSV, bibliothèque d'exercices, export
 // ============================================================
 import * as db from "./db.js";
+import { icon } from "./icons.js";
 import { importCsvFile } from "./import.js";
 import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl, APP_VERSION, healthNoteHtml, forceUpdate, defaultSetType, setDefaultSetType } from "./utils.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -11,7 +12,7 @@ import { EXERCISE_SEED, exerciseOrigin } from "./exercises-seed.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { getUser, signOutUser } from "./auth.js";
 import { openProfile, openProfileEditor } from "./profile.js";
-import { t, tn, getLang } from "./i18n.js";
+import { t, tn, getLang, LANGS } from "./i18n.js";
 import { langPickerHtml, bindLangPicker } from "./auth.js";
 import { getBody, saveBody, bodyComplete, restingKcalPerDay } from "./calories.js";
 
@@ -50,7 +51,13 @@ function makeCollapsible(container) {
     card.classList.add("collapsible");
     title.setAttribute("role", "button");
     title.tabIndex = 0;
-    title.insertAdjacentHTML("beforeend", `<span class="collapse-chevron" aria-hidden="true">›</span>`);
+    // En-tête : pastille d'icône, titre + résumé, chevron.
+    const label = title.textContent.trim();
+    const sub = card.dataset.sub || "";
+    title.innerHTML = `
+      <span class="set-ico">${icon(card.dataset.icon || "info")}</span>
+      <span class="set-title"><span>${esc(label)}</span>${sub ? `<small>${sub}</small>` : ""}</span>
+      <span class="collapse-chevron" aria-hidden="true">${icon("chevron")}</span>`;
     const set = (open) => {
       card.classList.toggle("open", open);
       title.setAttribute("aria-expanded", String(open));
@@ -73,13 +80,13 @@ export async function renderReglages(container) {
   container.innerHTML = `
     <h1 class="section-title">${t("Réglages")}</h1>
 
-    <div class="card">
-      <div class="card-title">🌐 ${t("Langue")}</div>
+    <div class="card" data-icon="globe" data-sub="${esc(LANGS.find(l => l.code === getLang())?.label || "")}">
+      <div class="card-title">${t("Langue")}</div>
       ${langPickerHtml("settings-lang")}
       ${getLang() === "mfe" ? `<p class="muted" style="font-size:12px; margin:6px 0 0;">${t("Traduction en cours de relecture : signale-nous les erreurs !")}</p>` : ""}
     </div>
 
-    <div class="card">
+    <div class="card" data-icon="user" data-sub="${esc(t("Pseudo, photo, profil public"))}">
       <div class="card-title">${t("Compte")}</div>
       <div style="display:flex; align-items:center; gap:14px; margin:10px 0 14px;">
         <div style="position:relative; flex-shrink:0;">
@@ -102,13 +109,13 @@ export async function renderReglages(container) {
       <button class="btn btn-secondary" id="signout-btn" style="margin-top:10px;">${t("Se déconnecter")}</button>
     </div>
 
-    ${db.isAdmin() ? `<div class="card" id="reports-card">
-      <div class="card-title">🚩 ${t("Signalements")}</div>
+    ${db.isAdmin() ? `<div class="card" id="reports-card" data-icon="flag" data-sub="${esc(t("Profils signalés à traiter"))}">
+      <div class="card-title">${t("Signalements")}</div>
       <div id="reports-list"><p class="muted">${t("Chargement…")}</p></div>
     </div>` : ""}
 
-    <div class="card" id="spotify-card">
-      <div class="card-title">🎧 Spotify</div>
+    <div class="card" id="spotify-card" data-icon="music" data-sub="${esc(t("Son du record, bande-son des séances"))}">
+      <div class="card-title">Spotify</div>
       <p class="muted" style="margin-top:0;">${t("Connecte ton compte pour proposer automatiquement le morceau en cours comme « son du record » et joindre la bande-son de tes séances (morceaux écoutés pendant l'entraînement).")} <a href="privacy.html" style="color:var(--text);">${t("Données utilisées")}</a></p>
       <p class="muted" style="font-size:12px;">${t("Sur Apple Music ou Deezer ? Choisis ton service dans ton profil (🏆 Exercices phares & 🎧 musique) : liens, lecteurs et recherche des sons partagés s'adaptent. La connexion automatique ci-dessous n'existe que pour Spotify.")}</p>
       <p class="muted" id="spotify-status" style="font-size:13px;"></p>
@@ -131,8 +138,8 @@ export async function renderReglages(container) {
       </details>
     </div>
 
-    <div class="card" id="body-card">
-      <div class="card-title">🔥 ${t("Calories")}</div>
+    <div class="card" id="body-card" data-icon="flame" data-sub="${esc(t("Sexe, âge, taille et poids"))}">
+      <div class="card-title">${t("Calories")}</div>
       <p class="muted" style="margin-top:0;">${t("Pour estimer les calories de tes séances. Ces données restent privées : personne d'autre ne les voit.")}</p>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
         <div><label>${t("Sexe")}</label><select id="body-sex"><option value="">—</option><option value="m">${t("Homme")}</option><option value="f">${t("Femme")}</option></select></div>
@@ -150,7 +157,7 @@ export async function renderReglages(container) {
       </details>
     </div>
 
-    <div class="card">
+    <div class="card" data-icon="timer" data-sub="${esc(t("Notifications, RPE, rappel, type de série"))}">
       <div class="card-title">${t("Minuteur de repos")}</div>
       <p class="muted" style="margin-top:0;">${t("Reçois une notification à la fin du repos, même si tu es passé sur une autre app (Spotify...) ou que l'écran est verrouillé. Sur iPhone, il faut utiliser l'app ajoutée à l'écran d'accueil. La durée par défaut se règle par exercice, dans la bibliothèque ci-dessous.")}</p>
       <div class="list-row" style="cursor:default;">
@@ -188,14 +195,14 @@ export async function renderReglages(container) {
       </select>
     </div>
 
-    <div class="card">
+    <div class="card" data-icon="reset" data-sub="${esc(t("Supprimer toutes mes séances"))}">
       <div class="card-title">${t("Réinitialiser")}</div>
       <p class="muted" style="margin-top:0;">${t("Supprime toutes tes séances et leurs séries (les exercices et routines partagés ne sont pas touchés) — utile pour repartir propre avant un réimport.")}</p>
       <button class="btn btn-danger" id="wipe-btn">${t("Supprimer toutes mes séances")}</button>
       <div id="wipe-result"></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-icon="import" data-sub="${esc(t("Depuis Hevy"))}">
       <div class="card-title">${t("Importer un CSV")}</div>
       <p class="muted" style="margin-top:0;">${t("Export Hevy (Profil → Réglages → Exporter les données). Les séries déjà importées sont détectées et ignorées automatiquement — aucun doublon possible, même en réimportant plusieurs fois le même fichier.")}</p>
       <input type="file" id="csv-file" accept=".csv,text/csv">
@@ -209,13 +216,13 @@ export async function renderReglages(container) {
       <div id="import-result"></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-icon="export" data-sub="${esc(t("Toutes tes séries en CSV"))}">
       <div class="card-title">${t("Export")}</div>
       <p class="muted" style="margin-top:0;">${t("Télécharge toutes tes séries au format CSV.")}</p>
       <button class="btn btn-secondary" id="export-csv">${t("Exporter en CSV")}</button>
     </div>
 
-    <div class="card">
+    <div class="card" data-icon="info" data-sub="${esc(t("Version {v}, conditions, confidentialité", { v: APP_VERSION }))}">
       <div class="card-title">${t("À propos")}</div>
       <p class="muted" style="margin-top:0;">${t("Version de l'app : {version} · Projet Firebase : {project}", { version: `<b>${APP_VERSION}</b>`, project: esc(firebaseConfig.projectId) })}</p>
       <button class="btn btn-secondary btn-sm" id="force-update">${t("Forcer la mise à jour")}</button>
@@ -223,7 +230,7 @@ export async function renderReglages(container) {
       <p class="muted">${t("Ajoute cette page à ton écran d'accueil (icône Partager → \"Sur l'écran d'accueil\") pour l'utiliser comme une app.")}</p>
     </div>
 
-    <div class="card">
+    <div class="card" data-icon="book" data-sub="${esc(t("Exercices, muscles, doublons"))}">
       <div class="card-title">${t("Bibliothèque d'exercices")}</div>
       <p class="muted" style="margin-top:0;">${t("Complète ta bibliothèque avec {n} exercices standards (barre, haltère, machine, poulie, poids du corps) — les exercices déjà présents ne sont pas dupliqués.", { n: EXERCISE_SEED.length })}</p>
       <button class="btn btn-secondary" id="load-seed">${t("Charger la bibliothèque standard")}</button>

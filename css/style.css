@@ -1077,3 +1077,42 @@ body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var
 .chip .ico { width: 1.05em; height: 1.05em; margin-right: 5px; }
 .start-tab.active .ico, .chip.active .ico { filter: drop-shadow(0 0 3px rgba(0,0,0,0.25)); }
 .btn .ico { margin-right: 8px; }
+
+/* ---------- Onglets du haut : sélecteur unique (js/icons.js → segHtml) ---------- */
+.seg { display: flex; gap: 4px; padding: 4px; margin: 0 0 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.seg-btn {
+  flex: 1 1 0; min-width: 0; height: 38px; padding: 0 6px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: transparent; border: 0; border-radius: 9px; cursor: pointer;
+  color: var(--text-dim); font: 700 11.5px/1 'Inter', sans-serif; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap;
+  transition: background 0.15s, color 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent;
+}
+.seg-btn span { overflow: hidden; text-overflow: ellipsis; }
+.seg-btn .ico { width: 16px; height: 16px; margin: 0; vertical-align: 0; flex-shrink: 0; }
+.seg-btn:active { transform: scale(0.96); }
+.seg-btn.active { background: linear-gradient(180deg, #E8322F, var(--amber)); color: #fff; box-shadow: 0 2px 10px rgba(224,36,36,0.35), inset 0 1px 0 rgba(255,255,255,0.14); }
+.seg-btn .req-dot { margin-left: 2px; }
+/* Second niveau (ex. Découvrir → Routines / Plans) : simple soulignement. */
+.seg.seg-sub { padding: 0; gap: 0; background: none; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+.seg-sub .seg-btn { height: 40px; border-radius: 0; background: none; box-shadow: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.seg-sub .seg-btn.active { background: none; box-shadow: none; color: var(--text); border-bottom-color: var(--amber); }
+.seg-sub .seg-btn.active .ico { color: var(--amber); filter: drop-shadow(0 0 4px rgba(224,36,36,0.5)); }
+#start-tabs .seg { margin: 16px 0 12px; }
+
+/* ---------- Réglages : sections (pastille d'icône, titre, résumé, chevron) ---------- */
+.card.collapsible { padding: 12px 14px; margin-bottom: 8px; }
+.card.collapsible > .card-title { gap: 12px; font-size: 16px; }
+.set-ico { width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--amber); background: rgba(224,36,36,0.10); border: 1px solid rgba(224,36,36,0.30); }
+.set-ico .ico { width: 19px; height: 19px; margin: 0; vertical-align: 0; }
+.set-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.set-title > span { font-weight: 700; line-height: 1.2; }
+.set-title small { font-size: 12px; font-weight: 400; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card.collapsible .collapse-chevron { display: flex; font-size: 0; }
+.card.collapsible .collapse-chevron .ico { width: 16px; height: 16px; margin: 0; }
+.card.collapsible.open { border-color: rgba(224,36,36,0.35); }
+.card.collapsible.open .set-ico { background: var(--amber); color: #fff; border-color: var(--amber); box-shadow: 0 0 12px rgba(224,36,36,0.4); }
+.card.collapsible > .collapse-body { padding-top: 12px; border-top: 1px solid var(--border); }
+/* 3 onglets : texte resserré ; 4 onglets et plus : icône au-dessus du libellé. */
+.seg[data-n="3"] .seg-btn { flex: 1 1 auto; letter-spacing: 0.02em; font-size: 11px; gap: 5px; padding: 0 8px; }
+.seg[data-n="4"] .seg-btn, .seg[data-n="5"] .seg-btn { flex-direction: column; gap: 4px; height: 50px; font-size: 10px; letter-spacing: 0.04em; padding: 0 2px; }
+.seg[data-n="4"] .seg-btn .ico, .seg[data-n="5"] .seg-btn .ico { width: 18px; height: 18px; }

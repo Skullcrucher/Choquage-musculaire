@@ -1032,5 +1032,14 @@ export default {
   "Mes plans": "Moje plany",
   "Mes plans et programmes": "Moje plany i programy",
   "Pas encore de routine : crée-la ci-dessous ou pioche dans Découvrir, ou démarre une séance vide.": "Brak rutyn: utwórz ją poniżej lub wybierz w Odkrywaj, albo zacznij pusty trening.",
-  "Gérer mes routines · Découvrir": "Zarządzaj rutynami · Odkrywaj"
+  "Gérer mes routines · Découvrir": "Zarządzaj rutynami · Odkrywaj",
+  "Pseudo, photo, profil public": "Nick, zdjęcie, profil publiczny",
+  "Profils signalés à traiter": "Zgłoszone profile do sprawdzenia",
+  "Son du record, bande-son des séances": "Utwór rekordu, ścieżka dźwiękowa treningów",
+  "Sexe, âge, taille et poids": "Płeć, wiek, wzrost i waga",
+  "Notifications, RPE, rappel, type de série": "Powiadomienia, RPE, przypomnienie, typ serii",
+  "Depuis Hevy": "Z Hevy",
+  "Toutes tes séries en CSV": "Wszystkie serie w CSV",
+  "Version {v}, conditions, confidentialité": "Wersja {v}, warunki, prywatność",
+  "Exercices, muscles, doublons": "Ćwiczenia, mięśnie, duplikaty"
 };
