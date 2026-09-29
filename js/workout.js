@@ -52,51 +52,45 @@ export async function renderSeance(container) {
     if (currentWorkout.presence === undefined) currentWorkout.presence = presenceDefault();
     renderActiveWorkout(container);
   } else {
-    seanceMain = "start"; // ouverture de l'onglet : toujours sur « Démarrer »
+    manageMode = null; // ouverture de l'onglet : toujours sur l'écran de départ
     await renderStartScreen(container);
   }
 }
 
 const LS_START_MODE = "skullcrusher_start_mode"; // "routine" | "plan"
-let seanceMain = "start"; // "start" | "tracking" | "routines"
+// Vue « gestion » (mes routines, Découvrir, plans) ouverte depuis un onglet.
+let manageMode = null; // null | "mine" | "plans"
 
-// Écran Séance sans séance en cours : démarrer, suivi du plan, routines et plans.
+// Écran Séance sans séance en cours : deux onglets, « Routines » (démarrer
+// une routine) et « Plan en cours » (séances de la semaine du plan actif).
+// Le suivi détaillé du plan est dans Stats → Plan en cours.
 async function renderStartScreen(container) {
-  container.innerHTML = `
-    <h1 class="section-title">${t("Séance")}</h1>
-    <div class="chip-row" id="seance-main" style="margin-bottom:14px;">
-      <div class="chip ${seanceMain === "start" ? "active" : ""}" data-smain="start">▶ ${t("Démarrer")}</div>
-      <div class="chip ${seanceMain === "tracking" ? "active" : ""}" data-smain="tracking">📅 ${t("Suivi du plan")}</div>
-      <div class="chip ${seanceMain === "routines" ? "active" : ""}" data-smain="routines">📋 ${t("Routines")}</div>
-    </div>
-    <div id="seance-main-body"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>
-  `;
-  container.querySelectorAll("[data-smain]").forEach(c => c.onclick = () => { seanceMain = c.dataset.smain; renderStartScreen(container); });
-  const body = container.querySelector("#seance-main-body");
-  if (seanceMain === "tracking") {
-    const { openWorkoutDetail } = await import("./workout-detail.js");
-    await (await import("./plans.js")).renderPlanTracking(body, { onOpenWorkout: (w) => w && openWorkoutDetail(w, () => renderStartScreen(container)) });
-  } else if (seanceMain === "routines") {
-    await (await import("./routines.js")).renderRoutines(body);
-  } else {
-    await drawStartPanel(body, () => renderStartScreen(container));
+  const refreshAll = () => renderStartScreen(container);
+  if (manageMode) {
+    container.innerHTML = `
+      <button class="btn btn-secondary btn-sm back-link" id="manage-back" style="width:auto; margin-bottom:10px;">← ${t("Retour")}</button>
+      <h1 class="section-title">${manageMode === "plans" ? t("Mes plans") : t("Routines")}</h1>
+      <div id="manage-body"></div>`;
+    container.querySelector("#manage-back").onclick = () => { manageMode = null; refreshAll(); };
+    const routines = await import("./routines.js");
+    routines.setRoutinesMode(manageMode === "plans" ? "plans" : "mine");
+    await routines.renderRoutines(container.querySelector("#manage-body"));
+    return;
   }
-}
-
-async function drawStartPanel(container, refreshAll) {
   const [allRoutines, workouts, planView, planIds] = await Promise.all([
     getRoutines(), getWorkouts(),
     import("./plans.js").then(m => m.planSessionsHtml()).catch(e => { console.warn("[Skullcrusher] Plan indisponible", e); return null; }),
     import("./plans.js").then(m => m.planRoutineIds()).catch(() => new Set())
   ]);
   if (!container.isConnected) return;
-  // Les séances des plans sont dans l'onglet « Depuis un plan ».
+  // Les séances des plans sont dans l'onglet « Plan en cours ».
   const routines = allRoutines.filter(r => !planIds.has(r.id));
   let startMode = null;
   try { startMode = localStorage.getItem(LS_START_MODE); } catch (_) {}
   if (startMode !== "routine" && startMode !== "plan") startMode = planView?.sessions?.length ? "plan" : "routine";
   const weekCount = countThisWeek(workouts);
   container.innerHTML = `
+    <h1 class="section-title">${t("Séance")}</h1>
     <div class="card-hero">
       <div class="muted" style="margin-bottom:2px;">${t("Cette semaine")}</div>
       <span class="num" style="font-size:56px; color:var(--amber); display:block; line-height:1;">${weekCount}</span>
@@ -104,8 +98,8 @@ async function drawStartPanel(container, refreshAll) {
     </div>
     <button class="btn btn-primary" id="start-empty">+ ${t("Démarrer une séance vide")}</button>
     <div class="start-tabs" id="start-tabs">
-      <button class="start-tab ${startMode === "routine" ? "active" : ""}" data-smode="routine">📋 ${t("Depuis une routine")}</button>
-      <button class="start-tab ${startMode === "plan" ? "active" : ""}" data-smode="plan">📅 ${t("Depuis un plan")}</button>
+      <button class="start-tab ${startMode === "routine" ? "active" : ""}" data-smode="routine">📋 ${t("Routines")}</button>
+      <button class="start-tab ${startMode === "plan" ? "active" : ""}" data-smode="plan">📅 ${t("Plan en cours")}</button>
     </div>
     <div id="start-body"></div>
   `;
@@ -113,7 +107,8 @@ async function drawStartPanel(container, refreshAll) {
   const body = container.querySelector("#start-body");
   const draw = () => {
     if (startMode === "plan") {
-      body.innerHTML = planView?.html || `<p class="muted">${t("Plan indisponible.")}</p>`;
+      body.innerHTML = (planView?.html || `<p class="muted">${t("Plan indisponible.")}</p>`) +
+        `<button class="btn btn-secondary" id="manage-plans" style="margin-top:12px;">⚙️ ${t("Mes plans et programmes")}</button>`;
       if (planView?.card?.bind) planView.card.bind(body, refreshAll);
       body.querySelectorAll("[data-plan-session]").forEach(el => {
         const s = planView.sessions[+el.dataset.planSession];
@@ -122,6 +117,7 @@ async function drawStartPanel(container, refreshAll) {
           startWorkout(s.routine.id, s.routine, e.currentTarget, { plan_id: planView.plan.id, plan_week: planView.week });
         };
       });
+      body.querySelector("#manage-plans").onclick = () => { manageMode = "plans"; refreshAll(); };
     } else {
       body.innerHTML = `
         ${routines.map(r => `
@@ -130,10 +126,12 @@ async function drawStartPanel(container, refreshAll) {
             <div class="muted">${tn((r.exercises || []).length, "{n} exercice", "{n} exercices")}</div>
           </div>
         `).join("")}
-        ${routines.length === 0 ? `<p class="muted">${t("Pas encore de routine — crée-en une dans l'onglet Routines, ou démarre une séance vide.")}</p>` : ""}`;
+        ${routines.length === 0 ? `<p class="muted">${t("Pas encore de routine : crée-la ci-dessous ou pioche dans Découvrir, ou démarre une séance vide.")}</p>` : ""}
+        <button class="btn btn-secondary" id="manage-routines" style="margin-top:4px;">⚙️ ${t("Gérer mes routines · Découvrir")}</button>`;
       body.querySelectorAll("[data-start-routine]").forEach(el => {
         el.onclick = (e) => startWorkout(el.dataset.startRoutine, routines.find(r => r.id === el.dataset.startRoutine), e.currentTarget);
       });
+      body.querySelector("#manage-routines").onclick = () => { manageMode = "mine"; refreshAll(); };
     }
   };
   container.querySelectorAll("[data-smode]").forEach(b => b.onclick = () => {

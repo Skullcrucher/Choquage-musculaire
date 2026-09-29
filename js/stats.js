@@ -77,7 +77,34 @@ function inPeriod(iso, weeks) {
   return new Date(iso).getTime() >= Date.now() - weeks * 7 * 24 * 3600 * 1000;
 }
 
+// Onglet Stats : « Générale » (séances, muscles, exercices) et « Plan en
+// cours » (suivi du plan actif : avancement, assiduité, semaines).
+let statsTab = "general";
 export async function renderStats(container) {
+  container.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <h1 class="section-title">${t("Statistiques")}</h1>
+      ${statsTab === "general" ? `<button class="btn btn-sm btn-primary share-btn" id="share-stats" style="width:auto;">📸 ${t("Partager")}</button>` : ""}
+    </div>
+    <div class="start-tabs" style="margin-top:0;">
+      <button class="start-tab ${statsTab === "general" ? "active" : ""}" data-stab="general">📊 ${t("Générale")}</button>
+      <button class="start-tab ${statsTab === "plan" ? "active" : ""}" data-stab="plan">📅 ${t("Plan en cours")}</button>
+    </div>
+    <div id="stats-tab-body"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>`;
+  container.querySelectorAll("[data-stab]").forEach(b => b.onclick = () => { statsTab = b.dataset.stab; renderStats(container); });
+  const share = container.querySelector("#share-stats");
+  if (share) share.onclick = async () =>
+    (await import("./share-card.js")).openShareCard({ kind: "period", periodDays: state.periodWeeks ? (state.periodWeeks <= 4 ? 30 : state.periodWeeks <= 13 ? 91 : state.periodWeeks <= 26 ? 182 : 365) : null });
+  const body = container.querySelector("#stats-tab-body");
+  if (statsTab === "plan") {
+    const { openWorkoutDetail } = await import("./workout-detail.js");
+    await (await import("./plans.js")).renderPlanTracking(body, { onOpenWorkout: (w) => w && openWorkoutDetail(w, () => renderStats(container)) });
+  } else {
+    await renderGeneralStats(body);
+  }
+}
+
+async function renderGeneralStats(container) {
   const [exercises, workouts] = await Promise.all([getExercises(), getWorkouts()]);
   const exerciseNames = [...new Set(exercises.map(e => e.name))].sort((a, b) => a.localeCompare(b, "fr"));
   const muscleGroups = [...new Set(exercises.map(e => e.muscle_group))].sort();
@@ -91,11 +118,8 @@ export async function renderStats(container) {
   const totalSets = workouts.reduce((acc, w) => acc + (w.total_sets || 0), 0);
   const totalTonnage = workouts.reduce((acc, w) => acc + (w.total_tonnage || 0), 0);
 
+  if (!container.isConnected) return;
   container.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-      <h1 class="section-title">${t("Statistiques")}</h1>
-      <button class="btn btn-sm btn-primary share-btn" id="share-stats" style="width:auto;">📸 ${t("Partager")}</button>
-    </div>
     <div class="stat-grid">
       <div class="stat-box"><span class="num">${workouts.length}</span><span class="lbl">${t("séances")}</span></div>
       <div class="stat-box"><span class="num">${Math.round(totalTonnage / 1000)}</span><span class="lbl">${t("tonnes soulevées")}</span></div>
@@ -121,8 +145,6 @@ export async function renderStats(container) {
   `;
 
   const ctx = { container, exercises, exerciseNames, muscleGroups };
-  container.querySelector("#share-stats").onclick = async () =>
-    (await import("./share-card.js")).openShareCard({ kind: "period", periodDays: state.periodWeeks ? (state.periodWeeks <= 4 ? 30 : state.periodWeeks <= 13 ? 91 : state.periodWeeks <= 26 ? 182 : 365) : null });
   container.querySelectorAll("#period-chips .chip").forEach(chip => {
     chip.onclick = () => {
       state.periodWeeks = chip.dataset.weeks ? parseInt(chip.dataset.weeks, 10) : null;

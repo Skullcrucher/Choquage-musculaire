@@ -10,6 +10,7 @@ import { normalizePlaylistUrl } from "./music.js";
 import { t } from "./i18n.js";
 
 let routinesMode = "mine"; // "mine" | "discover" | "plans"
+export function setRoutinesMode(mode) { routinesMode = mode; }
 
 export async function renderRoutines(container) {
   container.innerHTML = `
