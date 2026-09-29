@@ -1141,5 +1141,8 @@ export default {
   "{n} séance(s) supprimée(s)": "Usunięte treningi: {n}",
   "Séance vide": "Pusty trening",
   "Aucune série n'a été faite : elle ne sera pas gardée dans ton historique.": "Nie wykonano żadnej serii: trening nie zostanie zapisany w historii.",
-  "Supprimer la séance vide": "Usuń pusty trening"
+  "Supprimer la séance vide": "Usuń pusty trening",
+  "En double ({n})": "Duplikaty ({n})",
+  "Même créneau qu'une autre séance (import ou ajout manuel en plus) : comptée une seule fois. Touche-la pour la voir ou la supprimer.": "Ten sam czas co inny trening (dodatkowy import lub ręczne dodanie): liczony raz. Dotknij, aby zobaczyć lub usunąć.",
+  "comme « {title} »": "jak „{title}”"
 };

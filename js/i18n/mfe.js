@@ -1131,5 +1131,8 @@ export default {
   "{n} séance(s) supprimée(s)": "{n} seans efase",
   "Séance vide": "Seans vid",
   "Aucune série n'a été faite : elle ne sera pas gardée dans ton historique.": "Okenn seri pa finn fer : li pa pou res dan to listwar.",
-  "Supprimer la séance vide": "Efas seans vid-la"
+  "Supprimer la séance vide": "Efas seans vid-la",
+  "En double ({n})": "An doub ({n})",
+  "Même créneau qu'une autre séance (import ou ajout manuel en plus) : comptée une seule fois. Touche-la pour la voir ou la supprimer.": "Mem ler ki enn lot seans (import ouswa azout manyel an plis) : konte enn sel fwa. Tous li pou get li ouswa efas li.",
+  "comme « {title} »": "parey ki « {title} »"
 };
