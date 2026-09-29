@@ -1118,5 +1118,18 @@ export default {
   "Bibliothèque": "Bibliotek",
   "Mes plans et programmes (Biblio)": "Mo bann plan ek program (Biblio)",
   "Mes routines · Découvrir (Biblio)": "Mo bann rutinn · Dekouver (Biblio)",
-  "Progrès": "Progre"
+  "Progrès": "Progre",
+  "Aucune séance terminée depuis lundi.": "Pena okenn seans fini depi lindi.",
+  "Datées dans le futur ({n})": "Date dan lavenir ({n})",
+  "Garder": "Gard",
+  "Jamais terminées ({n})": "Zame fini ({n})",
+  "Ouvertes puis abandonnées : elles ne comptent pas dans « Cette semaine ».": "Ouver apre abandone : zot pa konte dan « Sa semenn-la ».",
+  "Souvent un import avec une date mal lue : elles ne comptent pas cette semaine.": "Souvan enn import avek enn dat mal li : zot pa konte sa semenn-la.",
+  "Supprimer ces {n} séance(s)": "Efas sa {n} seans-la",
+  "Supprimer {n} séance(s) ?": "Efas {n} seans ?",
+  "Séances jamais terminées ou datées dans le futur. Elles seront effacées définitivement, avec leurs séries.": "Seans zame fini ouswa date dan lavenir. Zot pou efase pou tou, avek zot bann seri.",
+  "{n} séance(s) supprimée(s)": "{n} seans efase",
+  "Séance vide": "Seans vid",
+  "Aucune série n'a été faite : elle ne sera pas gardée dans ton historique.": "Okenn seri pa finn fer : li pa pou res dan to listwar.",
+  "Supprimer la séance vide": "Efas seans vid-la"
 };

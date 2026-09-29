@@ -1119,5 +1119,18 @@ export default {
   "Bibliothèque": "Library",
   "Mes plans et programmes (Biblio)": "My plans and programs (Library)",
   "Mes routines · Découvrir (Biblio)": "My routines · Discover (Library)",
-  "Progrès": "Progress"
+  "Progrès": "Progress",
+  "Aucune séance terminée depuis lundi.": "No workout finished since Monday.",
+  "Datées dans le futur ({n})": "Dated in the future ({n})",
+  "Garder": "Keep",
+  "Jamais terminées ({n})": "Never finished ({n})",
+  "Ouvertes puis abandonnées : elles ne comptent pas dans « Cette semaine ».": "Started then abandoned: they don't count in “This week”.",
+  "Souvent un import avec une date mal lue : elles ne comptent pas cette semaine.": "Often an import with a misread date: they don't count this week.",
+  "Supprimer ces {n} séance(s)": "Delete these {n} workout(s)",
+  "Supprimer {n} séance(s) ?": "Delete {n} workout(s)?",
+  "Séances jamais terminées ou datées dans le futur. Elles seront effacées définitivement, avec leurs séries.": "Workouts never finished or dated in the future. They'll be permanently deleted, with their sets.",
+  "{n} séance(s) supprimée(s)": "{n} workout(s) deleted",
+  "Séance vide": "Empty workout",
+  "Aucune série n'a été faite : elle ne sera pas gardée dans ton historique.": "No set was done: it won't be kept in your history.",
+  "Supprimer la séance vide": "Delete the empty workout"
 };

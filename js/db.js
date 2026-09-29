@@ -707,6 +707,12 @@ export async function updateWorkout(id, patch) {
   await updateDoc(doc(dbase, "workouts", id), patch);
 }
 
+// La séance a-t-elle au moins une série enregistrée ?
+export async function workoutHasSets(id) {
+  const snap = await getDocs(query(collection(dbase, "workouts", id, "sets"), limit(1)));
+  return !snap.empty;
+}
+
 export async function deleteWorkout(id) {
   const setsSnap = await getDocs(collection(dbase, "workouts", id, "sets"));
   const batch = writeBatch(dbase);
