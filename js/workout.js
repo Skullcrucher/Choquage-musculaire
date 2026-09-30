@@ -3,6 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { weekSessions } from "./week-sessions.js";
+import { unlockAudio, playRestEnd, armLockSound, disarmLockSound, scheduleRestSound, cancelRestSound, restSoundScheduledFor, lockSoundMode } from "./sound.js";
 import { icon, segHtml } from "./icons.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce, fireRestEndNotification, esc, defaultSetType, confirmDanger } from "./utils.js";
 import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate } from "./cache.js";
@@ -15,6 +16,7 @@ import { armReminder, clearReminder } from "./workout-reminder.js";
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
 let restTimerInterval = null;
 let restTimerEnd = null;
+let restTotalSec = 90; // durée du repos en cours (barre de progression écran verrouillé)
 
 const LS_KEY = "skullcrusher_active_workout_id";
 const LS_STATE_KEY = "skullcrusher_active_workout_state";
@@ -494,6 +496,7 @@ function drawExerciseList(el) {
     badge.onclick = () => showTypePicker(row, set, persist);
 
     check.onclick = async () => {
+      unlockAudio();
       set.done = !set.done;
       // Valeurs pré-remplies (depuis l'historique) jamais encore sauvegardées
       // (aucune saisie n'a déclenché persist) : on force l'écriture ici.
@@ -501,7 +504,8 @@ function drawExerciseList(el) {
         await savePersist();
       }
       if (set.done && set.weight_kg != null && set.reps != null) {
-        startRestTimer(ex.rest_timer_seconds || 90, t("Prochaine série : {exercise}", { exercise: ex.exercise_title }));
+        const next = nextSetInfo();
+        startRestTimer(ex.rest_timer_seconds || 90, next ? `${next.exercise} · ${setLine(next)}` : t("Dernière série faite : termine la séance !"));
         if (askRpe() && set.set_type !== "warmup") showRpePicker(row, set, savePersist);
       }
       if (!set.done) row.nextElementSibling?.classList.contains("rpe-picker") && row.nextElementSibling.remove();
@@ -760,16 +764,93 @@ function scheduleRestPush(endMs, body) {
   loadTimerSync().then(m => m?.scheduleRestPush(endMs, body));
 }
 function cancelRestPush() {
+  cancelRestSound();
   loadTimerSync().then(m => m?.cancelRestPush());
 }
 
 // Le compte à rebours affiché tourne dans l'app ; la notification de fin,
 // elle, est confiée au serveur push pour arriver même si on est passé sur
 // une autre app (voir timer-sync.js).
+// ---------- Série suivante & carte « écran verrouillé » ----------
+// Prochaine série à faire : première série non validée, dans l'ordre.
+function nextSetInfo() {
+  for (const ex of currentWorkout?.exercises || []) {
+    const i = ex.sets.findIndex(st => !st.done);
+    if (i >= 0) {
+      const st = ex.sets[i];
+      return { exercise: ex.exercise_title, idx: i + 1, total: ex.sets.length, kg: st.weight_kg, reps: st.reps ?? (parseInt(st.target_reps, 10) || null) };
+    }
+  }
+  return null;
+}
+// « Série 3/4 · 80 kg × 8 »
+function setLine(n) {
+  const load = [n.kg != null ? `${String(n.kg).replace(".", ",")} kg` : "", n.reps != null ? `× ${n.reps}` : ""].filter(Boolean).join(" ");
+  return [t("Série {i}/{n}", { i: n.idx, n: n.total }), load].filter(Boolean).join(" · ");
+}
+
+const LIVE_TAG = "skullcrusher-live";
+const LS_LOCK_CARD = "skullcrusher_lock_card";
+export function lockCardEnabled() {
+  try { return localStorage.getItem(LS_LOCK_CARD) !== "0"; } catch (_) { return true; }
+}
+// Quand l'écran se verrouille (ou qu'on quitte l'app) pendant une séance :
+// notification silencieuse, condensée, qui reste sur l'écran verrouillé
+// (exercice, série, charge × reps, fin du repos). Retirée au retour.
+async function showLockCard() {
+  if (!currentWorkout || !lockCardEnabled()) return;
+  if (!("Notification" in window) || Notification.permission !== "granted" || !("serviceWorker" in navigator)) return;
+  const next = nextSetInfo();
+  const hhmm = (ms) => new Date(ms).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
+  const rest = restTimerEnd && restTimerEnd > Date.now()
+    ? `⏱ ${t("Repos jusqu'à {time}", { time: hhmm(restTimerEnd) })} (${Math.ceil((restTimerEnd - Date.now()) / 60000)} min)`
+    : `⏱ ${t("Séance en cours depuis {n} min", { n: Math.max(1, Math.round((Date.now() - new Date(currentWorkout.start_time)) / 60000)) })}`;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification(next ? `🏋️ ${next.exercise}` : `🏋️ ${currentWorkout.title}`, {
+      body: [next ? setLine(next) : t("Toutes les séries sont faites"), rest].join("\n"),
+      icon: "icons/icon-192.png", badge: "icons/icon-192.png",
+      tag: LIVE_TAG, renotify: false, silent: true,
+      timestamp: restTimerEnd || Date.now()
+    });
+  } catch (e) { console.warn("[Skullcrusher] Carte écran verrouillé", e); }
+}
+async function hideLockCard() {
+  try {
+    const reg = await navigator.serviceWorker?.ready;
+    (await reg?.getNotifications({ tag: LIVE_TAG }) || []).forEach(n => n.close());
+  } catch (_) {}
+}
+// Écran verrouillé pendant un repos : piste audio qui joue le son de fin
+// de repos à l'heure prévue (voir sound.js), avec l'exercice et la série
+// sur le lecteur de l'écran verrouillé.
+function armRestSound() {
+  // Mode « mélangé » : le son est déjà programmé (scheduleRestSound).
+  if (lockSoundMode() !== "exclusive") return;
+  if (!currentWorkout || !restTimerEnd || restTimerEnd <= Date.now()) return;
+  const next = nextSetInfo();
+  const hhmm = new Date(restTimerEnd).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
+  armLockSound(restTimerEnd, restTotalSec, {
+    title: `⏱ ${t("Repos jusqu'à {time}", { time: hhmm })}`,
+    artist: next ? `${next.exercise} · ${setLine(next)}` : t("Toutes les séries sont faites")
+  });
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { showLockCard(); armRestSound(); }
+  else {
+    hideLockCard();
+    // Mode garanti : on repasse au son programmé, qui ne coupe pas la musique.
+    if (lockSoundMode() === "exclusive") { disarmLockSound(); if (restTimerEnd > Date.now()) scheduleRestSound(restTimerEnd); }
+  }
+});
+export const _lockCardForTests = { showLockCard, nextSetInfo, setLine };
+
 function startRestTimer(seconds, pushBody = "") {
   clearInterval(restTimerInterval);
   restTimerEnd = Date.now() + seconds * 1000;
+  restTotalSec = seconds;
   restPushBody = pushBody;
+  scheduleRestSound(restTimerEnd);
   localStorage.setItem(LS_REST_KEY, String(restTimerEnd));
   scheduleRestPush(restTimerEnd, restPushBody);
   renderRestTimerBar();
@@ -795,9 +876,16 @@ function renderRestTimerBar() {
   const remaining = Math.round((restTimerEnd - Date.now()) / 1000);
   if (remaining <= 0) {
     clearInterval(restTimerInterval);
+    // Retour dans l'app bien après la fin (le son a déjà été joué écran
+    // verrouillé) : pas de son en retard.
+    const late = Date.now() - restTimerEnd > 3000;
+    const endedAt = restTimerEnd;
     restTimerEnd = null;
     localStorage.removeItem(LS_REST_KEY);
-    fireRestEndNotification();
+    // Son déjà programmé pour cette fin de repos (scheduleRestSound) : il
+    // joue tout seul ; sinon (repos repris après rechargement) on le joue.
+    if (!late && !restSoundScheduledFor(endedAt)) playRestEnd();
+    fireRestEndNotification(restPushBody);
     toast(t("Repos terminé"), 2200, { horns: true });
     return;
   }
@@ -809,11 +897,14 @@ function renderRestTimerBar() {
   document.body.appendChild(bar);
   bar.querySelector("#rt-add").onclick = () => {
     restTimerEnd += 15000;
+    scheduleRestSound(restTimerEnd);
     localStorage.setItem(LS_REST_KEY, String(restTimerEnd));
     scheduleRestPush(restTimerEnd, restPushBody);
     renderRestTimerBar();
   };
   bar.querySelector("#rt-skip").onclick = () => {
+    disarmLockSound();
+    cancelRestSound();
     clearInterval(restTimerInterval);
     restTimerEnd = null;
     cancelRestPush();

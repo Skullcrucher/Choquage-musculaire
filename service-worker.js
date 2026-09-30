@@ -1,5 +1,5 @@
 // À incrémenter avec APP_VERSION (js/utils.js) à chaque mise en ligne.
-const CACHE_NAME = "skullcrusher-cache-v89";
+const CACHE_NAME = "skullcrusher-cache-v92";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const APP_SHELL = [
   "./privacy.html",
   "./conditions.html",
   "./css/style.css",
+  "./sounds/rest-end.mp3",
   "./fonts/anton-latin-400-normal.woff2",
   "./fonts/inter-latin-400-normal.woff2",
   "./fonts/inter-latin-500-normal.woff2",
@@ -49,6 +50,7 @@ const APP_SHELL = [
   "./js/weekly-challenge.js",
   "./js/admin.js",
   "./js/week-sessions.js",
+  "./js/sound.js",
   "./js/settings.js",
   "./js/workout.js",
   "./js/utils.js",
@@ -127,6 +129,8 @@ self.addEventListener("push", (event) => {
     // Rappel de séance ouverte : notification distincte de celle du repos.
     tag: data.tag === "reminder" ? "skullcrusher-reminder" : "skullcrusher-rest-timer",
     renotify: true,
+    // Son et vibration du système (réglables dans les réglages du téléphone).
+    silent: false,
     vibrate: data.tag === "reminder" ? [100] : [200, 100, 200]
   }));
 });
