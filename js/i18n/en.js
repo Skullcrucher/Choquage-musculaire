@@ -1201,5 +1201,9 @@ export default {
   "Retirer le programme": "Remove the program",
   "Sur ordinateur, l'éditeur de routines s'affiche en grand pour aller plus vite.": "On a computer, the routine editor opens full-size to go faster.",
   "Visible par tout le monde dans Découvrir, avec le badge « Officiel ». Les charges ne sont pas publiées.": "Visible to everyone in Discover, with the “Official” badge. Weights aren't published.",
-  "« {name} » ne sera plus proposé dans Découvrir. Ceux qui l'ont déjà ajouté gardent leur copie.": "“{name}” will no longer be offered in Discover. Those who already added it keep their copy."
+  "« {name} » ne sera plus proposé dans Découvrir. Ceux qui l'ont déjà ajouté gardent leur copie.": "“{name}” will no longer be offered in Discover. Those who already added it keep their copy.",
+  "Aucun exercice : clique dans la bibliothèque à droite pour en ajouter.": "No exercise yet: click in the library on the right to add some.",
+  "Clique sur un exercice pour l'ajouter.": "Click an exercise to add it.",
+  "Ligne vide": "Empty row",
+  "Rechercher…": "Search…"
 };

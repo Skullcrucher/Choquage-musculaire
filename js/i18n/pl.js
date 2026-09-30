@@ -1210,5 +1210,9 @@ export default {
   "Retirer le programme": "Usuń program",
   "Sur ordinateur, l'éditeur de routines s'affiche en grand pour aller plus vite.": "Na komputerze edytor rutyn otwiera się w dużym oknie, by działać szybciej.",
   "Visible par tout le monde dans Découvrir, avec le badge « Officiel ». Les charges ne sont pas publiées.": "Widoczne dla wszystkich w Odkrywaj, z plakietką „Oficjalne”. Ciężary nie są publikowane.",
-  "« {name} » ne sera plus proposé dans Découvrir. Ceux qui l'ont déjà ajouté gardent leur copie.": "„{name}” nie będzie już proponowany w Odkrywaj. Ci, którzy go dodali, zachowują kopię."
+  "« {name} » ne sera plus proposé dans Découvrir. Ceux qui l'ont déjà ajouté gardent leur copie.": "„{name}” nie będzie już proponowany w Odkrywaj. Ci, którzy go dodali, zachowują kopię.",
+  "Aucun exercice : clique dans la bibliothèque à droite pour en ajouter.": "Brak ćwiczeń: kliknij w bibliotece po prawej, aby dodać.",
+  "Clique sur un exercice pour l'ajouter.": "Kliknij ćwiczenie, aby je dodać.",
+  "Ligne vide": "Pusty wiersz",
+  "Rechercher…": "Szukaj…"
 };

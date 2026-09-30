@@ -1185,3 +1185,58 @@ body.has-spotify-dock .rest-timer { bottom: calc(76px + var(--dock-h, 0px) + var
 .admin-box { margin-top: 14px; padding: 10px 12px; border: 1px dashed rgba(240,180,41,0.6); border-radius: 10px; background: rgba(240,180,41,0.06); }
 .admin-box-title { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #F0B429; margin-bottom: 8px; }
 .admin-btn { width: 100%; border-color: rgba(240,180,41,0.6) !important; color: #F0B429 !important; }
+
+/* =========================================================
+   AFFICHAGE ORDINATEUR (html.desktop, voir app.js : écran large
+   + souris). Barre d'onglets en colonne à gauche, contenu centré,
+   fenêtres centrées au lieu de panneaux montant du bas.
+   ========================================================= */
+html.desktop { --side-w: 232px; }
+html.desktop body > .topbar,
+html.desktop body > .view { margin-left: var(--side-w); }
+html.desktop .topbar { padding: 18px max(32px, calc((100% - 980px) / 2)) 10px; }
+html.desktop .view { padding: 0 32px 48px; }
+html.desktop .view > * { max-width: 980px; margin-left: auto; margin-right: auto; }
+html.desktop .tabbar {
+  top: 0; bottom: 0; left: 0; right: auto; width: var(--side-w);
+  flex-direction: column; justify-content: flex-start; gap: 4px;
+  padding: 96px 14px 20px; border-top: 0; border-right: 1px solid var(--border);
+}
+html.desktop .tab-btn {
+  flex: none; flex-direction: row; justify-content: flex-start; gap: 14px;
+  padding: 12px 14px; border-radius: 12px; width: 100%;
+}
+html.desktop .tab-btn:hover { background: var(--surface-raised); color: var(--text); }
+html.desktop .tab-btn:active { transform: none; }
+html.desktop .tab-btn.active { background: rgba(224,36,36,0.12); }
+html.desktop .tab-btn.active::before { top: 10px; bottom: 10px; left: 0; width: 3px; height: auto; }
+html.desktop .tab-label { font-size: 13px; }
+html.desktop .tab-btn.featured .tab-icon-badge { margin: 0; }
+html.desktop .rest-timer { left: calc(var(--side-w) + 32px); right: 32px; bottom: 20px; max-width: 700px; margin: 0 auto; }
+html.desktop .toast { bottom: 28px; left: calc(50% + var(--side-w) / 2); }
+html.desktop .modal-backdrop { align-items: center; justify-content: center; padding: 24px; }
+html.desktop .modal { max-width: 640px; max-height: calc(100vh - 48px); overflow-y: auto; border-radius: 16px; padding: 24px 26px; }
+html.desktop .modal.modal-wide { max-width: 1180px; }
+html.desktop .card:hover { border-color: #3a3a3e; }
+html.desktop .fold-head:hover .card-title { color: var(--red); }
+
+/* ---------- Éditeur de routine large (ordinateur) ---------- */
+.re-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
+.re-lib { position: sticky; top: 0; border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: var(--bg); max-height: calc(100vh - 150px); display: flex; flex-direction: column; }
+.re-lib-list { overflow-y: auto; margin-top: 8px; flex: 1; min-height: 120px; }
+.re-lib-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
+.re-lib-item:hover { background: var(--surface-raised); }
+.re-lib-item small { color: var(--text-dim); font-size: 11.5px; white-space: nowrap; }
+.re-lib-item .re-add { color: var(--red); font-weight: 800; }
+.re-table { width: 100%; border-collapse: collapse; }
+.re-table th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); text-align: left; padding: 6px 4px; font-weight: 700; }
+.re-table td { padding: 4px; vertical-align: middle; }
+.re-table tr.re-row:hover td { background: rgba(255,255,255,0.02); }
+.re-table input { padding: 8px 10px; margin: 0; }
+.re-table .re-num { width: 74px; }
+.re-table .re-reps { width: 90px; }
+.re-actions { white-space: nowrap; }
+.re-actions button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--text-dim); cursor: pointer; font: inherit; }
+.re-actions button:hover { color: var(--text); border-color: #444; }
+.re-actions button.re-del:hover { color: var(--red); border-color: var(--red); }
+.re-empty { padding: 20px; text-align: center; color: var(--text-dim); border: 1px dashed var(--border); border-radius: 10px; }

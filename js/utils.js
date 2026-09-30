@@ -12,8 +12,8 @@ import { t, locale } from "./i18n.js";
 //     worker (CACHE_NAME dans service-worker.js doit valoir
 //     skullcrusher-cache-v<APP_BUILD>).
 // Puis : node tools/stamp-version.mjs
-export const APP_VERSION = "0.81.00";
-export const APP_BUILD = 87;
+export const APP_VERSION = "0.82.00";
+export const APP_BUILD = 88;
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
@@ -99,6 +99,11 @@ export function closeModal() {
   if (document.querySelector(".modal-backdrop")) document.body.style.overflow = "hidden";
   window.dispatchEvent(new Event("sc:modal-close"));
 }
+
+// Affichage ordinateur : écran large ET souris/trackpad (pas une tablette
+// tactile). Classe « desktop » sur <html> (voir app.js et style.css).
+export const DESKTOP_QUERY = "(min-width: 1000px) and (hover: hover) and (pointer: fine)";
+export const isDesktop = () => document.documentElement.classList.contains("desktop");
 
 // Cartes repliables (.fold, en-tête .fold-head) : un toucher sur l'en-tête
 // déplie le détail. openSet garde les cartes ouvertes d'un affichage à l'autre.
