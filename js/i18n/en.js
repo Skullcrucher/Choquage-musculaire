@@ -1205,5 +1205,8 @@ export default {
   "Aucun exercice : clique dans la bibliothèque à droite pour en ajouter.": "No exercise yet: click in the library on the right to add some.",
   "Clique sur un exercice pour l'ajouter.": "Click an exercise to add it.",
   "Ligne vide": "Empty row",
-  "Rechercher…": "Search…"
+  "Rechercher…": "Search…",
+  "Aucune séance cette semaine.": "No workout this week.",
+  "Séances de la semaine prises en compte (terminées, avec des séries enregistrées) :": "This week's workouts that count (finished, with logged sets):",
+  "moins de 3 séries : ne compte pas": "under 3 sets: doesn't count"
 };

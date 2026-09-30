@@ -8,6 +8,7 @@ import * as db from "./db.js";
 import { toast, openModal, closeModal, esc, isoWeek, confirmDanger } from "./utils.js";
 import { getWorkouts, getExercises, getSetsForPeriod } from "./cache.js";
 import { guessMuscleGroup } from "./muscles.js";
+import { weekSessions } from "./week-sessions.js";
 import { t, locale } from "./i18n.js";
 
 const DAY = 86400000;
@@ -66,34 +67,65 @@ export function describeTarget(c) {
   return `${n} ${t(ty.unit)}${what}`;
 }
 
-// Progression de l'utilisateur connecté sur le défi (semaine du défi).
+// Lundi de la semaine ISO « 2026-W40 ».
+function mondayOfIsoWeek(wk) {
+  const [y, w] = wk.split("-W").map(Number);
+  const jan4 = new Date(y, 0, 4);
+  const monday = new Date(jan4); monday.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7 + (w - 1) * 7);
+  return monday;
+}
+
+// Progression de l'utilisateur connecté sur le défi : mêmes séances que le
+// compteur « Cette semaine » (week-sessions.js : terminées, pas dans le
+// futur, doublons comptés une fois) et uniquement les séries réellement
+// enregistrées (pas les valeurs seulement pré-remplies).
+// Renvoie { value, sessions: [{ w, sets }] } (séances qui comptent).
 export async function myProgress(c) {
-  if (!c || !TYPES[c.type]) return 0;
-  const inWeek = (iso) => iso && weekKey(new Date(iso)) === c.week;
-  const workouts = (await getWorkouts()).filter(w => w.end_time && inWeek(w.start_time));
+  if (!c || !TYPES[c.type]) return { value: 0, sessions: [] };
+  const { counted } = weekSessions(await getWorkouts(), c.week === weekKey() ? new Date() : mondayOfIsoWeek(c.week));
+  if (!counted.length) return { value: 0, sessions: [] };
+  const ids = new Set(counted.map(w => w.id));
+  const sets = (await getSetsForPeriod(2)).filter(s => ids.has(s.workout_id) && s.set_type !== "warmup" && ((s.reps || 0) > 0 || (s.weight_kg || 0) > 0));
+  const byWorkout = new Map();
+  for (const s of sets) byWorkout.set(s.workout_id, [...(byWorkout.get(s.workout_id) || []), s]);
+  const sessions = counted.map(w => ({ w, sets: byWorkout.get(w.id) || [] })).filter(x => x.sets.length);
+  const tonnage = (list) => list.reduce((a, s) => a + (s.weight_kg || 0) * (s.reps || 0), 0);
+  let value = 0;
   switch (c.type) {
-    case "workouts": return workouts.filter(w => (w.total_sets ?? MIN_SETS) >= MIN_SETS).length;
-    case "days": return new Set(workouts.map(w => new Date(w.start_time).toDateString())).size;
-    case "tonnage": return Math.round(workouts.reduce((a, w) => a + (w.total_tonnage || 0), 0));
-    case "sets": return workouts.reduce((a, w) => a + (w.total_sets || 0), 0);
-    case "records": return workouts.reduce((a, w) => a + (w.records?.length || 0), 0);
+    case "workouts": value = sessions.filter(x => x.sets.length >= MIN_SETS).length; break;
+    case "days": value = new Set(sessions.map(x => new Date(x.w.start_time).toDateString())).size; break;
+    case "tonnage": value = Math.round(tonnage(sets)); break;
+    case "sets": value = sets.length; break;
+    case "records": value = sessions.reduce((a, x) => a + (x.w.records?.length || 0), 0); break;
+    case "exercise_reps":
+    case "exercise_tonnage": {
+      const name = String(c.exercise || "").toLowerCase();
+      const mine = sets.filter(s => String(s.exercise_title || "").toLowerCase() === name);
+      value = c.type === "exercise_reps" ? mine.reduce((a, s) => a + (s.reps || 0), 0) : Math.round(tonnage(mine));
+      break;
+    }
+    case "muscle_sets": {
+      const lib = await getExercises().catch(() => []);
+      const group = (n) => lib.find(e => e.name === n)?.muscle_group || guessMuscleGroup(n);
+      value = sets.filter(s => (s.reps || 0) > 0 && group(s.exercise_title) === c.muscle).length;
+      break;
+    }
   }
-  // Séries de la semaine (les 2 dernières semaines suffisent).
-  const ids = new Set(workouts.map(w => w.id));
-  const sets = (await getSetsForPeriod(2)).filter(s => (s.workout_id ? ids.has(s.workout_id) : inWeek(s.workout_start_time)) && s.set_type !== "warmup");
-  if (c.type === "exercise_reps" || c.type === "exercise_tonnage") {
-    const name = String(c.exercise || "").toLowerCase();
-    const mine = sets.filter(s => String(s.exercise_title || "").toLowerCase() === name);
-    return c.type === "exercise_reps"
-      ? mine.reduce((a, s) => a + (s.reps || 0), 0)
-      : Math.round(mine.reduce((a, s) => a + (s.weight_kg || 0) * (s.reps || 0), 0));
-  }
-  if (c.type === "muscle_sets") {
-    const lib = await getExercises().catch(() => []);
-    const group = (n) => lib.find(e => e.name === n)?.muscle_group || guessMuscleGroup(n);
-    return sets.filter(s => (s.reps || 0) > 0 && group(s.exercise_title) === c.muscle).length;
-  }
-  return 0;
+  return { value, sessions };
+}
+
+// Séances prises en compte (toucher la progression du défi).
+function openProgressDetail(c, sessions) {
+  const fmt = (w) => new Date(w.start_time).toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "short" });
+  openModal(`
+    <h3>🎯 ${esc(c.title)}</h3>
+    <p class="muted" style="margin-top:0; font-size:13px;">${t("Séances de la semaine prises en compte (terminées, avec des séries enregistrées) :")}</p>
+    ${sessions.length ? sessions.map(({ w, sets }) => `
+      <div class="list-row"><div><div class="list-row-title">${esc(w.title || t("Séance"))}</div><div class="list-row-sub">${esc(fmt(w))}</div></div>
+      <span class="list-row-meta">${sets.length} ${t("séries")}${c.type === "workouts" && sets.length < MIN_SETS ? ` · ${t("moins de 3 séries : ne compte pas")}` : ""}</span></div>`).join("")
+      : `<p class="muted">${t("Aucune séance cette semaine.")}</p>`}
+    <button class="btn btn-secondary" id="wcd-close" style="margin-top:12px;">${t("Fermer")}</button>
+  `, (m) => { m.querySelector("#wcd-close").onclick = closeModal; });
 }
 
 // ---------- Affichage (onglet Feed → Défis) ----------
@@ -110,7 +142,8 @@ export async function weeklyChallengeHtml() {
         <button class="btn btn-primary btn-sm" data-wc-edit="${wk}">✏️ ${t("Choisir le défi de la semaine")}</button>
       </div>` };
   }
-  const value = await myProgress(c).catch(() => 0);
+  const { value, sessions } = await myProgress(c).catch(e => { console.warn("[Skullcrusher] Progression du défi", e); return { value: 0, sessions: [] }; });
+  lastDetail = { c, sessions };
   const pct = Math.min(100, Math.round(value / Math.max(1, c.target) * 100));
   const done = value >= c.target;
   const left = Math.max(0, Math.ceil((new Date(weekEnd(wk)) - Date.now()) / DAY));
@@ -122,10 +155,12 @@ export async function weeklyChallengeHtml() {
       </div>
       <div class="muted" style="font-size:12px; margin-bottom:8px;">${t("Défi de la semaine")} · ${esc(describeTarget(c))} · ${left > 1 ? t("encore {n} jours", { n: left }) : t("dernier jour")}</div>
       ${c.description ? `<p style="margin:0 0 10px; font-size:14px;">${esc(c.description)}</p>` : ""}
-      <div class="wc-bar"><div style="width:${pct}%"></div></div>
-      <div style="display:flex; justify-content:space-between; font-size:13px; margin-top:6px;">
-        <span>${done ? `✅ ${t("Défi réussi !")}` : t("Ta progression")}</span>
-        <b>${Number(value).toLocaleString(locale())} / ${Number(c.target).toLocaleString(locale())}</b>
+      <div data-wc-detail style="cursor:pointer;">
+        <div class="wc-bar"><div style="width:${pct}%"></div></div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-top:6px;">
+          <span>${done ? `✅ ${t("Défi réussi !")}` : t("Ta progression")} <span class="muted">›</span></span>
+          <b>${Number(value).toLocaleString(locale())} / ${Number(c.target).toLocaleString(locale())}</b>
+        </div>
       </div>
       ${admin ? `<button class="btn btn-secondary btn-sm" data-wc-edit="${weekKey(new Date(Date.now() + 7 * DAY))}" style="margin-top:10px;">📅 ${t("Préparer le défi de la semaine prochaine")}</button>` : ""}
     </div>` };
@@ -138,8 +173,10 @@ function weekEnd(wk) {
   return weekKey(d) === wk ? sunday : new Date(sunday.getTime() + 7 * DAY);
 }
 
+let lastDetail = null;
 export function bindWeeklyChallenge(root, onChanged) {
   root.querySelectorAll("[data-wc-edit]").forEach(b => b.onclick = () => openChallengeEditor(b.dataset.wcEdit, onChanged));
+  root.querySelectorAll("[data-wc-detail]").forEach(el => el.onclick = () => lastDetail && openProgressDetail(lastDetail.c, lastDetail.sessions));
 }
 
 // ---------- Édition (administrateur) ----------

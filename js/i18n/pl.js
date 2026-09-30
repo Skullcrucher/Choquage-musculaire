@@ -1214,5 +1214,8 @@ export default {
   "Aucun exercice : clique dans la bibliothèque à droite pour en ajouter.": "Brak ćwiczeń: kliknij w bibliotece po prawej, aby dodać.",
   "Clique sur un exercice pour l'ajouter.": "Kliknij ćwiczenie, aby je dodać.",
   "Ligne vide": "Pusty wiersz",
-  "Rechercher…": "Szukaj…"
+  "Rechercher…": "Szukaj…",
+  "Aucune séance cette semaine.": "Brak treningów w tym tygodniu.",
+  "Séances de la semaine prises en compte (terminées, avec des séries enregistrées) :": "Treningi tego tygodnia, które się liczą (ukończone, z zapisanymi seriami):",
+  "moins de 3 séries : ne compte pas": "mniej niż 3 serie: nie liczy się"
 };
