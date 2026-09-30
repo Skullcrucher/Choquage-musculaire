@@ -1237,5 +1237,9 @@ export default {
   "Garanti (met la musique en pause pendant le repos)": "Gwarantowany (wstrzymuje muzykę w przerwie)",
   "Notification seulement": "Tylko powiadomienie",
   "Mélangé : ton son joue par-dessus la musique sans l'arrêter. Sur Android il retentit aussi écran verrouillé ; sur iPhone, iOS coupe ce type de son écran verrouillé, c'est alors la notification (son du téléphone, sans couper la musique) qui prévient. Garanti : ton son retentit toujours, mais la musique d'une autre app est mise en pause pendant le repos.": "Zmiksowany: twój dźwięk gra na muzyce, nie zatrzymując jej. Na Androidzie gra też przy zablokowanym ekranie; na iPhonie iOS wycisza taki dźwięk po zablokowaniu, wtedy ostrzega powiadomienie (dźwięk telefonu, muzyka gra dalej). Gwarantowany: dźwięk zawsze gra, ale muzyka innej aplikacji jest wstrzymana na czas przerwy.",
-  "Le son de reprise retentit à la fin de chaque repos.": "Dźwięk wznowienia gra na końcu każdej przerwy."
+  "Le son de reprise retentit à la fin de chaque repos.": "Dźwięk wznowienia gra na końcu każdej przerwy.",
+  "Décalée": "Przesunięty",
+  "Rattraper : {routine}": "Nadrób: {routine}",
+  "À rattraper cette semaine": "Do nadrobienia w tym tygodniu",
+  "Manquée": "Pominięty"
 };
