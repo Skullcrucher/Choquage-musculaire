@@ -1221,5 +1221,11 @@ export default {
   "Son de fin de repos": "Son lafin repo",
   "Quand l'app est à l'écran : tic-tac des 3 dernières secondes puis le son de reprise.": "Kan lapp lor lekran : tik-tak 3 dernie segonn apre son repran.",
   "Son même écran verrouillé": "Son mem lekran bloke",
-  "Si tu verrouilles pendant un repos, le son retentit à la fin et le repos s'affiche comme un lecteur (exercice, série, progression). Comme tout lecteur audio, il met en pause la musique d'une autre app (Spotify…) pendant le repos.": "Si to bloke pandan enn repo, son-la zwe alafin ek repo-la afise kouma enn lekter (legzersis, seri, progresion). Kouma tou lekter odio, li met poz lamizik enn lot app (Spotify…) pandan repo."
+  "Si tu verrouilles pendant un repos, le son retentit à la fin et le repos s'affiche comme un lecteur (exercice, série, progression). Comme tout lecteur audio, il met en pause la musique d'une autre app (Spotify…) pendant le repos.": "Si to bloke pandan enn repo, son-la zwe alafin ek repo-la afise kouma enn lekter (legzersis, seri, progresion). Kouma tou lekter odio, li met poz lamizik enn lot app (Spotify…) pandan repo.",
+  "Son écran verrouillé": "Son lekran bloke",
+  "Mélangé à la musique (ne coupe rien)": "Melanze ar lamizik (pa koup nanye)",
+  "Garanti (met la musique en pause pendant le repos)": "Garanti (met lamizik an poz pandan repo)",
+  "Notification seulement": "Notifikasion selman",
+  "Mélangé : ton son joue par-dessus la musique sans l'arrêter. Sur Android il retentit aussi écran verrouillé ; sur iPhone, iOS coupe ce type de son écran verrouillé, c'est alors la notification (son du téléphone, sans couper la musique) qui prévient. Garanti : ton son retentit toujours, mais la musique d'une autre app est mise en pause pendant le repos.": "Melanze : to son zwe lor lamizik san aret li. Lor Android li zwe osi lekran bloke ; lor iPhone, iOS koup sa kalite son-la lekran bloke, alor se notifikasion (son telefonn, lamizik kontinie) ki averti. Garanti : to son zwe touzour, me lamizik enn lot app met an poz pandan repo.",
+  "Le son de reprise retentit à la fin de chaque repos.": "Son repran zwe alafin sak repo."
 };

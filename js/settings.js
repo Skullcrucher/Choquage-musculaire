@@ -188,23 +188,20 @@ export async function renderReglages(container) {
       <div class="list-row" style="cursor:default; margin-top:6px;">
         <div>
           <div class="list-row-title">🔊 ${t("Son de fin de repos")}</div>
-          <div class="list-row-sub">${t("Quand l'app est à l'écran : tic-tac des 3 dernières secondes puis le son de reprise.")}</div>
+          <div class="list-row-sub">${t("Le son de reprise retentit à la fin de chaque repos.")}</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="sound-toggle" ${(() => { try { return localStorage.getItem("skullcrusher_rest_sound") !== "0"; } catch (_) { return true; } })() ? "checked" : ""}>
           <span class="switch-track"></span>
         </label>
       </div>
-      <div class="list-row" style="cursor:default; margin-top:6px;">
-        <div>
-          <div class="list-row-title">🔒🔊 ${t("Son même écran verrouillé")}</div>
-          <div class="list-row-sub">${t("Si tu verrouilles pendant un repos, le son retentit à la fin et le repos s'affiche comme un lecteur (exercice, série, progression). Comme tout lecteur audio, il met en pause la musique d'une autre app (Spotify…) pendant le repos.")}</div>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="locksound-toggle" ${(() => { try { return localStorage.getItem("skullcrusher_lock_sound") !== "0"; } catch (_) { return true; } })() ? "checked" : ""}>
-          <span class="switch-track"></span>
-        </label>
-      </div>
+      <label style="margin-top:10px;">🔒🔊 ${t("Son écran verrouillé")}</label>
+      <select id="locksound-mode">
+        <option value="mix">${t("Mélangé à la musique (ne coupe rien)")}</option>
+        <option value="exclusive">${t("Garanti (met la musique en pause pendant le repos)")}</option>
+        <option value="off">${t("Notification seulement")}</option>
+      </select>
+      <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Mélangé : ton son joue par-dessus la musique sans l'arrêter. Sur Android il retentit aussi écran verrouillé ; sur iPhone, iOS coupe ce type de son écran verrouillé, c'est alors la notification (son du téléphone, sans couper la musique) qui prévient. Garanti : ton son retentit toujours, mais la musique d'une autre app est mise en pause pendant le repos.")}</p>
       <div class="list-row" style="cursor:default; margin-top:6px;">
         <div>
           <div class="list-row-title">🔒 ${t("Carte sur l'écran verrouillé")}</div>
@@ -371,7 +368,9 @@ export async function renderReglages(container) {
     snd.setRestSoundEnabled(e.target.checked);
     if (e.target.checked) { snd.unlockAudio(); snd.playRestEnd(); }
   };
-  container.querySelector("#locksound-toggle").onchange = async (e) => (await import("./sound.js")).setLockSoundEnabled(e.target.checked);
+  const lockSel = container.querySelector("#locksound-mode");
+  import("./sound.js").then(m => { lockSel.value = m.lockSoundMode(); });
+  lockSel.onchange = async () => (await import("./sound.js")).setLockSoundMode(lockSel.value);
   container.querySelector("#lockcard-toggle").onchange = (e) => {
     try { localStorage.setItem("skullcrusher_lock_card", e.target.checked ? "1" : "0"); } catch (_) {}
   };

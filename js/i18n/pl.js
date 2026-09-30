@@ -1231,5 +1231,11 @@ export default {
   "Son de fin de repos": "Dźwięk końca przerwy",
   "Quand l'app est à l'écran : tic-tac des 3 dernières secondes puis le son de reprise.": "Gdy aplikacja jest na ekranie: tykanie przez ostatnie 3 sekundy, potem dźwięk wznowienia.",
   "Son même écran verrouillé": "Dźwięk także przy zablokowanym ekranie",
-  "Si tu verrouilles pendant un repos, le son retentit à la fin et le repos s'affiche comme un lecteur (exercice, série, progression). Comme tout lecteur audio, il met en pause la musique d'une autre app (Spotify…) pendant le repos.": "Jeśli zablokujesz ekran w trakcie przerwy, dźwięk zabrzmi na końcu, a przerwa pojawi się jako odtwarzacz (ćwiczenie, seria, postęp). Jak każdy odtwarzacz, wstrzymuje muzykę innej aplikacji (Spotify…) na czas przerwy."
+  "Si tu verrouilles pendant un repos, le son retentit à la fin et le repos s'affiche comme un lecteur (exercice, série, progression). Comme tout lecteur audio, il met en pause la musique d'une autre app (Spotify…) pendant le repos.": "Jeśli zablokujesz ekran w trakcie przerwy, dźwięk zabrzmi na końcu, a przerwa pojawi się jako odtwarzacz (ćwiczenie, seria, postęp). Jak każdy odtwarzacz, wstrzymuje muzykę innej aplikacji (Spotify…) na czas przerwy.",
+  "Son écran verrouillé": "Dźwięk przy zablokowanym ekranie",
+  "Mélangé à la musique (ne coupe rien)": "Zmiksowany z muzyką (nic nie przerywa)",
+  "Garanti (met la musique en pause pendant le repos)": "Gwarantowany (wstrzymuje muzykę w przerwie)",
+  "Notification seulement": "Tylko powiadomienie",
+  "Mélangé : ton son joue par-dessus la musique sans l'arrêter. Sur Android il retentit aussi écran verrouillé ; sur iPhone, iOS coupe ce type de son écran verrouillé, c'est alors la notification (son du téléphone, sans couper la musique) qui prévient. Garanti : ton son retentit toujours, mais la musique d'une autre app est mise en pause pendant le repos.": "Zmiksowany: twój dźwięk gra na muzyce, nie zatrzymując jej. Na Androidzie gra też przy zablokowanym ekranie; na iPhonie iOS wycisza taki dźwięk po zablokowaniu, wtedy ostrzega powiadomienie (dźwięk telefonu, muzyka gra dalej). Gwarantowany: dźwięk zawsze gra, ale muzyka innej aplikacji jest wstrzymana na czas przerwy.",
+  "Le son de reprise retentit à la fin de chaque repos.": "Dźwięk wznowienia gra na końcu każdej przerwy."
 };

@@ -3,7 +3,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { weekSessions } from "./week-sessions.js";
-import { unlockAudio, playRestEnd, playCountdownTick, armLockSound, disarmLockSound } from "./sound.js";
+import { unlockAudio, playRestEnd, armLockSound, disarmLockSound, scheduleRestSound, cancelRestSound, restSoundScheduledFor, lockSoundMode } from "./sound.js";
 import { icon, segHtml } from "./icons.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce, fireRestEndNotification, esc, defaultSetType, confirmDanger } from "./utils.js";
 import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate } from "./cache.js";
@@ -764,6 +764,7 @@ function scheduleRestPush(endMs, body) {
   loadTimerSync().then(m => m?.scheduleRestPush(endMs, body));
 }
 function cancelRestPush() {
+  cancelRestSound();
   loadTimerSync().then(m => m?.cancelRestPush());
 }
 
@@ -824,6 +825,8 @@ async function hideLockCard() {
 // de repos à l'heure prévue (voir sound.js), avec l'exercice et la série
 // sur le lecteur de l'écran verrouillé.
 function armRestSound() {
+  // Mode « mélangé » : le son est déjà programmé (scheduleRestSound).
+  if (lockSoundMode() !== "exclusive") return;
   if (!currentWorkout || !restTimerEnd || restTimerEnd <= Date.now()) return;
   const next = nextSetInfo();
   const hhmm = new Date(restTimerEnd).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
@@ -834,7 +837,11 @@ function armRestSound() {
 }
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) { showLockCard(); armRestSound(); }
-  else { hideLockCard(); disarmLockSound(); }
+  else {
+    hideLockCard();
+    // Mode garanti : on repasse au son programmé, qui ne coupe pas la musique.
+    if (lockSoundMode() === "exclusive") { disarmLockSound(); if (restTimerEnd > Date.now()) scheduleRestSound(restTimerEnd); }
+  }
 });
 export const _lockCardForTests = { showLockCard, nextSetInfo, setLine };
 
@@ -843,6 +850,7 @@ function startRestTimer(seconds, pushBody = "") {
   restTimerEnd = Date.now() + seconds * 1000;
   restTotalSec = seconds;
   restPushBody = pushBody;
+  scheduleRestSound(restTimerEnd);
   localStorage.setItem(LS_REST_KEY, String(restTimerEnd));
   scheduleRestPush(restTimerEnd, restPushBody);
   renderRestTimerBar();
@@ -871,14 +879,16 @@ function renderRestTimerBar() {
     // Retour dans l'app bien après la fin (le son a déjà été joué écran
     // verrouillé) : pas de son en retard.
     const late = Date.now() - restTimerEnd > 3000;
+    const endedAt = restTimerEnd;
     restTimerEnd = null;
     localStorage.removeItem(LS_REST_KEY);
-    if (!late) playRestEnd();
+    // Son déjà programmé pour cette fin de repos (scheduleRestSound) : il
+    // joue tout seul ; sinon (repos repris après rechargement) on le joue.
+    if (!late && !restSoundScheduledFor(endedAt)) playRestEnd();
     fireRestEndNotification(restPushBody);
     toast(t("Repos terminé"), 2200, { horns: true });
     return;
   }
-  if (remaining <= 3) playCountdownTick();
   const mm = Math.floor(remaining / 60);
   const ss = String(remaining % 60).padStart(2, "0");
   const bar = document.createElement("div");
@@ -887,12 +897,14 @@ function renderRestTimerBar() {
   document.body.appendChild(bar);
   bar.querySelector("#rt-add").onclick = () => {
     restTimerEnd += 15000;
+    scheduleRestSound(restTimerEnd);
     localStorage.setItem(LS_REST_KEY, String(restTimerEnd));
     scheduleRestPush(restTimerEnd, restPushBody);
     renderRestTimerBar();
   };
   bar.querySelector("#rt-skip").onclick = () => {
     disarmLockSound();
+    cancelRestSound();
     clearInterval(restTimerInterval);
     restTimerEnd = null;
     cancelRestPush();

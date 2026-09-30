@@ -1,19 +1,20 @@
 // ============================================================
-// SONS DE FIN DE REPOS
-//  - App à l'écran : tic des 3 dernières secondes (Web Audio) puis le son
-//    de fin de repos (sounds/rest-end.mp3).
-//  - Écran verrouillé : le téléphone suspend l'app, aucun minuteur ne
-//    tourne. Au verrouillage pendant un repos, on lance donc une piste
-//    audio préparée à l'avance : silence jusqu'à la fin du repos, puis le
-//    son. Elle continue de jouer écran verrouillé et s'affiche comme un
-//    lecteur (exercice, série, barre de progression du repos). Revers :
-//    comme tout lecteur audio, elle met en pause la musique d'une autre
-//    app (Spotify…) pendant le repos. Réglage « Son écran verrouillé ».
+// SON DE FIN DE REPOS (sounds/rest-end.mp3), sans bips.
+//  - Dès le début du repos, le son est programmé dans le moteur audio
+//    (Web Audio) pour l'heure de fin : il se mélange à la musique d'une
+//    autre app sans la couper ni la baisser (catégorie « ambient »).
+//    Android : il continue de jouer écran verrouillé. iPhone : iOS coupe
+//    ce type de son quand l'écran est verrouillé — la notification de fin
+//    de repos (son du système, par-dessus la musique) prend le relais.
+//  - Mode « garanti » (réglage) : au verrouillage, piste silence + son
+//    lue comme un lecteur audio. Joue écran verrouillé partout, mais met
+//    en pause la musique d'une autre app pendant le repos.
 // Le navigateur n'autorise le son qu'après un geste : unlockAudio() est
 // appelé au toucher d'une série validée.
 // ============================================================
 const LS_SOUND = "skullcrusher_rest_sound";
-const LS_LOCK_SOUND = "skullcrusher_lock_sound";
+const LS_LOCK_SOUND = "skullcrusher_lock_sound"; // ancien réglage (0 = désactivé)
+const LS_LOCK_MODE = "skullcrusher_lock_sound_mode"; // "mix" | "exclusive" | "off"
 const SOUND_URL = "sounds/rest-end.mp3";
 const RATE = 16000; // piste d'écran verrouillé : mono 16 kHz (léger)
 let ctx = null, buffer = null, loading = null, lockEl = null, lockUrl = null;
@@ -22,8 +23,13 @@ const get = (k) => { try { return localStorage.getItem(k); } catch (_) { return 
 const set = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
 export const restSoundEnabled = () => get(LS_SOUND) !== "0";
 export const setRestSoundEnabled = (on) => set(LS_SOUND, on ? "1" : "0");
-export const lockSoundEnabled = () => get(LS_LOCK_SOUND) !== "0";
-export const setLockSoundEnabled = (on) => set(LS_LOCK_SOUND, on ? "1" : "0");
+export function lockSoundMode() {
+  const m = get(LS_LOCK_MODE);
+  if (m === "mix" || m === "exclusive" || m === "off") return m;
+  return get(LS_LOCK_SOUND) === "0" ? "off" : "mix";
+}
+export const setLockSoundMode = (m) => set(LS_LOCK_MODE, m);
+const lockSoundEnabled = () => lockSoundMode() === "exclusive";
 
 function audioCtx() {
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -52,8 +58,10 @@ export function unlockAudio() {
     const c = audioCtx();
     if (c && c.state === "suspended") c.resume();
     loadBuffer();
-    // Élément audio de l'écran verrouillé : un play() pendant le geste
+    // Élément audio de l'écran verrouillé (mode garanti seulement : un
+    // lecteur audio couperait la musique) : un play() pendant le geste
     // autorise les suivants (iOS).
+    if (lockSoundMode() !== "exclusive") return;
     if (!lockEl) { lockEl = new Audio(); lockEl.preload = "auto"; lockEl.setAttribute("playsinline", ""); }
     if (lockEl.paused && !lockEl.src) {
       lockEl.src = silentWavUrl();
@@ -62,47 +70,50 @@ export function unlockAudio() {
   } catch (_) {}
 }
 
-function beep(freq, dur, at = 0, vol = 0.35) {
-  const t0 = ctx.currentTime + at;
-  const osc = ctx.createOscillator(), gain = ctx.createGain();
-  osc.type = "square";
-  osc.frequency.value = freq;
-  gain.gain.setValueAtTime(0.0001, t0);
-  gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.01);
-  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  osc.connect(gain).connect(ctx.destination);
-  osc.start(t0);
-  osc.stop(t0 + dur + 0.05);
-}
-
-function ready() {
-  if (!restSoundEnabled() || document.hidden) return false;
-  // Safari : son bref qui baisse la musique en cours au lieu de l'arrêter.
-  try { if (navigator.audioSession) navigator.audioSession.type = "transient"; } catch (_) {}
+function ready(type = "ambient") {
+  if (!restSoundEnabled()) return false;
+  // « ambient » : se mélange à la musique d'une autre app sans la couper.
+  try { if (navigator.audioSession) navigator.audioSession.type = type; } catch (_) {}
   const c = audioCtx();
   if (c?.state === "suspended") c.resume();
   return !!c && c.state !== "closed";
 }
 
-// Petit « tic » des 3 dernières secondes.
-export function playCountdownTick() {
-  if (!ready()) return;
-  beep(660, 0.08, 0, 0.18);
+// Joue le son tout de suite (test dans les réglages, reprise après
+// rechargement de l'app).
+export async function playRestEnd() {
+  if (document.hidden || !ready()) return;
+  const buf = await loadBuffer();
+  if (!buf || !ctx) return;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  src.start();
 }
 
-// Fin du repos (app à l'écran) : le son choisi, ou des bips en secours.
-export async function playRestEnd() {
-  if (!ready()) return;
+// Programme le son pour endMs (remplace la programmation précédente).
+let scheduled = null, scheduledEnd = 0;
+export async function scheduleRestSound(endMs) {
+  cancelRestSound();
+  if (!ready()) return false;
   const buf = await loadBuffer();
-  if (buf && ctx) {
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(ctx.destination);
-    src.start();
-  } else {
-    beep(880, 0.12, 0); beep(880, 0.12, 0.2); beep(1320, 0.45, 0.4);
-  }
+  if (!buf || !ctx) return false;
+  const delay = (endMs - Date.now()) / 1000;
+  if (delay < 0) return false;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  src.start(ctx.currentTime + delay);
+  scheduled = src; scheduledEnd = endMs;
+  src.onended = () => { if (scheduled === src) scheduled = null; };
+  return true;
 }
+export function cancelRestSound() {
+  try { scheduled?.stop(); } catch (_) {}
+  scheduled = null; scheduledEnd = 0;
+}
+// Le son de cette fin de repos est-il programmé (donc déjà joué / en cours) ?
+export const restSoundScheduledFor = (endMs) => !!endMs && Math.abs(scheduledEnd - endMs) < 1000;
 
 // ---------- Piste d'écran verrouillé ----------
 function wavUrl(samples) {
@@ -143,6 +154,7 @@ export async function armLockSound(endMs, totalSec, info = {}) {
   const all = new Float32Array(silence + snd.length);
   all.set(snd, silence);
   disarmLockSound();
+  cancelRestSound();
   lockUrl = wavUrl(all);
   try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (_) {}
   lockEl.src = lockUrl;

@@ -1222,5 +1222,11 @@ export default {
   "Son de fin de repos": "End-of-rest sound",
   "Quand l'app est à l'écran : tic-tac des 3 dernières secondes puis le son de reprise.": "When the app is on screen: ticks for the last 3 seconds, then the restart sound.",
   "Son même écran verrouillé": "Sound even when locked",
-  "Si tu verrouilles pendant un repos, le son retentit à la fin et le repos s'affiche comme un lecteur (exercice, série, progression). Comme tout lecteur audio, il met en pause la musique d'une autre app (Spotify…) pendant le repos.": "If you lock during a rest, the sound plays at the end and the rest shows as a player (exercise, set, progress). Like any audio player, it pauses music from another app (Spotify…) during the rest."
+  "Si tu verrouilles pendant un repos, le son retentit à la fin et le repos s'affiche comme un lecteur (exercice, série, progression). Comme tout lecteur audio, il met en pause la musique d'une autre app (Spotify…) pendant le repos.": "If you lock during a rest, the sound plays at the end and the rest shows as a player (exercise, set, progress). Like any audio player, it pauses music from another app (Spotify…) during the rest.",
+  "Son écran verrouillé": "Sound when locked",
+  "Mélangé à la musique (ne coupe rien)": "Mixed with music (interrupts nothing)",
+  "Garanti (met la musique en pause pendant le repos)": "Guaranteed (pauses music during rest)",
+  "Notification seulement": "Notification only",
+  "Mélangé : ton son joue par-dessus la musique sans l'arrêter. Sur Android il retentit aussi écran verrouillé ; sur iPhone, iOS coupe ce type de son écran verrouillé, c'est alors la notification (son du téléphone, sans couper la musique) qui prévient. Garanti : ton son retentit toujours, mais la musique d'une autre app est mise en pause pendant le repos.": "Mixed: your sound plays over the music without stopping it. On Android it also plays when locked; on iPhone, iOS mutes this kind of sound when locked, so the notification (phone sound, music keeps playing) alerts you. Guaranteed: your sound always plays, but another app's music is paused during the rest.",
+  "Le son de reprise retentit à la fin de chaque repos.": "The restart sound plays at the end of each rest."
 };
