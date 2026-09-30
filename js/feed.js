@@ -29,7 +29,7 @@ export function workoutMusicHtml(w) {
     </div>`;
 }
 
-let feedMode = "workouts"; // "workouts" | "challenges" | "music" | "friends"
+let feedMode = "workouts"; // "workouts" | "challenges" | "friends" (la musique a son onglet)
 
 const MUSCLE_EMOJI = {
   "Pectoraux": "💥", "Dos": "🦍", "Épaules": "🏔️", "Biceps": "💪", "Triceps": "🔱",
@@ -66,7 +66,7 @@ function tonnageFun(kg) {
 export async function renderFeedTab(container) {
   container.innerHTML = `
     <h1 class="section-title">${t("Feed")} <img class="title-horns" src="icons/horns.png" alt=""></h1>
-    ${segHtml([["workouts", t("Séances"), "workouts"], ["challenges", t("Défis"), "trophy"], ["music", t("Son"), "music"], ["friends", t("Amis"), "friends"]], feedMode, "data-fmode", { extra: { friends: `<span id="friend-req-count"></span>` } })}
+    ${segHtml([["workouts", t("Séances"), "workouts"], ["challenges", t("Défis"), "trophy"], ["friends", t("Amis"), "friends"]], feedMode, "data-fmode", { extra: { friends: `<span id="friend-req-count"></span>` } })}
     <div id="feed-body"></div>
   `;
   container.querySelectorAll("[data-fmode]").forEach(chip => {
@@ -88,7 +88,6 @@ async function drawFeedBody(container) {
   if (!body) return;
   if (feedMode === "friends") await renderFriends(body);
   else if (feedMode === "challenges") await (await import("./challenges.js")).renderChallenges(body);
-  else if (feedMode === "music") await (await import("./music-wall.js")).renderMusicWall(body);
   else await renderFeedWorkouts(body);
 }
 
