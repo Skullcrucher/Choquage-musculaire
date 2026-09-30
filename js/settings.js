@@ -187,11 +187,21 @@ export async function renderReglages(container) {
       <p class="muted" style="font-size:12px; margin:6px 0 0;">${t("Le son des notifications est celui du téléphone. iPhone : Réglages → Notifications → Skullcrusher → Sons. Android : appui long sur la notification → Paramètres.")}</p>
       <div class="list-row" style="cursor:default; margin-top:6px;">
         <div>
-          <div class="list-row-title">🔊 ${t("Bips de fin de repos")}</div>
-          <div class="list-row-sub">${t("Quand l'app est à l'écran : tic-tac des 3 dernières secondes puis signal de reprise.")}</div>
+          <div class="list-row-title">🔊 ${t("Son de fin de repos")}</div>
+          <div class="list-row-sub">${t("Quand l'app est à l'écran : tic-tac des 3 dernières secondes puis le son de reprise.")}</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="sound-toggle" ${(() => { try { return localStorage.getItem("skullcrusher_rest_sound") !== "0"; } catch (_) { return true; } })() ? "checked" : ""}>
+          <span class="switch-track"></span>
+        </label>
+      </div>
+      <div class="list-row" style="cursor:default; margin-top:6px;">
+        <div>
+          <div class="list-row-title">🔒🔊 ${t("Son même écran verrouillé")}</div>
+          <div class="list-row-sub">${t("Si tu verrouilles pendant un repos, le son retentit à la fin et le repos s'affiche comme un lecteur (exercice, série, progression). Comme tout lecteur audio, il met en pause la musique d'une autre app (Spotify…) pendant le repos.")}</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="locksound-toggle" ${(() => { try { return localStorage.getItem("skullcrusher_lock_sound") !== "0"; } catch (_) { return true; } })() ? "checked" : ""}>
           <span class="switch-track"></span>
         </label>
       </div>
@@ -361,6 +371,7 @@ export async function renderReglages(container) {
     snd.setRestSoundEnabled(e.target.checked);
     if (e.target.checked) { snd.unlockAudio(); snd.playRestEnd(); }
   };
+  container.querySelector("#locksound-toggle").onchange = async (e) => (await import("./sound.js")).setLockSoundEnabled(e.target.checked);
   container.querySelector("#lockcard-toggle").onchange = (e) => {
     try { localStorage.setItem("skullcrusher_lock_card", e.target.checked ? "1" : "0"); } catch (_) {}
   };

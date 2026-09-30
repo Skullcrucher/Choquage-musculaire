@@ -1227,5 +1227,9 @@ export default {
   "Repos jusqu'à {time}": "Przerwa do {time}",
   "Séance en cours depuis {n} min": "Trening trwa od {n} min",
   "Série {i}/{n}": "Seria {i}/{n}",
-  "Toutes les séries sont faites": "Wszystkie serie zrobione"
+  "Toutes les séries sont faites": "Wszystkie serie zrobione",
+  "Son de fin de repos": "Dźwięk końca przerwy",
+  "Quand l'app est à l'écran : tic-tac des 3 dernières secondes puis le son de reprise.": "Gdy aplikacja jest na ekranie: tykanie przez ostatnie 3 sekundy, potem dźwięk wznowienia.",
+  "Son même écran verrouillé": "Dźwięk także przy zablokowanym ekranie",
+  "Si tu verrouilles pendant un repos, le son retentit à la fin et le repos s'affiche comme un lecteur (exercice, série, progression). Comme tout lecteur audio, il met en pause la musique d'une autre app (Spotify…) pendant le repos.": "Jeśli zablokujesz ekran w trakcie przerwy, dźwięk zabrzmi na końcu, a przerwa pojawi się jako odtwarzacz (ćwiczenie, seria, postęp). Jak każdy odtwarzacz, wstrzymuje muzykę innej aplikacji (Spotify…) na czas przerwy."
 };

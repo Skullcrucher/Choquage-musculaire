@@ -1217,5 +1217,9 @@ export default {
   "Repos jusqu'à {time}": "Repo ziska {time}",
   "Séance en cours depuis {n} min": "Seans an-kour depi {n} min",
   "Série {i}/{n}": "Seri {i}/{n}",
-  "Toutes les séries sont faites": "Tou bann seri fer"
+  "Toutes les séries sont faites": "Tou bann seri fer",
+  "Son de fin de repos": "Son lafin repo",
+  "Quand l'app est à l'écran : tic-tac des 3 dernières secondes puis le son de reprise.": "Kan lapp lor lekran : tik-tak 3 dernie segonn apre son repran.",
+  "Son même écran verrouillé": "Son mem lekran bloke",
+  "Si tu verrouilles pendant un repos, le son retentit à la fin et le repos s'affiche comme un lecteur (exercice, série, progression). Comme tout lecteur audio, il met en pause la musique d'une autre app (Spotify…) pendant le repos.": "Si to bloke pandan enn repo, son-la zwe alafin ek repo-la afise kouma enn lekter (legzersis, seri, progresion). Kouma tou lekter odio, li met poz lamizik enn lot app (Spotify…) pandan repo."
 };

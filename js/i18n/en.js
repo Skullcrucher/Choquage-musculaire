@@ -1218,5 +1218,9 @@ export default {
   "Repos jusqu'à {time}": "Rest until {time}",
   "Séance en cours depuis {n} min": "Workout in progress for {n} min",
   "Série {i}/{n}": "Set {i}/{n}",
-  "Toutes les séries sont faites": "All sets done"
+  "Toutes les séries sont faites": "All sets done",
+  "Son de fin de repos": "End-of-rest sound",
+  "Quand l'app est à l'écran : tic-tac des 3 dernières secondes puis le son de reprise.": "When the app is on screen: ticks for the last 3 seconds, then the restart sound.",
+  "Son même écran verrouillé": "Sound even when locked",
+  "Si tu verrouilles pendant un repos, le son retentit à la fin et le repos s'affiche comme un lecteur (exercice, série, progression). Comme tout lecteur audio, il met en pause la musique d'une autre app (Spotify…) pendant le repos.": "If you lock during a rest, the sound plays at the end and the rest shows as a player (exercise, set, progress). Like any audio player, it pauses music from another app (Spotify…) during the rest."
 };
