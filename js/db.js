@@ -572,6 +572,20 @@ export async function deleteSharedPlan(id) {
   await deleteDoc(doc(dbase, "shared_plans", id));
 }
 
+// ---------- Défi de la semaine ----------
+// weekly_challenges/{semaine ISO, ex. 2026-W40} : lu par tous, écrit par
+// l'administrateur.
+export async function getWeeklyChallenge(week) {
+  const snap = await getDoc(doc(dbase, "weekly_challenges", week));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+export async function saveWeeklyChallenge(week, data) {
+  await setDoc(doc(dbase, "weekly_challenges", week), { ...data, week, updated_at: new Date().toISOString(), updated_by: requireUid() });
+}
+export async function deleteWeeklyChallenge(week) {
+  await deleteDoc(doc(dbase, "weekly_challenges", week));
+}
+
 // ---------- Envois entre amis ----------
 // gifts/{id} : copie d'une routine ou d'un plan envoyée à un ami. Elle
 // attend dans sa boîte « Reçus » jusqu'à ce qu'il l'ajoute ou la refuse

@@ -113,15 +113,20 @@ export async function renderChallenges(container) {
   const [myProfile, friendships] = await Promise.all([db.getProfile(myUid).catch(() => null), db.listFriendships()]);
   const friendUids = friendships.filter(f => f.status === "accepted").map(f => f.other_uid);
   const participating = !!myProfile?.challenge?.opt_in;
+  const wcMod = await import("./weekly-challenge.js");
+  const wc = await wcMod.weeklyChallengeHtml().catch(e => { console.warn("[Skullcrusher] Défi de la semaine", e); return { html: "", challenge: null }; });
+  const redraw = () => renderChallenges(container);
 
   if (!participating) {
     container.innerHTML = `
+      ${wc.html}
       <div class="card">
         <div class="card-title">🏆 ${t("Défis entre amis")}</div>
         <p class="muted" style="margin-top:0;">${t("Chaque semaine, un classement entre toi et tes amis. Le score récompense la régularité et ta progression par rapport à toi-même : débutant ou confirmé, tout le monde peut gagner. Le vainqueur de la semaine choisit la <b>playlist de la semaine</b> pour tout le monde.")}</p>
         <p class="muted" style="font-size:13px;">${t("En participant, seuls tes totaux de la semaine sont visibles par tes amis — tes séances restent privées.")}</p>
         <button class="btn btn-primary" id="ch-join">${t("Participer aux défis")}</button>
       </div>`;
+    wcMod.bindWeeklyChallenge(container, redraw);
     container.querySelector("#ch-join").onclick = async (e) => {
       e.target.disabled = true;
       try {
@@ -138,6 +143,8 @@ export async function renderChallenges(container) {
 
   // Mes totaux, recalculés à l'ouverture pour être à jour.
   const mine = await computeMyWeeks();
+  // Avancement sur le défi de la semaine, visible par les amis participants.
+  mine.wc = wc.challenge ? { week: wc.challenge.week, value: wc.challenge.value, target: wc.challenge.target, done: wc.challenge.done } : null;
   db.updatePublicProfile({ challenge: mine }).catch(() => null);
   const profiles = await db.getProfiles(friendUids);
   const me = { ...(myProfile || {}), uid: myUid, challenge: { ...(myProfile?.challenge || {}), ...mine } };
@@ -150,7 +157,17 @@ export async function renderChallenges(container) {
   const iAmWinner = winner?.uid === myUid;
   const weekPlaylist = winner?.challenge?.playlist?.week === cw ? winner.challenge.playlist.url : "";
 
+  const wcFriends = wc.challenge ? people.filter(p => p.uid !== myUid && p.challenge?.wc?.week === wc.challenge.week)
+    .sort((a, b) => (b.challenge.wc.value || 0) - (a.challenge.wc.value || 0)) : [];
   container.innerHTML = `
+    ${wc.html}
+    ${wcFriends.length ? `<div class="card" style="margin-top:-4px;">
+      <div class="muted" style="font-size:13px; margin-bottom:6px;">🎯 ${t("Tes amis sur le défi")}</div>
+      ${wcFriends.map(p => `<div class="list-row" style="cursor:pointer;" data-profile="${esc(p.uid)}">
+        <div style="display:flex; align-items:center; gap:10px; min-width:0;">${avatar(p, 28)}<span class="list-row-title">${esc(p.display_name || t("Utilisateur"))}</span></div>
+        <span class="list-row-meta" style="white-space:nowrap;">${p.challenge.wc.done ? "✅ " : ""}${Number(p.challenge.wc.value || 0).toLocaleString(locale())} / ${Number(wc.challenge.target).toLocaleString(locale())}</span>
+      </div>`).join("")}
+    </div>` : ""}
     <div class="card">
       <div class="card-title">👑 ${t("Playlist de la semaine")}</div>
       ${winner ? `<p class="muted" style="margin-top:0;">${winner.uid === myUid
@@ -187,6 +204,7 @@ export async function renderChallenges(container) {
     <button class="btn btn-secondary btn-sm" id="ch-leave">${t("Ne plus participer")}</button>
   `;
 
+  wcMod.bindWeeklyChallenge(container, redraw);
   container.querySelectorAll("[data-metric]").forEach(c => c.onclick = () => { metric = c.dataset.metric; renderChallenges(container); });
   container.querySelectorAll("[data-profile]").forEach(el => el.onclick = () => openProfile(el.dataset.profile));
   const setBtn = container.querySelector("#ch-set-playlist");
