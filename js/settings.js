@@ -184,6 +184,27 @@ export async function renderReglages(container) {
         <button class="btn btn-secondary btn-sm" id="notify-retry">🔄 ${t("Redemander l'autorisation")}</button>
       </div>
       <button class="btn btn-secondary btn-sm" id="notify-test" style="display:none;">${t("Tester : notification dans 10 s")}</button>
+      <p class="muted" style="font-size:12px; margin:6px 0 0;">${t("Le son des notifications est celui du téléphone. iPhone : Réglages → Notifications → Skullcrusher → Sons. Android : appui long sur la notification → Paramètres.")}</p>
+      <div class="list-row" style="cursor:default; margin-top:6px;">
+        <div>
+          <div class="list-row-title">🔊 ${t("Bips de fin de repos")}</div>
+          <div class="list-row-sub">${t("Quand l'app est à l'écran : tic-tac des 3 dernières secondes puis signal de reprise.")}</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="sound-toggle" ${(() => { try { return localStorage.getItem("skullcrusher_rest_sound") !== "0"; } catch (_) { return true; } })() ? "checked" : ""}>
+          <span class="switch-track"></span>
+        </label>
+      </div>
+      <div class="list-row" style="cursor:default; margin-top:6px;">
+        <div>
+          <div class="list-row-title">🔒 ${t("Carte sur l'écran verrouillé")}</div>
+          <div class="list-row-sub">${t("En séance, quand l'écran se verrouille : exercice, série, charge × reps et fin du repos, sans son. Nécessite les notifications.")}</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="lockcard-toggle" ${(() => { try { return localStorage.getItem("skullcrusher_lock_card") !== "0"; } catch (_) { return true; } })() ? "checked" : ""}>
+          <span class="switch-track"></span>
+        </label>
+      </div>
       <div class="list-row" style="cursor:default; margin-top:6px;">
         <div>
           <div class="list-row-title">${t("Demander le RPE après chaque série")}</div>
@@ -334,6 +355,14 @@ export async function renderReglages(container) {
   container.querySelector("#default-set-type").onchange = (e) => {
     setDefaultSetType(e.target.value);
     toast(e.target.value === "failure" ? t("Les nouvelles séries seront en échec") : t("Les nouvelles séries seront normales"));
+  };
+  container.querySelector("#sound-toggle").onchange = async (e) => {
+    const snd = await import("./sound.js");
+    snd.setRestSoundEnabled(e.target.checked);
+    if (e.target.checked) { snd.unlockAudio(); snd.playRestEnd(); }
+  };
+  container.querySelector("#lockcard-toggle").onchange = (e) => {
+    try { localStorage.setItem("skullcrusher_lock_card", e.target.checked ? "1" : "0"); } catch (_) {}
   };
   container.querySelector("#rpe-toggle").onchange = (e) => {
     try { localStorage.setItem("skullcrusher_ask_rpe", e.target.checked ? "1" : "0"); } catch (_) {}

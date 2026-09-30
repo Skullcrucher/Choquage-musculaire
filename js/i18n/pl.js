@@ -1217,5 +1217,15 @@ export default {
   "Rechercher…": "Szukaj…",
   "Aucune séance cette semaine.": "Brak treningów w tym tygodniu.",
   "Séances de la semaine prises en compte (terminées, avec des séries enregistrées) :": "Treningi tego tygodnia, które się liczą (ukończone, z zapisanymi seriami):",
-  "moins de 3 séries : ne compte pas": "mniej niż 3 serie: nie liczy się"
+  "moins de 3 séries : ne compte pas": "mniej niż 3 serie: nie liczy się",
+  "Bips de fin de repos": "Sygnały końca przerwy",
+  "Carte sur l'écran verrouillé": "Karta na ekranie blokady",
+  "Dernière série faite : termine la séance !": "Ostatnia seria zrobiona: zakończ trening!",
+  "En séance, quand l'écran se verrouille : exercice, série, charge × reps et fin du repos, sans son. Nécessite les notifications.": "Podczas treningu, gdy ekran się zablokuje: ćwiczenie, seria, ciężar × powt. i koniec przerwy, bez dźwięku. Wymaga powiadomień.",
+  "Le son des notifications est celui du téléphone. iPhone : Réglages → Notifications → Skullcrusher → Sons. Android : appui long sur la notification → Paramètres.": "Dźwięk powiadomień to dźwięk telefonu. iPhone: Ustawienia → Powiadomienia → Skullcrusher → Dźwięki. Android: przytrzymaj powiadomienie → Ustawienia.",
+  "Quand l'app est à l'écran : tic-tac des 3 dernières secondes puis signal de reprise.": "Gdy aplikacja jest na ekranie: tykanie przez ostatnie 3 sekundy, potem sygnał wznowienia.",
+  "Repos jusqu'à {time}": "Przerwa do {time}",
+  "Séance en cours depuis {n} min": "Trening trwa od {n} min",
+  "Série {i}/{n}": "Seria {i}/{n}",
+  "Toutes les séries sont faites": "Wszystkie serie zrobione"
 };

@@ -1207,5 +1207,15 @@ export default {
   "Rechercher…": "Rod…",
   "Aucune séance cette semaine.": "Pena okenn seans sa semenn-la.",
   "Séances de la semaine prises en compte (terminées, avec des séries enregistrées) :": "Bann seans sa semenn-la ki konte (fini, avek seri anrezistre) :",
-  "moins de 3 séries : ne compte pas": "mwins ki 3 seri : pa konte"
+  "moins de 3 séries : ne compte pas": "mwins ki 3 seri : pa konte",
+  "Bips de fin de repos": "Bip lafin repo",
+  "Carte sur l'écran verrouillé": "Kart lor lekran bloke",
+  "Dernière série faite : termine la séance !": "Dernie seri fer : termin seans-la!",
+  "En séance, quand l'écran se verrouille : exercice, série, charge × reps et fin du repos, sans son. Nécessite les notifications.": "Pandan seans, kan lekran bloke : legzersis, seri, pwa × rep ek lafin repo, san son. Bizin notifikasion.",
+  "Le son des notifications est celui du téléphone. iPhone : Réglages → Notifications → Skullcrusher → Sons. Android : appui long sur la notification → Paramètres.": "Son notifikasion se son telefonn. iPhone : Reglaz → Notifikasion → Skullcrusher → Son. Android : lapiy long lor notifikasion → Paramet.",
+  "Quand l'app est à l'écran : tic-tac des 3 dernières secondes puis signal de reprise.": "Kan lapp lor lekran : tik-tak 3 dernie segonn apre signal repran.",
+  "Repos jusqu'à {time}": "Repo ziska {time}",
+  "Séance en cours depuis {n} min": "Seans an-kour depi {n} min",
+  "Série {i}/{n}": "Seri {i}/{n}",
+  "Toutes les séries sont faites": "Tou bann seri fer"
 };

@@ -1208,5 +1208,15 @@ export default {
   "Rechercher…": "Search…",
   "Aucune séance cette semaine.": "No workout this week.",
   "Séances de la semaine prises en compte (terminées, avec des séries enregistrées) :": "This week's workouts that count (finished, with logged sets):",
-  "moins de 3 séries : ne compte pas": "under 3 sets: doesn't count"
+  "moins de 3 séries : ne compte pas": "under 3 sets: doesn't count",
+  "Bips de fin de repos": "End-of-rest beeps",
+  "Carte sur l'écran verrouillé": "Lock screen card",
+  "Dernière série faite : termine la séance !": "Last set done: finish the workout!",
+  "En séance, quand l'écran se verrouille : exercice, série, charge × reps et fin du repos, sans son. Nécessite les notifications.": "During a workout, when the screen locks: exercise, set, weight × reps and end of rest, silently. Requires notifications.",
+  "Le son des notifications est celui du téléphone. iPhone : Réglages → Notifications → Skullcrusher → Sons. Android : appui long sur la notification → Paramètres.": "Notification sound is the phone's. iPhone: Settings → Notifications → Skullcrusher → Sounds. Android: long-press the notification → Settings.",
+  "Quand l'app est à l'écran : tic-tac des 3 dernières secondes puis signal de reprise.": "When the app is on screen: ticks for the last 3 seconds, then a restart signal.",
+  "Repos jusqu'à {time}": "Rest until {time}",
+  "Séance en cours depuis {n} min": "Workout in progress for {n} min",
+  "Série {i}/{n}": "Set {i}/{n}",
+  "Toutes les séries sont faites": "All sets done"
 };

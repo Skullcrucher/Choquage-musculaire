@@ -12,8 +12,8 @@ import { t, locale } from "./i18n.js";
 //     worker (CACHE_NAME dans service-worker.js doit valoir
 //     skullcrusher-cache-v<APP_BUILD>).
 // Puis : node tools/stamp-version.mjs
-export const APP_VERSION = "0.82.01";
-export const APP_BUILD = 89;
+export const APP_VERSION = "0.83.00";
+export const APP_BUILD = 90;
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
@@ -241,7 +241,7 @@ export async function setRestNotificationsEnabled(enabled) {
   return true;
 }
 
-export async function fireRestEndNotification() {
+export async function fireRestEndNotification(body = "") {
   if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
   if (!restNotificationsEnabled()) return;
   // Avec le push, c'est le serveur qui envoie la notification (même app
@@ -254,11 +254,13 @@ export async function fireRestEndNotification() {
     if ("serviceWorker" in navigator) {
       const reg = await navigator.serviceWorker.ready;
       await reg.showNotification(t("Repos terminé") + " 🤘", {
-        body: t("C'est reparti pour la série suivante."),
+        body: body || t("C'est reparti pour la série suivante."),
         icon: "icons/icon-192.png",
         badge: "icons/icon-192.png",
         tag: "skullcrusher-rest-timer",
-        renotify: true
+        renotify: true,
+        silent: false,
+        vibrate: [200, 100, 200]
       });
     } else {
       new Notification(t("Repos terminé"), { body: t("C'est reparti pour la série suivante.") });
