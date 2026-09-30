@@ -2,6 +2,7 @@
 // ONGLET SÉANCE — démarrage, log de séries, minuteur de repos
 // ============================================================
 import * as db from "./db.js";
+import { weekSessions } from "./week-sessions.js";
 import { icon, segHtml } from "./icons.js";
 import { toast, openModal, closeModal, fmtDateTime, debounce, fireRestEndNotification, esc, defaultSetType, confirmDanger } from "./utils.js";
 import { getExercises, getRoutines, getWorkouts, getSetsForExercise, invalidate } from "./cache.js";
@@ -21,33 +22,9 @@ const LS_REST_KEY = "skullcrusher_rest_timer_end";
 // Séances annulées dont la suppression a échoué (hors ligne) : réessayées.
 const LS_PENDING_DEL = "skullcrusher_pending_workout_deletes";
 
-// Séances bouclées cette semaine : terminées (end_time), commencées entre
-// lundi 0 h et maintenant. Les séances ouvertes puis jamais terminées et
-// les dates dans le futur (import mal daté) ne comptent pas. Deux séances
-// qui se chevauchent dans le temps (même séance importée ou ajoutée deux
-// fois) ne comptent qu'une fois.
-function weekWorkouts(workouts) {
-  const now = new Date();
-  const monday = new Date(now);
-  monday.setHours(0, 0, 0, 0);
-  monday.setDate(now.getDate() - (now.getDay() + 6) % 7);
-  const list = workouts.filter(w => {
-    if (!w.end_time || !w.start_time) return false;
-    const start = new Date(w.start_time);
-    return !isNaN(start) && start >= monday && start <= now;
-  }).sort((a, b) => keepScore(b) - keepScore(a) || new Date(a.start_time) - new Date(b.start_time));
-  const counted = [], duplicates = [];
-  for (const w of list) {
-    const s0 = new Date(w.start_time), e0 = Math.max(+new Date(w.end_time), +s0 + 60e3);
-    const twin = counted.find(c => s0 < Math.max(+new Date(c.end_time), +new Date(c.start_time) + 60e3) && e0 > new Date(c.start_time));
-    if (twin) duplicates.push({ w, twin }); else counted.push(w);
-  }
-  counted.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
-  return { monday, now, counted, duplicates };
-}
-// En cas de doublon, on garde d'abord la séance faite dans l'app depuis
-// une routine ou un plan, puis celle faite dans l'app, puis l'import.
-const keepScore = (w) => (w.plan_id || w.routine_id ? 2 : 0) + (w.imported_at ? 0 : 1);
+// Séances bouclées cette semaine : même règle que le défi de la semaine
+// (voir week-sessions.js).
+const weekWorkouts = (workouts) => weekSessions(workouts);
 function countThisWeek(workouts) {
   return weekWorkouts(workouts).counted.length;
 }

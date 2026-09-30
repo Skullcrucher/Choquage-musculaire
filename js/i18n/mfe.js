@@ -1204,5 +1204,8 @@ export default {
   "Aucun exercice : clique dans la bibliothèque à droite pour en ajouter.": "Pena legzersis : klik dan bibliotek adrwat pou azoute.",
   "Clique sur un exercice pour l'ajouter.": "Klik lor enn legzersis pou azout li.",
   "Ligne vide": "Lign vid",
-  "Rechercher…": "Rod…"
+  "Rechercher…": "Rod…",
+  "Aucune séance cette semaine.": "Pena okenn seans sa semenn-la.",
+  "Séances de la semaine prises en compte (terminées, avec des séries enregistrées) :": "Bann seans sa semenn-la ki konte (fini, avek seri anrezistre) :",
+  "moins de 3 séries : ne compte pas": "mwins ki 3 seri : pa konte"
 };

@@ -9,6 +9,7 @@
 import * as db from "./db.js";
 import { toast, esc, isoWeek, safeImageUrl } from "./utils.js";
 import { getWorkouts } from "./cache.js";
+import { weekSessions } from "./week-sessions.js";
 import { normalizePlaylistUrl, spotifyEmbed } from "./music.js";
 import { openProfile } from "./profile.js";
 import { t, locale } from "./i18n.js";
@@ -50,7 +51,9 @@ function computeScore(t) {
 function totalsFor(workouts, refDate) {
   const week = weekOf(refDate);
   const inWeek = (w, wk) => w.start_time && isoWeek(w.start_time) === wk;
-  const ws = workouts.filter(w => inWeek(w, week));
+  // Même règle que « Cette semaine » : terminées, pas dans le futur,
+  // doublons comptés une fois (week-sessions.js).
+  const ws = weekSessions(workouts, refDate).counted;
   // Moyenne de tonnage des 4 semaines précédentes où il y a eu entraînement.
   const past = [1, 2, 3, 4]
     .map(k => weekOf(new Date(refDate.getTime() - k * 7 * DAY)))
