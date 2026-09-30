@@ -117,10 +117,12 @@ async function renderGeneralStats(container) {
   if (!state.exercise && exerciseNames.length) state.exercise = exerciseNames[0];
 
   const body = await getBody();
-  const kcalSince = (days) => workouts
-    .filter(w => Date.parse(w.start_time) > Date.now() - days * 86400000)
-    .reduce((acc, w) => acc + (workoutCalories(w, body)?.kcal || 0), 0);
-  const kcal7 = kcalSince(7), kcal30 = kcalSince(30);
+  // Même règle que « Cette semaine » : séances terminées jusqu'à
+  // maintenant (pas de date dans le futur), doublons comptés une fois.
+  const { weekSessions, sessionsBetween } = await import("./week-sessions.js");
+  const kcalOf = (list) => Math.round(list.reduce((acc, w) => acc + (workoutCalories(w, body)?.kcal || 0), 0));
+  const kcal7 = kcalOf(weekSessions(workouts).counted);
+  const kcal30 = kcalOf(sessionsBetween(workouts, new Date(Date.now() - 30 * 86400000), new Date()).counted);
   const totalSets = workouts.reduce((acc, w) => acc + (w.total_sets || 0), 0);
   const totalTonnage = workouts.reduce((acc, w) => acc + (w.total_tonnage || 0), 0);
 
