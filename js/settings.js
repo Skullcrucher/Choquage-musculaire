@@ -818,9 +818,10 @@ async function renderReports(container) {
   });
 }
 
-// Pastille sur l'onglet Réglages quand des signalements attendent (admin).
+// Pastille sur la photo de profil (accès aux Réglages) quand des
+// signalements attendent (admin).
 export function updateReportsBadge(n) {
-  const btn = document.querySelector(".tab-btn[data-tab=reglages]");
+  const btn = document.getElementById("topbar-avatar");
   if (!btn) return;
   btn.querySelector(".tab-badge")?.remove();
   if (n > 0) btn.insertAdjacentHTML("beforeend", `<span class="tab-badge">${n > 9 ? "9+" : n}</span>`);

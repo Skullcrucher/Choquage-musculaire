@@ -17,8 +17,36 @@ const TABS = {
   progres: { render: renderStats },
   feed: { render: renderFeedTab },
   biblio: { render: renderBiblio },
+  musique: { render: renderMusique },
+  // Réglages : ouverts par la photo de profil (en haut à droite).
   reglages: { render: renderReglages }
 };
+
+// Onglet Musique (anciennement Feed → Son) : le mur des sons.
+async function renderMusique(container) {
+  container.innerHTML = `<h1 class="section-title">${t("Musique")}</h1><div id="music-body"></div>`;
+  await (await import("./music-wall.js")).renderMusicWall(container.querySelector("#music-body"));
+}
+
+// Photo de profil (ou initiale) en haut à droite : ouvre les Réglages.
+const topAvatar = document.getElementById("topbar-avatar");
+export async function refreshTopAvatar() {
+  if (!topAvatar) return;
+  try {
+    const db = await import("./db.js");
+    const u = db.getCurrentUser();
+    if (!u) { topAvatar.hidden = true; return; }
+    const prof = await db.getProfile(u.uid).catch(() => null);
+    const { safeImageUrl } = await import("./utils.js");
+    const photo = safeImageUrl(prof?.photo_data_url || u.photoURL || "");
+    const name = prof?.display_name || u.displayName || u.email || "?";
+    topAvatar.hidden = false;
+    topAvatar.setAttribute("aria-label", t("Réglages"));
+    topAvatar.style.backgroundImage = photo ? `url('${photo}')` : "";
+    topAvatar.textContent = photo ? "" : name.trim()[0].toUpperCase();
+  } catch (e) { console.warn("[Skullcrusher] Avatar", e); }
+}
+topAvatar?.addEventListener("click", () => switchTab("reglages"));
 
 // Ordinateur ou smartphone : deux mises en page (voir style.css, html.desktop).
 const desktopMq = window.matchMedia(DESKTOP_QUERY);
@@ -31,6 +59,7 @@ const tabbar = document.getElementById("tabbar");
 let activeTab = localStorage.getItem("skullcrusher_last_tab") || "seance";
 // Anciens onglets Historique et Stats : réunis dans Progrès.
 if (activeTab === "historique" || activeTab === "stats") activeTab = "progres";
+if (activeTab === "reglages") activeTab = "seance";
 if (!TABS[activeTab]) activeTab = "seance";
 let renderToken = 0;
 
@@ -102,7 +131,10 @@ window.addEventListener("sc:dock-change", () => setTimeout(syncBackHandling, 0))
 document.addEventListener("pointerdown", () => setTimeout(syncBackHandling, 0), true);
 
 async function switchTab(tab) {
+  // En quittant les Réglages : la photo de profil a peut-être changé.
+  if (activeTab === "reglages" && tab !== "reglages") refreshTopAvatar();
   activeTab = tab;
+  topAvatar?.classList.toggle("active", tab === "reglages");
   setTimeout(syncBackHandling, 0);
   const myToken = ++renderToken;
   localStorage.setItem("skullcrusher_last_tab", tab);
@@ -167,6 +199,7 @@ initAuth((user) => {
     if (!appStarted) {
       appStarted = true;
       switchTab(activeTab);
+      refreshTopAvatar();
       // Administrateur : pastille des signalements en attente.
       import("./settings.js").then(m => m.checkReportsBadge()).catch(() => null);
       // Doublons fusionnés par d'autres (administrateur…) : appliqués à ses données.
@@ -193,6 +226,7 @@ initAuth((user) => {
   } else {
     appStarted = false;
     tabbar.style.display = "none";
+    if (topAvatar) topAvatar.hidden = true;
     renderToken++; // invalide tout rendu en cours
     if (user) renderUnauthorizedGate(view, user);
     else renderLoginGate(view);

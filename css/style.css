@@ -1240,3 +1240,16 @@ html.desktop .fold-head:hover .card-title { color: var(--red); }
 .re-actions button:hover { color: var(--text); border-color: #444; }
 .re-actions button.re-del:hover { color: var(--red); border-color: var(--red); }
 .re-empty { padding: 20px; text-align: center; color: var(--text-dim); border: 1px dashed var(--border); border-radius: 10px; }
+
+/* ---------- Photo de profil en haut à droite (accès aux Réglages) ---------- */
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.topbar-avatar {
+  position: relative; width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid var(--amber); background: var(--surface-raised) center / cover no-repeat;
+  color: var(--amber); font-family: 'Anton', sans-serif; font-size: 18px; line-height: 1;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+  box-shadow: 0 0 10px rgba(224,36,36,0.35); -webkit-tap-highlight-color: transparent;
+}
+.topbar-avatar:active { transform: scale(0.94); }
+.topbar-avatar.active { box-shadow: 0 0 0 3px rgba(224,36,36,0.35), 0 0 14px rgba(224,36,36,0.6); }
+.topbar-avatar .tab-badge { top: -4px; right: -6px; }
