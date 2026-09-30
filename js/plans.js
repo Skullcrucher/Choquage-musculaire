@@ -13,6 +13,7 @@ import * as db from "./db.js";
 import { toast, openModal, closeModal, esc, healthNoteHtml, confirmDanger, bindFolds } from "./utils.js";
 import { getRoutines, getWorkouts, invalidate } from "./cache.js";
 import { t, tn, locale } from "./i18n.js";
+import { sessionsBetween } from "./week-sessions.js";
 
 export const MAX_PLANS = 20;
 const DAY_MS = 86400000;
@@ -106,10 +107,10 @@ function weekCells(plan, date, routines, workouts) {
 
 function weekStripHtml(cells) {
   return `<div class="plan-week">${cells.map(c => `
-    <div class="plan-day ${c.today ? "today" : ""} ${c.done ? "done" : ""} ${c.routine && c.past && !c.done && !c.today ? "missed" : ""} ${c.inPlan ? "" : "off"}">
+    <div class="plan-day ${c.today ? "today" : ""} ${c.done ? "done" : ""} ${c.missed ? "missed" : ""} ${c.moved ? "moved" : ""} ${c.inPlan ? "" : "off"}">
       <span class="plan-dow">${esc(dowLabel(c.dow, "narrow"))}</span>
-      <span class="plan-mark">${!c.inPlan ? "" : c.done ? "✓" : c.routine ? (c.past && !c.today ? "✗" : "●") : "–"}</span>
-      <span class="plan-rname">${c.routine ? esc(c.routine.name) : c.inPlan ? t("Repos") : ""}</span>
+      <span class="plan-mark">${!c.inPlan ? "" : c.done ? "✓" : c.missed ? "✗" : c.moved ? "↷" : c.routine ? "●" : "–"}</span>
+      <span class="plan-rname">${c.routine ? esc(c.routine.name) : c.missed ? t("Manquée") : c.moved ? t("Décalée") : c.inPlan ? t("Repos") : ""}</span>
     </div>`).join("")}</div>`;
 }
 
@@ -152,8 +153,13 @@ export async function todayPlanCard({ compact = false } = {}) {
   if (pos.status === "upcoming") body = `<p class="muted" style="margin:0;">${t("Le plan commence dans {n} jour(s).", { n: pos.startsIn })}</p>`;
   else if (pos.status === "done") body = `<p class="muted" style="margin:0;">🎉 ${t("Plan terminé ! Crée le suivant dans Biblio → Mes plans.")}</p>`;
   else {
-    routine = routines.find(r => r.id === pos.routineId) || null;
-    const already = routine && doneOn(workouts, new Date(), routine);
+    // Séance du jour : la prochaine de la file (ordre du plan, en tenant
+    // compte de celles déjà faites), ou une séance en retard à rattraper.
+    const wk = planWeek(plan, new Date(), routines, workouts);
+    const todayCell = wk.cells.find(c => c.today);
+    const already = !!todayCell?.done;
+    const catchUp = !todayCell?.routine && wk.slots.find(x => x.overdue)?.routine;
+    routine = todayCell?.routine || catchUp || null;
     const missed = missedLastWeek(plan, pos, routines, workouts);
     body = `
       ${missed ? `<div class="plan-shift">
@@ -167,7 +173,7 @@ export async function todayPlanCard({ compact = false } = {}) {
       ${weekStripHtml(stripCells(plan, new Date(), routines, workouts))}
       ${compact ? "" : routine
         ? (already ? `<p class="muted" style="margin:8px 0 0;">✓ ${t("{routine} faite aujourd'hui. Bien joué !", { routine: esc(routine.name) })}</p>`
-                   : `<button class="btn btn-primary" id="plan-start" style="margin-top:10px;">▶ ${t("Démarrer : {routine}", { routine: esc(routine.name) })}</button>`)
+                   : `<button class="btn btn-primary" id="plan-start" style="margin-top:10px;">▶ ${catchUp ? t("Rattraper : {routine}", { routine: esc(routine.name) }) : t("Démarrer : {routine}", { routine: esc(routine.name) })}</button>`)
         : `<p class="muted" style="margin:8px 0 0;">😴 ${t("Repos aujourd'hui.")}</p>`}`;
   }
   return {
@@ -186,8 +192,7 @@ export async function todayPlanCard({ compact = false } = {}) {
 // Frise de la semaine : même décompte que la liste des séances (une
 // séance faite un autre jour de la semaine coche le jour prévu).
 function stripCells(plan, date, routines, workouts) {
-  const done = new Map(weekSessions(plan, date, routines, workouts).map(s => [s.dow, s.done]));
-  return weekCells(plan, date, routines, workouts).map(c => ({ ...c, done: c.routine ? !!done.get(c.dow) : false }));
+  return planWeek(plan, date, routines, workouts).cells;
 }
 
 // ==================== ROUTINES DE PLAN ====================
@@ -209,29 +214,67 @@ const matchesRoutine = (w, routine, plan) => {
   return w.routine_id ? w.routine_id === routine.id : w.title === routine.name;
 };
 
-// Séances prévues dans la semaine du plan qui contient `date`, avec celles
-// déjà faites (une séance faite un autre jour de la semaine compte aussi).
-export function weekSessions(plan, date, routines, workouts) {
-  const cells = weekCells(plan, date, routines, workouts).filter(c => c.inPlan && c.routine);
+// ---------- Semaine du plan, dans l'ordre ----------
+// Les séances de la semaine se font dans l'ordre du plan, mais on peut les
+// intervertir : une séance faite (n'importe quel jour) retire SA routine de
+// la file ; les routines restantes, dans l'ordre du plan, sont proposées
+// aux prochains jours d'entraînement. Une séance manquée n'est pas perdue :
+// elle glisse sur les jours suivants (ou « à rattraper » s'il n'en reste pas).
+export function planWeek(plan, date, routines, workouts) {
+  const cells = weekCells(plan, date, routines, workouts);
+  const sched = cells.filter(c => c.inPlan && c.routine);
+  const queue = sched.map(c => c.routine);
+  const byId = new Map(queue.map(r => [r.id, r]));
+  // Routine d'une séance faite : association manuelle, sinon même routine
+  // (ou même titre pour une séance libre) parmi celles de la semaine.
+  const routineOf = (w) => {
+    if (plan.links?.[w.id]) return routines.find(r => r.id === plan.links[w.id]) || null;
+    if (w.routine_id && byId.has(w.routine_id)) return byId.get(w.routine_id);
+    return queue.find(r => !w.routine_id && w.title === r.name) || null;
+  };
   const monday = mondayOf(date), next = new Date(monday); next.setDate(monday.getDate() + 7);
-  const inWeek = workouts.filter(w => w.end_time && w.start_time && new Date(w.start_time) >= monday && new Date(w.start_time) < next)
-    .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
-  const used = new Set();
-  const slots = cells.map(c => ({ ...c, workout: null }));
-  // D'abord les séances associées à la main, à leur case exacte.
-  slots.forEach(sl => {
-    const w = inWeek.find(x => !used.has(x.id) && plan.links?.[x.id] === sl.routine.id && plan.link_days?.[x.id] === dayStr(sl.date));
-    if (w) { sl.workout = w; sl.linked = true; used.add(w.id); }
-  });
-  // Puis les séances faites le jour prévu, puis les autres jours.
-  for (const pass of [true, false]) {
-    slots.forEach(sl => {
-      if (sl.workout) return;
-      const w = inWeek.find(x => !used.has(x.id) && matchesRoutine(x, sl.routine, plan) && (!pass || dayStr(new Date(x.start_time)) === dayStr(sl.date)));
-      if (w) { sl.workout = w; sl.linked = !!plan.links?.[w.id]; used.add(w.id); }
-    });
+  const done = sessionsBetween(workouts, monday, next).counted
+    .map(w => ({ w, routine: routineOf(w) })).filter(x => x.routine)
+    .slice(0, sched.length);
+  // File des séances restantes (ordre du plan) : chaque séance faite retire
+  // sa routine, ou à défaut la prochaine de la file.
+  const remaining = [...queue];
+  for (const d of done) {
+    const i = remaining.findIndex(r => r.id === d.routine.id);
+    remaining.splice(i >= 0 ? i : 0, 1);
   }
-  return slots.map(sl => ({ ...sl, done: !!sl.workout }));
+  const todayKey = dayStr(new Date());
+  const doneByDay = new Map();
+  done.forEach(d => { const k = dayStr(new Date(d.w.start_time)); if (!doneByDay.has(k)) doneByDay.set(k, d); });
+  // Prochains jours d'entraînement (aujourd'hui compris) sans séance faite.
+  const upcoming = sched.filter(c => dayStr(c.date) >= todayKey && !doneByDay.has(dayStr(c.date)));
+  const planned = remaining.slice(0, upcoming.length).map((r, i) => ({ cell: upcoming[i], routine: r }));
+  const overdue = remaining.slice(upcoming.length); // pas de jour libre restant
+  // Jours passés sans séance : les premiers portent les séances en retard.
+  const pastEmpty = sched.filter(c => dayStr(c.date) < todayKey && !doneByDay.has(dayStr(c.date)));
+  const view = cells.map(c => {
+    const key = dayStr(c.date);
+    const d = doneByDay.get(key);
+    if (d) return { ...c, routine: d.routine, done: true, workout: d.w };
+    const pl = planned.find(x => x.cell === c);
+    if (pl) return { ...c, routine: pl.routine, done: false };
+    const pi = pastEmpty.indexOf(c);
+    if (pi >= 0) return pi < overdue.length ? { ...c, routine: null, done: false, missed: true } : { ...c, routine: null, moved: true, done: false };
+    // Jour de repos, ou jour prévu alors que toutes les séances sont faites.
+    return { ...c, routine: null, done: false };
+  });
+  // Séances de la semaine (liste, stats) : faites, prévues, en retard.
+  const slots = [
+    ...done.map(d => { const dt = new Date(d.w.start_time); return { routine: d.routine, workout: d.w, done: true, linked: !!plan.links?.[d.w.id], date: dt, dow: dowOf(dt), today: dayStr(dt) === todayKey, past: dayStr(dt) < todayKey }; }),
+    ...planned.map(x => ({ routine: x.routine, workout: null, done: false, date: x.cell.date, dow: x.cell.dow, today: x.cell.today, past: false })),
+    ...overdue.map(r => ({ routine: r, workout: null, done: false, overdue: true, past: true, date: null, dow: null, today: false }))
+  ];
+  return { cells: view, slots };
+}
+
+// Compatibilité : séances de la semaine (voir planWeek).
+export function weekSessions(plan, date, routines, workouts) {
+  return planWeek(plan, date, routines, workouts).slots;
 }
 
 // Liste des séances de la semaine pour « Depuis un plan » (écran Séance).
@@ -249,7 +292,9 @@ export async function planSessionsHtml() {
   const pos = planPosition(plan);
   if (pos.status !== "running") return { html: card?.html || "", sessions: [], card };
   const slots = weekSessions(plan, new Date(), routines, workouts);
-  const todo = slots.filter(s => !s.done).sort((a, b) => (b.today - a.today) || (a.dow - b.dow));
+  // À faire : aujourd'hui, puis les jours suivants (ordre du plan), puis
+  // les séances en retard ; les séances faites à la fin.
+  const todo = slots.filter(s => !s.done).sort((a, b) => (b.today - a.today) || (!!a.overdue - !!b.overdue) || ((a.dow || 0) - (b.dow || 0)));
   const done = slots.filter(s => s.done);
   const ordered = [...todo, ...done];
   const doneLabel = (s) => new Date(s.workout.start_time).toLocaleDateString(locale(), { weekday: "long" });
@@ -261,12 +306,12 @@ export async function planSessionsHtml() {
     </div>
     ${ordered.length ? ordered.map((s, i) => `
       <div class="card plan-session ${s.done ? "done" : ""} ${s.today && !s.done ? "today" : ""}" data-plan-session="${i}" role="button" tabindex="0">
-        <div class="plan-session-mark">${s.done ? "✓" : s.today ? "▶" : esc(dowLabel(s.dow, "short"))}</div>
+        <div class="plan-session-mark">${s.done ? "✓" : s.today ? "▶" : s.overdue ? "↺" : esc(dowLabel(s.dow, "short"))}</div>
         <div style="flex:1; min-width:0;">
           <div class="card-title" style="margin:0;">${esc(s.routine.name)}</div>
           <div class="muted plan-session-sub">${s.done ? t("Faite ({day})", { day: doneLabel(s) })
             : s.today ? t("Prévue aujourd'hui")
-            : s.past ? t("Prévue {day} · en retard", { day: dowLabel(s.dow, "long") })
+            : s.overdue ? t("À rattraper cette semaine")
             : t("Prévue {day}", { day: dowLabel(s.dow, "long") })} · ${(s.routine.exercises || []).length} ${t("exercice(s)")}</div>
         </div>
       </div>`).join("") : `<p class="muted">😴 ${t("Pas de séance prévue cette semaine.")}</p>`}
@@ -377,7 +422,7 @@ export async function renderPlanTracking(content, { onOpenWorkout } = {}) {
         ${st.weeks.map(w => `
           <div class="plan-wrow ${w.state}">
             <div class="plan-wnum">S${w.n}<span>${esc(w.block?.name || "")}</span></div>
-            <div class="plan-wdays">${w.slots.map((s, si) => `<span class="plan-wdot ${s.done ? "done" : w.state === "future" || (!s.past && !s.done) ? "todo" : "missed"} ${w.state !== "future" ? "tap" : ""}" ${w.state !== "future" ? `data-slot="${w.n - 1}:${si}" role="button"` : ""} title="${esc(s.routine.name)} · ${esc(dowLabel(s.dow, "long"))}">${s.done ? (s.linked ? "🔗" : "✓") : esc(dowLabel(s.dow, "narrow"))}</span>`).join("") || `<span class="muted" style="font-size:12px;">${t("Repos")}</span>`}</div>
+            <div class="plan-wdays">${w.slots.map((s, si) => `<span class="plan-wdot ${s.done ? "done" : w.state === "future" || (!s.past && !s.done) ? "todo" : "missed"} ${w.state !== "future" ? "tap" : ""}" ${w.state !== "future" ? `data-slot="${w.n - 1}:${si}" role="button"` : ""} title="${esc(s.routine.name)}${s.dow ? ` · ${esc(dowLabel(s.dow, "long"))}` : ""}">${s.done ? (s.linked ? "🔗" : "✓") : s.dow ? esc(dowLabel(s.dow, "narrow")) : "↺"}</span>`).join("") || `<span class="muted" style="font-size:12px;">${t("Repos")}</span>`}</div>
             <div class="plan-wcount">${w.state === "future" ? "" : `${w.done}/${w.slots.length}`}</div>
           </div>`).join("")}
       </div>
@@ -422,7 +467,7 @@ function openSlotLink(plan, week, slot, workouts, { onOpenWorkout, onChanged }) 
     await savePlans(plans.map(p => p.id === cur.id ? { ...p, links, link_days: days } : p), active);
   };
   const head = `<h3>${esc(slot.routine.name)}</h3>
-    <p class="muted" style="margin-top:0;">${t("Semaine {n}", { n: week.n })} · ${esc(dowLabel(slot.dow, "long"))} ${slot.date.toLocaleDateString(locale(), { day: "numeric", month: "short" })}</p>`;
+    <p class="muted" style="margin-top:0;">${t("Semaine {n}", { n: week.n })} · ${slot.date ? `${esc(dowLabel(slot.dow, "long"))} ${slot.date.toLocaleDateString(locale(), { day: "numeric", month: "short" })}` : t("À rattraper cette semaine")}</p>`;
   if (slot.done) {
     openModal(`${head}
       <div class="list-row"><div><div class="list-row-title">${slot.linked ? "🔗" : "✓"} ${esc(slot.workout.title)}</div><div class="list-row-sub">${esc(fmt(slot.workout))}</div></div></div>
@@ -452,7 +497,7 @@ function openSlotLink(plan, week, slot, workouts, { onOpenWorkout, onChanged }) 
     m.querySelectorAll("[data-link]").forEach(r => r.onclick = async () => {
       r.style.pointerEvents = "none";
       try {
-        await save((links, days) => { links[r.dataset.link] = slot.routine.id; days[r.dataset.link] = dayStr(slot.date); });
+        await save((links, days) => { links[r.dataset.link] = slot.routine.id; if (slot.date) days[r.dataset.link] = dayStr(slot.date); });
         closeModal();
         toast(t("Séance associée au plan"));
         onChanged();

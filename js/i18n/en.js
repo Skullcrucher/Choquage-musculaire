@@ -1228,5 +1228,9 @@ export default {
   "Garanti (met la musique en pause pendant le repos)": "Guaranteed (pauses music during rest)",
   "Notification seulement": "Notification only",
   "Mélangé : ton son joue par-dessus la musique sans l'arrêter. Sur Android il retentit aussi écran verrouillé ; sur iPhone, iOS coupe ce type de son écran verrouillé, c'est alors la notification (son du téléphone, sans couper la musique) qui prévient. Garanti : ton son retentit toujours, mais la musique d'une autre app est mise en pause pendant le repos.": "Mixed: your sound plays over the music without stopping it. On Android it also plays when locked; on iPhone, iOS mutes this kind of sound when locked, so the notification (phone sound, music keeps playing) alerts you. Guaranteed: your sound always plays, but another app's music is paused during the rest.",
-  "Le son de reprise retentit à la fin de chaque repos.": "The restart sound plays at the end of each rest."
+  "Le son de reprise retentit à la fin de chaque repos.": "The restart sound plays at the end of each rest.",
+  "Décalée": "Moved",
+  "Rattraper : {routine}": "Catch up: {routine}",
+  "À rattraper cette semaine": "To catch up this week",
+  "Manquée": "Missed"
 };

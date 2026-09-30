@@ -1227,5 +1227,9 @@ export default {
   "Garanti (met la musique en pause pendant le repos)": "Garanti (met lamizik an poz pandan repo)",
   "Notification seulement": "Notifikasion selman",
   "Mélangé : ton son joue par-dessus la musique sans l'arrêter. Sur Android il retentit aussi écran verrouillé ; sur iPhone, iOS coupe ce type de son écran verrouillé, c'est alors la notification (son du téléphone, sans couper la musique) qui prévient. Garanti : ton son retentit toujours, mais la musique d'une autre app est mise en pause pendant le repos.": "Melanze : to son zwe lor lamizik san aret li. Lor Android li zwe osi lekran bloke ; lor iPhone, iOS koup sa kalite son-la lekran bloke, alor se notifikasion (son telefonn, lamizik kontinie) ki averti. Garanti : to son zwe touzour, me lamizik enn lot app met an poz pandan repo.",
-  "Le son de reprise retentit à la fin de chaque repos.": "Son repran zwe alafin sak repo."
+  "Le son de reprise retentit à la fin de chaque repos.": "Son repran zwe alafin sak repo.",
+  "Décalée": "Deplase",
+  "Rattraper : {routine}": "Ratrap : {routine}",
+  "À rattraper cette semaine": "Pou ratrap sa semenn-la",
+  "Manquée": "Rate"
 };
