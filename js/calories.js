@@ -30,7 +30,7 @@ export const EFFORTS = {
   vigorous: { met: 6.0, label: "Intense" }
 };
 const IDLE_AFTER_LAST_SET_MS = 10 * 60 * 1000;
-const MAX_MINUTES = 300;
+const MAX_MINUTES = 180;
 
 // Mémorisées par compte (changement de compte sans rechargement).
 let bodyPromise = null, bodyUid = null;
@@ -68,7 +68,11 @@ export function workoutMinutes(w) {
   if (!start || !end || end <= start) return null;
   const lastSet = Date.parse(w.last_set_at);
   if (lastSet && lastSet > start) end = Math.min(end, lastSet + IDLE_AFTER_LAST_SET_MS);
-  return Math.min(MAX_MINUTES, Math.round((end - start) / 60000));
+  let minutes = Math.round((end - start) / 60000);
+  // Séance fermée bien plus tard (oubliée ouverte, sans heure de dernière
+  // série) : on plafonne à ~4 min par série (série + repos) + 10 min.
+  if (!(lastSet > start) && w.total_sets > 0) minutes = Math.min(minutes, w.total_sets * 4 + 10);
+  return Math.min(MAX_MINUTES, minutes);
 }
 
 // Effort proposé d'après la densité de la séance (séries par heure).
