@@ -78,6 +78,24 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.owner_uid == request.auth.uid;
     }
 
+    // Programmes officiels Skullcrusher : lus par tout compte connecté,
+    // écrits par l'administrateur. { deleted: true } masque un programme
+    // intégré à l'app.
+    match /official_programs/{programId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin()
+                    && programId.matches('^[A-Za-z0-9-]{1,60}$')
+                    && (request.resource.data.get('deleted', false) == true
+                        || (isSafeText(request.resource.data.name, 80)
+                            && isSafeText(request.resource.data.get('description', ''), 500)
+                            && request.resource.data.routines is list
+                            && request.resource.data.routines.size() >= 1
+                            && request.resource.data.routines.size() <= 14
+                            && request.resource.data.get('blocks', []) is list
+                            && request.resource.data.get('blocks', []).size() <= 20));
+      allow delete: if isAdmin();
+    }
+
     // Défi de la semaine : lu par tout compte connecté, écrit par
     // l'administrateur uniquement (id = semaine ISO, ex. 2026-W40).
     match /weekly_challenges/{week} {

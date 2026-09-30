@@ -147,23 +147,47 @@ export const PROGRAMS = [
 ];
 
 // Routines des programmes, au format des routines partagées (Découvrir).
-export function officialRoutines() {
-  return PROGRAMS.flatMap(p => p.routines.map(r => {
-    const muscles = [...new Set(r.exercises.map(e => e.muscle_group))];
+// ---------- Programmes modifiables par l'administrateur ----------
+// official_programs/{id} (Firestore) : un document avec l'id d'un
+// programme intégré le remplace ; { deleted: true } le retire ; les autres
+// ids s'ajoutent. kind "routines" = routines officielles seules (pas de
+// calendrier) : visibles dans Découvrir → Routines uniquement.
+let merged = null;
+export async function loadOfficialPrograms(force = false) {
+  if (merged && !force) return merged;
+  let docs = [];
+  try { docs = await (await import("./db.js")).listOfficialPrograms(); }
+  catch (e) { console.warn("[Skullcrusher] Programmes officiels (Firestore) indisponibles", e); }
+  const byId = new Map(PROGRAMS.map(p => [p.id, { ...p, builtin: true }]));
+  for (const d of docs) {
+    if (d.deleted) byId.delete(d.id);
+    else byId.set(d.id, { ...d, builtin: PROGRAMS.some(p => p.id === d.id), edited: true });
+  }
+  merged = [...byId.values()].sort((a, b) => (a.order ?? 50) - (b.order ?? 50));
+  return merged;
+}
+export const isBuiltinProgram = (id) => PROGRAMS.some(p => p.id === id);
+
+function routinesOf(list) {
+  return list.flatMap(p => (p.routines || []).map(r => {
+    const muscles = [...new Set((r.exercises || []).map(e => e.muscle_group).filter(Boolean))];
     return {
       id: `${p.id}-${r.key}`, official: true, program_id: p.id,
-      name: r.name, description: r.description, level: p.level, goal: p.goal,
-      exercises: r.exercises, exercise_count: r.exercises.length, muscle_groups: muscles,
-      owner_uid: OFFICIAL_UID, owner_name: OFFICIAL_AUTHOR, visibility: "public", created_at: "2026-01-01"
+      name: r.name, description: r.description || "", level: r.level || p.level, goal: r.goal || p.goal,
+      exercises: r.exercises || [], exercise_count: (r.exercises || []).length, muscle_groups: muscles,
+      owner_uid: OFFICIAL_UID, owner_name: OFFICIAL_AUTHOR, visibility: "public", created_at: p.created_at || "2026-01-01"
     };
   }));
 }
-
-// Programmes au format des plans partagés (Découvrir → Plans).
-export function officialPlans() {
-  return PROGRAMS.map(p => ({
+function plansOf(list) {
+  return list.filter(p => p.kind !== "routines" && (p.blocks || []).length).map(p => ({
     id: p.id, official: true, name: p.name, description: p.description, level: p.level, goal: p.goal,
     source: p.source, routines: p.routines, blocks: p.blocks,
-    owner_uid: OFFICIAL_UID, owner_name: OFFICIAL_AUTHOR, visibility: "public", created_at: "2026-01-01"
+    owner_uid: OFFICIAL_UID, owner_name: OFFICIAL_AUTHOR, visibility: "public", created_at: p.created_at || "2026-01-01"
   }));
 }
+
+export function officialRoutines() { return routinesOf(merged || PROGRAMS); }
+export function officialPlans() { return plansOf(merged || PROGRAMS); }
+export async function getOfficialRoutines() { return routinesOf(await loadOfficialPrograms()); }
+export async function getOfficialPlans() { return plansOf(await loadOfficialPrograms()); }

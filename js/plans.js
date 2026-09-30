@@ -510,6 +510,7 @@ export async function renderPlans(content) {
             ${pos.status !== "done" ? `<button class="btn btn-sm btn-secondary" data-pshift="${esc(p.id)}" title="${t("Décaler d'une semaine")}">⏭ +1 ${t("sem.")}</button>` : ""}
             <button class="btn btn-sm btn-danger" data-pdel="${esc(p.id)}">${t("Supprimer")}</button>
           </div>
+          ${db.isAdmin() ? `<button class="btn btn-sm btn-secondary admin-btn" data-pofficial="${esc(p.id)}" style="margin-top:8px;">⭐ ${p.official_id ? t("Mettre à jour l'officiel") : t("Publier (officiel)")}</button>` : ""}
         </div>
       </div>`;
     }).join("")}
@@ -524,6 +525,8 @@ export async function renderPlans(content) {
     const { openPlanShare } = await import("./plan-share.js");
     openPlanShare(plans.find(p => p.id === b.dataset.pshare), routines, refresh);
   });
+  content.querySelectorAll("[data-pofficial]").forEach(b => b.onclick = async () =>
+    (await import("./admin.js")).publishPlanOfficial(plans.find(x => x.id === b.dataset.pofficial), routines, refresh));
   content.querySelectorAll("[data-psend]").forEach(b => b.onclick = async () => {
     const p = plans.find(x => x.id === b.dataset.psend);
     const [{ planTemplateFrom }, { openSendModal }] = await Promise.all([import("./plan-share.js"), import("./gifts.js")]);

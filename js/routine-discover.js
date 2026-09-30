@@ -9,7 +9,7 @@ import { toast, openModal, closeModal, attachAutocomplete, esc, debounce } from 
 import { getExercises, getRoutines, invalidate } from "./cache.js";
 import { spotifyEmbed } from "./music.js";
 import { t, tn } from "./i18n.js";
-import { officialRoutines } from "./programs.js";
+import { getOfficialRoutines } from "./programs.js";
 import { ratingKey, score, starsHtml, openRatingModal } from "./ratings.js";
 
 // i18n-keys: "Courte (≤ 4 exos)", "Moyenne (5-7)", "Longue (8+)", "Les mieux notées", "Les plus récentes", "Moins d'exercices", "Plus d'exercices", "Tout", "👥 Amis", "🌍 Communauté"
@@ -68,7 +68,7 @@ async function renderDiscoverRoutines(content, onLibraryChanged, reload) {
   // Une routine "amis" d'un ancien ami reste dans shared_with jusqu'à ce que
   // son propriétaire la modifie : on ne l'affiche plus.
   // Routines Skullcrusher (programmes standards) en plus de celles des utilisateurs.
-  const routines = [...officialRoutines(), ...all.filter(r => r.owner_uid === myUid || r.visibility === "public" || friendUids.has(r.owner_uid))];
+  const routines = [...(await getOfficialRoutines()), ...all.filter(r => r.owner_uid === myUid || r.visibility === "public" || friendUids.has(r.owner_uid))];
   const ratings = await db.getRatings(routines.map(r => ratingKey("routine", r.id))).catch(() => ({}));
   if (!content.isConnected) return;
 
@@ -290,7 +290,18 @@ function openRoutineDetail(r, ctx, redraw) {
       ${mine ? "" : `<button class="btn btn-secondary" id="rd-rate">★ ${ctx.ratings[ratingKey("routine", r.id)]?.mine ? t("Modifier ma note") : t("Noter")}</button>`}
     </div>
     ${mine ? "" : `<button class="btn btn-primary" id="rd-copy" style="margin-top:10px;" ${ctx.copiedIds.has(r.id) ? "disabled" : ""}>${ctx.copiedIds.has(r.id) ? t("✓ Dans ta bibliothèque") : t("+ Ajouter à ma bibliothèque")}</button>`}
+    ${r.official && db.isAdmin() ? `<div class="admin-box">
+      <div class="admin-box-title">🛡️ ${t("Administrateur")}</div>
+      <div class="btn-row btn-row-wrap">
+        <button class="btn btn-sm btn-secondary" id="rd-admin-edit">✏️ ${t("Modifier la séance officielle")}</button>
+        <button class="btn btn-sm btn-danger" id="rd-admin-del">🗑 ${t("Retirer le programme")}</button>
+      </div>
+    </div>` : ""}
   `, (modalEl) => {
+    const ae = modalEl.querySelector("#rd-admin-edit");
+    if (ae) ae.onclick = async () => { closeModal(); (await import("./admin.js")).editOfficialRoutine(r, redraw); };
+    const ad = modalEl.querySelector("#rd-admin-del");
+    if (ad) ad.onclick = async () => (await import("./admin.js")).removeOfficialProgram(r.program_id, r.name, redraw);
     modalEl.querySelector("#rd-close").onclick = closeModal;
     const rateBtn = modalEl.querySelector("#rd-rate");
     if (rateBtn) rateBtn.onclick = () => { closeModal(); rate(r, ctx, redraw); };

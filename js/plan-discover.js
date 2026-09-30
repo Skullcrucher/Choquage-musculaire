@@ -5,7 +5,7 @@
 // ============================================================
 import * as db from "./db.js";
 import { toast, openModal, closeModal, esc } from "./utils.js";
-import { officialPlans } from "./programs.js";
+import { getOfficialPlans } from "./programs.js";
 import { ratingKey, score, starsHtml, openRatingModal } from "./ratings.js";
 import { planScheduleHtml, addPlanFromTemplate, startFieldHtml, readStartField } from "./plan-share.js";
 import { getPlans } from "./plans.js";
@@ -22,7 +22,7 @@ export async function renderDiscoverPlans(content) {
     getPlans()
   ]);
   const friendUids = new Set(friendships.filter(f => f.status === "accepted").map(f => f.other_uid));
-  const list = [...officialPlans(), ...shared.filter(p => p.owner_uid === myUid || p.visibility === "public" || friendUids.has(p.owner_uid))];
+  const list = [...(await getOfficialPlans()), ...shared.filter(p => p.owner_uid === myUid || p.visibility === "public" || friendUids.has(p.owner_uid))];
   const ratings = await db.getRatings(list.map(p => ratingKey("plan", p.id))).catch(() => ({}));
   if (!content.isConnected) return;
   const added = new Set(plans.map(p => p.source?.id).filter(Boolean));
@@ -122,7 +122,19 @@ function openPlanDetail(p, ctx, redraw) {
     </div>
     ${mine ? "" : `<button class="btn btn-primary" id="pd-add" style="margin-top:10px;" ${done ? "disabled" : ""}>${done ? t("✓ Dans tes plans") : t("+ Ajouter à mes plans")}</button>`}
     <p class="muted" style="font-size:11.5px; margin-top:10px;">⚠️ ${t("Programme indicatif : adapte les charges à ton niveau. Il ne remplace pas l'avis d'un coach diplômé ni d'un médecin.")}</p>
+    ${p.official && db.isAdmin() ? `<div class="admin-box">
+      <div class="admin-box-title">🛡️ ${t("Administrateur")}</div>
+      <p class="muted" style="font-size:12px; margin:0 0 8px;">${t("Modifier crée une copie dans Mes plans ; « Publier (officiel) » sur cette copie remplace le programme publié.")}</p>
+      <div class="btn-row btn-row-wrap">
+        <button class="btn btn-sm btn-secondary" id="pd-admin-edit">✏️ ${t("Modifier le programme")}</button>
+        <button class="btn btn-sm btn-danger" id="pd-admin-del">🗑 ${t("Retirer")}</button>
+      </div>
+    </div>` : ""}
   `, (m) => {
+    const ae = m.querySelector("#pd-admin-edit");
+    if (ae) ae.onclick = async () => (await import("./admin.js")).editOfficialPlanAsCopy(p, redraw);
+    const ad = m.querySelector("#pd-admin-del");
+    if (ad) ad.onclick = async () => (await import("./admin.js")).removeOfficialProgram(p.id, p.name, redraw);
     m.querySelector("#pd-close").onclick = closeModal;
     const rateBtn = m.querySelector("#pd-rate");
     if (rateBtn) rateBtn.onclick = () => { closeModal(); ratePlan(p, ctx, redraw); };

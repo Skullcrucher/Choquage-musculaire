@@ -87,6 +87,7 @@ async function renderMyRoutines(content) {
             <button class="btn btn-sm btn-secondary" data-send="${esc(r.id)}">${t("Envoyer")}</button>
             <button class="btn btn-sm btn-danger" data-del="${esc(r.id)}">${t("Supprimer")}</button>
           </div>
+          ${db.isAdmin() ? `<button class="btn btn-sm btn-secondary admin-btn" data-official="${esc(r.id)}" style="margin-top:8px;">⭐ ${t("Publier (officielle)")}</button>` : ""}
         </div>
       </div>`;
     }).join("")}
@@ -102,6 +103,9 @@ async function renderMyRoutines(content) {
   });
   content.querySelectorAll("[data-share]").forEach(b => {
     b.onclick = (e) => { e.stopPropagation(); openShareModal(routines.find(r => r.id === b.dataset.share), refresh); };
+  });
+  content.querySelectorAll("[data-official]").forEach(b => {
+    b.onclick = async () => (await import("./admin.js")).publishRoutineOfficial(routines.find(r => r.id === b.dataset.official), refresh);
   });
   content.querySelectorAll("[data-send]").forEach(b => {
     b.onclick = async (e) => {
@@ -209,7 +213,9 @@ async function openShareModal(routine, onDone) {
 }
 
 // ---------- Éditeur ----------
-export async function openRoutineEditor(routine, onSaved) {
+// opts.save(state) : enregistrement à la place de « mes routines » (ex.
+// séance officielle modifiée par l'administrateur).
+export async function openRoutineEditor(routine, onSaved, opts = {}) {
   const exercises = await getExercises();
   const state = {
     name: routine?.name || "",
@@ -268,7 +274,8 @@ export async function openRoutineEditor(routine, onSaved) {
         e.muscle_group = known?.muscle_group || guessMuscleGroup(e.exercise_name);
       });
       try {
-        await db.saveRoutine(state, routine?.id || null);
+        if (opts.save) await opts.save(state);
+        else await db.saveRoutine(state, routine?.id || null);
       } catch (err) {
         console.error("[Skullcrusher] Erreur enregistrement routine", err);
         toast(t("Impossible d'enregistrer la routine"));
