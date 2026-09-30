@@ -14,6 +14,7 @@ import { toast, openModal, closeModal, esc, healthNoteHtml, confirmDanger, bindF
 import { getRoutines, getWorkouts, invalidate } from "./cache.js";
 import { t, tn, locale } from "./i18n.js";
 import { sessionsBetween } from "./week-sessions.js";
+import { guessMuscleGroup } from "./muscles.js";
 
 export const MAX_PLANS = 20;
 const DAY_MS = 86400000;
@@ -214,6 +215,30 @@ const matchesRoutine = (w, routine, plan) => {
   return w.routine_id ? w.routine_id === routine.id : w.title === routine.name;
 };
 
+// ---------- Récupération musculaire ----------
+// Muscles d'une routine, pondérés par le nombre de séries prévues.
+function muscleLoad(r) {
+  const m = new Map();
+  (r?.exercises || []).forEach(e => {
+    const g = e.muscle_group && e.muscle_group !== "Autre" ? e.muscle_group : guessMuscleGroup(e.exercise_name);
+    m.set(g, (m.get(g) || 0) + (Number(e.target_sets) || 3));
+  });
+  return m;
+}
+// Part des séries de `cand` sur les muscles PRINCIPAUX de `prev` (ceux qui
+// font au moins 30 % de ses séries ; un exercice d'appoint, comme un face
+// pull dans une séance Pull, ne bloque pas les épaules) — de 0 à 1.
+function muscleOverlap(cand, prev) {
+  const a = muscleLoad(cand), b = muscleLoad(prev);
+  const bTotal = [...b.values()].reduce((x, y) => x + y, 0);
+  const main = new Set([...b].filter(([, v]) => bTotal && v / bTotal >= 0.3).map(([g]) => g));
+  let total = 0, hit = 0;
+  a.forEach((v, g) => { total += v; if (main.has(g)) hit += v; });
+  return total ? hit / total : 0;
+}
+// Minuit du jour de `d` (écarts en jours entiers).
+const dayStart = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+
 // ---------- Semaine du plan, dans l'ordre ----------
 // Les séances de la semaine se font dans l'ordre du plan, mais on peut les
 // intervertir : une séance faite (n'importe quel jour) retire SA routine de
@@ -248,8 +273,30 @@ export function planWeek(plan, date, routines, workouts) {
   done.forEach(d => { const k = dayStr(new Date(d.w.start_time)); if (!doneByDay.has(k)) doneByDay.set(k, d); });
   // Prochains jours d'entraînement (aujourd'hui compris) sans séance faite.
   const upcoming = sched.filter(c => dayStr(c.date) >= todayKey && !doneByDay.has(dayStr(c.date)));
-  const planned = remaining.slice(0, upcoming.length).map((r, i) => ({ cell: upcoming[i], routine: r }));
-  const overdue = remaining.slice(upcoming.length); // pas de jour libre restant
+  // Répartition intelligente : dans l'ordre du plan, sauf si la séance
+  // suivante sollicite surtout des muscles travaillés les 2 jours d'avant
+  // (moins de 48 h de récupération) : on prend alors la suivante qui les
+  // laisse reposer. Séances des 3 jours précédant la semaine comprises.
+  const history = [];
+  const before = new Date(monday); before.setDate(monday.getDate() - 3);
+  sessionsBetween(workouts, before, monday).counted.forEach(w => {
+    const r = routines.find(x => x.id === (plan.links?.[w.id] || w.routine_id)) || routines.find(x => x.name === w.title);
+    if (r) history.push({ date: new Date(w.start_time), routine: r });
+  });
+  done.forEach(d => history.push({ date: new Date(d.w.start_time), routine: d.routine }));
+  const dayGap = (a, b) => Math.round((dayStart(b) - dayStart(a)) / DAY_MS);
+  const planned = [];
+  for (const cell of upcoming) {
+    if (!remaining.length) break;
+    const recent = history.filter(h => { const g = dayGap(h.date, cell.date); return g >= 1 && g <= 2; });
+    const tired = (r) => recent.reduce((acc, h) => acc + muscleOverlap(r, h.routine) * (dayGap(h.date, cell.date) === 1 ? 1 : 0.6), 0);
+    let pick = remaining.find(r => recent.every(h => muscleOverlap(r, h.routine) < 0.4));
+    if (!pick) pick = [...remaining].sort((a, b) => tired(a) - tired(b))[0];
+    remaining.splice(remaining.indexOf(pick), 1);
+    planned.push({ cell, routine: pick });
+    history.push({ date: cell.date, routine: pick });
+  }
+  const overdue = remaining; // pas de jour libre restant
   // Jours passés sans séance : les premiers portent les séances en retard.
   const pastEmpty = sched.filter(c => dayStr(c.date) < todayKey && !doneByDay.has(dayStr(c.date)));
   const view = cells.map(c => {
