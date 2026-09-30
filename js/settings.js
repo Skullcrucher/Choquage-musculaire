@@ -109,6 +109,17 @@ export async function renderReglages(container) {
       <button class="btn btn-secondary" id="signout-btn" style="margin-top:10px;">${t("Se déconnecter")}</button>
     </div>
 
+    ${db.isAdmin() ? `<div class="card" id="admin-card" data-icon="trophy" data-sub="${esc(t("Contenus officiels, défi de la semaine"))}">
+      <div class="card-title">🛡️ ${t("Administrateur")}</div>
+      <p class="muted" style="margin-top:0;">${t("Ce compte ({email}) a les droits d'administration. Ce que tu peux faire :", { email: esc(db.ADMIN_EMAIL) })}</p>
+      <ul class="muted" style="font-size:13px; padding-left:18px; line-height:1.6; margin:0;">
+        <li>${t("Feed → Défis : choisir et modifier le défi de la semaine (et préparer celui de la semaine suivante).")}</li>
+        <li>${t("Biblio → Découvrir : modifier une séance officielle, modifier ou retirer un programme officiel.")}</li>
+        <li>${t("Biblio → Mes routines / Mes plans : « Publier (officiel) » diffuse une routine ou un plan à tout le monde.")}</li>
+        <li>${t("Sur ordinateur, l'éditeur de routines s'affiche en grand pour aller plus vite.")}</li>
+      </ul>
+    </div>` : ""}
+
     ${db.isAdmin() ? `<div class="card" id="reports-card" data-icon="flag" data-sub="${esc(t("Profils signalés à traiter"))}">
       <div class="card-title">${t("Signalements")}</div>
       <div id="reports-list"><p class="muted">${t("Chargement…")}</p></div>

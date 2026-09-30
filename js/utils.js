@@ -12,8 +12,8 @@ import { t, locale } from "./i18n.js";
 //     worker (CACHE_NAME dans service-worker.js doit valoir
 //     skullcrusher-cache-v<APP_BUILD>).
 // Puis : node tools/stamp-version.mjs
-export const APP_VERSION = "0.78.04";
-export const APP_BUILD = 84;
+export const APP_VERSION = "0.82.00";
+export const APP_BUILD = 88;
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
@@ -98,6 +98,29 @@ export function closeModal() {
   document.querySelectorAll(".modal-backdrop:not([data-locked])").forEach(el => el.remove());
   if (document.querySelector(".modal-backdrop")) document.body.style.overflow = "hidden";
   window.dispatchEvent(new Event("sc:modal-close"));
+}
+
+// Affichage ordinateur : écran large ET souris/trackpad (pas une tablette
+// tactile). Classe « desktop » sur <html> (voir app.js et style.css).
+export const DESKTOP_QUERY = "(min-width: 1000px) and (hover: hover) and (pointer: fine)";
+export const isDesktop = () => document.documentElement.classList.contains("desktop");
+
+// Cartes repliables (.fold, en-tête .fold-head) : un toucher sur l'en-tête
+// déplie le détail. openSet garde les cartes ouvertes d'un affichage à l'autre.
+export function bindFolds(root, openSet = null) {
+  root.querySelectorAll(".fold").forEach(card => {
+    const key = card.dataset.fold;
+    if (openSet?.has(key)) card.classList.add("open");
+    const head = card.querySelector(".fold-head");
+    if (!head) return;
+    head.setAttribute("role", "button");
+    head.setAttribute("aria-expanded", card.classList.contains("open"));
+    head.onclick = () => {
+      const open = card.classList.toggle("open");
+      head.setAttribute("aria-expanded", open);
+      if (openSet) { if (open) openSet.add(key); else openSet.delete(key); }
+    };
+  });
 }
 
 // Avertissement avant une action qui arrête ou supprime quelque chose en

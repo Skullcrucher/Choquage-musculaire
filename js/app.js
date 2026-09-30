@@ -8,7 +8,7 @@ import { renderBiblio } from "./library.js";
 import { renderReglages } from "./settings.js";
 import { initAuth, renderLoginGate, renderUnauthorizedGate, isAuthorized } from "./auth.js";
 import { t, translateStatic } from "./i18n.js";
-import { esc } from "./utils.js";
+import { esc, DESKTOP_QUERY } from "./utils.js";
 
 // Chaque écran affiche son propre gros titre : la barre du haut garde
 // toujours le nom de l'app.
@@ -19,6 +19,12 @@ const TABS = {
   biblio: { render: renderBiblio },
   reglages: { render: renderReglages }
 };
+
+// Ordinateur ou smartphone : deux mises en page (voir style.css, html.desktop).
+const desktopMq = window.matchMedia(DESKTOP_QUERY);
+const applyLayout = () => document.documentElement.classList.toggle("desktop", desktopMq.matches);
+applyLayout();
+desktopMq.addEventListener?.("change", applyLayout);
 
 const view = document.getElementById("view");
 const tabbar = document.getElementById("tabbar");

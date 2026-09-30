@@ -78,6 +78,40 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.owner_uid == request.auth.uid;
     }
 
+    // Programmes officiels Skullcrusher : lus par tout compte connecté,
+    // écrits par l'administrateur. { deleted: true } masque un programme
+    // intégré à l'app.
+    match /official_programs/{programId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin()
+                    && programId.matches('^[A-Za-z0-9-]{1,60}$')
+                    && (request.resource.data.get('deleted', false) == true
+                        || (isSafeText(request.resource.data.name, 80)
+                            && isSafeText(request.resource.data.get('description', ''), 500)
+                            && request.resource.data.routines is list
+                            && request.resource.data.routines.size() >= 1
+                            && request.resource.data.routines.size() <= 14
+                            && request.resource.data.get('blocks', []) is list
+                            && request.resource.data.get('blocks', []).size() <= 20));
+      allow delete: if isAdmin();
+    }
+
+    // Défi de la semaine : lu par tout compte connecté, écrit par
+    // l'administrateur uniquement (id = semaine ISO, ex. 2026-W40).
+    match /weekly_challenges/{week} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin()
+                    && week.matches('^[0-9]{4}-W[0-9]{2}$')
+                    && request.resource.data.week == week
+                    && isSafeText(request.resource.data.title, 60)
+                    && isSafeText(request.resource.data.get('description', ''), 200)
+                    && isSafeText(request.resource.data.get('exercise', ''), 80)
+                    && request.resource.data.type in ['workouts', 'days', 'tonnage', 'sets', 'exercise_reps', 'exercise_tonnage', 'muscle_sets', 'records']
+                    && request.resource.data.target is number
+                    && request.resource.data.target >= 1;
+      allow delete: if isAdmin();
+    }
+
     // Envois entre amis : une routine ou un plan copié dans la boîte
     // « Reçus » d'un ami (amitié acceptée). Lus par l'expéditeur et le
     // destinataire ; supprimés quand le destinataire l'ajoute ou le refuse.

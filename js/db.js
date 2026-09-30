@@ -572,6 +572,32 @@ export async function deleteSharedPlan(id) {
   await deleteDoc(doc(dbase, "shared_plans", id));
 }
 
+// ---------- Programmes officiels (administrateur) ----------
+export async function listOfficialPrograms() {
+  const snap = await getDocs(collection(dbase, "official_programs"));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+export async function saveOfficialProgram(id, data) {
+  await setDoc(doc(dbase, "official_programs", id), { ...data, updated_at: new Date().toISOString(), updated_by: requireUid() });
+}
+export async function deleteOfficialProgram(id) {
+  await deleteDoc(doc(dbase, "official_programs", id));
+}
+
+// ---------- Défi de la semaine ----------
+// weekly_challenges/{semaine ISO, ex. 2026-W40} : lu par tous, écrit par
+// l'administrateur.
+export async function getWeeklyChallenge(week) {
+  const snap = await getDoc(doc(dbase, "weekly_challenges", week));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+export async function saveWeeklyChallenge(week, data) {
+  await setDoc(doc(dbase, "weekly_challenges", week), { ...data, week, updated_at: new Date().toISOString(), updated_by: requireUid() });
+}
+export async function deleteWeeklyChallenge(week) {
+  await deleteDoc(doc(dbase, "weekly_challenges", week));
+}
+
 // ---------- Envois entre amis ----------
 // gifts/{id} : copie d'une routine ou d'un plan envoyée à un ami. Elle
 // attend dans sa boîte « Reçus » jusqu'à ce qu'il l'ajoute ou la refuse
