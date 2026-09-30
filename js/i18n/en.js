@@ -1136,5 +1136,12 @@ export default {
   "En double ({n})": "Duplicates ({n})",
   "Même créneau qu'une autre séance (import ou ajout manuel en plus) : comptée une seule fois. Touche-la pour la voir ou la supprimer.": "Same time slot as another workout (extra import or manual add): counted once. Tap it to view or delete it.",
   "comme « {title} »": "like “{title}”",
-  "Touche une séance pour la voir, la modifier ou la supprimer.": "Tap a workout to view, edit or delete it."
+  "Touche une séance pour la voir, la modifier ou la supprimer.": "Tap a workout to view, edit or delete it.",
+  "Séance du {day}": "Workout on {day}",
+  "Touche un jour pour choisir sa séance.": "Tap a day to choose its workout.",
+  "{n} séance par semaine": "{n} workout per week",
+  "{n} séances par semaine": "{n} workouts per week",
+  "{n} séance/sem.": "{n} workout/wk",
+  "{n} séances/sem.": "{n} workouts/wk",
+  "Comment fonctionne un plan ?": "How does a plan work?"
 };

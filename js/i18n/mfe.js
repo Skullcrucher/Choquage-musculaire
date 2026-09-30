@@ -1135,5 +1135,12 @@ export default {
   "En double ({n})": "An doub ({n})",
   "Même créneau qu'une autre séance (import ou ajout manuel en plus) : comptée une seule fois. Touche-la pour la voir ou la supprimer.": "Mem ler ki enn lot seans (import ouswa azout manyel an plis) : konte enn sel fwa. Tous li pou get li ouswa efas li.",
   "comme « {title} »": "parey ki « {title} »",
-  "Touche une séance pour la voir, la modifier ou la supprimer.": "Tous enn seans pou get li, modifie li ouswa efas li."
+  "Touche une séance pour la voir, la modifier ou la supprimer.": "Tous enn seans pou get li, modifie li ouswa efas li.",
+  "Séance du {day}": "Seans {day}",
+  "Touche un jour pour choisir sa séance.": "Tous enn zour pou swazir so seans.",
+  "{n} séance par semaine": "{n} seans par semenn",
+  "{n} séances par semaine": "{n} seans par semenn",
+  "{n} séance/sem.": "{n} seans/sem.",
+  "{n} séances/sem.": "{n} seans/sem.",
+  "Comment fonctionne un plan ?": "Kouma enn plan marse ?"
 };

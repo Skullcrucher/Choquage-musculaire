@@ -3,12 +3,12 @@
 // ============================================================
 import * as db from "./db.js";
 import { icon, segHtml } from "./icons.js";
-import { toast, openModal, closeModal, attachAutocomplete, esc, confirmDanger } from "./utils.js";
+import { toast, openModal, closeModal, attachAutocomplete, esc, confirmDanger, bindFolds } from "./utils.js";
 import { getExercises, getRoutines, invalidate } from "./cache.js";
 import { renderDiscover } from "./routine-discover.js";
 import { guessMuscleGroup } from "./muscles.js";
 import { normalizePlaylistUrl } from "./music.js";
-import { t } from "./i18n.js";
+import { t, tn } from "./i18n.js";
 
 let routinesMode = "mine"; // "mine" | "discover" | "plans"
 export function setRoutinesMode(mode) { routinesMode = mode; }
@@ -43,6 +43,7 @@ export function routineMetaChips(r) {
   return chips;
 }
 
+const openRoutines = new Set(); // cartes dépliées
 async function renderMyRoutines(content) {
   const [all, planIds] = await Promise.all([getRoutines(), import("./plans.js").then(m => m.planRoutineIds()).catch(() => new Set())]);
   if (!content.isConnected) return;
@@ -59,30 +60,39 @@ async function renderMyRoutines(content) {
     <div style="height:14px"></div>
     ${hidden ? `<p class="muted" style="font-size:13px; margin:-4px 0 12px;">📅 ${t("{n} séance(s) de plan rangée(s) dans « Mes plans ».", { n: hidden })}</p>` : ""}
     ${routines.length === 0 ? `<div class="empty-state"><span class="num">▤</span>${t("Pas encore de routine.")}<br><span class="muted">${t("Crée la tienne ou pioche dans l'onglet Découvrir.")}</span></div>` : ""}
-    ${routines.map(r => `
-      <div class="card" data-routine="${esc(r.id)}">
-        <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
-          <div class="card-title" style="margin-bottom:4px;">${esc(r.name)}</div>
-          <span class="routine-badge">${db.ROUTINE_VISIBILITY[r.visibility || "private"]}</span>
+    ${routines.map(r => {
+      const exs = r.exercises || [];
+      const sub = [tn(exs.length, "{n} exercice", "{n} exercices"), ...routineMetaChips(r)].join(" · ");
+      return `
+      <div class="card fold" data-fold="${esc(r.id)}" data-routine="${esc(r.id)}">
+        <div class="fold-head">
+          <div class="fold-main">
+            <div class="card-title">${esc(r.name)}</div>
+            <div class="muted fold-sub">${esc(sub)}</div>
+          </div>
+          <span class="fold-badges"><span class="routine-badge">${db.ROUTINE_VISIBILITY[r.visibility || "private"]}</span></span>
+          <span class="fold-chev">›</span>
         </div>
-        ${r.source?.owner_name ? `<div class="muted" style="font-size:12px; margin-bottom:4px;">${t("Ajoutée depuis la routine de {name}", { name: esc(r.source.owner_name) })}</div>` : ""}
-        ${r.description ? `<div class="muted" style="font-size:13px; margin-bottom:6px;">${esc(r.description)}</div>` : ""}
-        <div class="muted" style="margin-bottom:10px;">${(r.exercises || []).map(e => esc(e.exercise_name)).join(" · ")}</div>
-        ${routineMetaChips(r).length || r.vote_count || r.playlist_url ? `<div class="chip-row" style="margin:0 0 10px;">
-          ${routineMetaChips(r).map(c => `<span class="feed-muscle-badge">${esc(c)}</span>`).join("")}
-          ${r.vote_count ? `<span class="feed-muscle-badge">👍 ${r.vote_count}</span>` : ""}
-          ${r.playlist_url ? `<span class="routine-badge">🎧 ${t("playlist")}</span>` : ""}
-        </div>` : ""}
-        <div class="btn-row btn-row-wrap">
-          <button class="btn btn-sm btn-secondary" data-edit="${esc(r.id)}">${t("Modifier")}</button>
-          <button class="btn btn-sm btn-secondary" data-share="${esc(r.id)}">${t("Partager")}</button>
-          <button class="btn btn-sm btn-secondary" data-send="${esc(r.id)}">${t("Envoyer")}</button>
-          <button class="btn btn-sm btn-danger" data-del="${esc(r.id)}">${t("Supprimer")}</button>
+        <div class="fold-body">
+          ${r.source?.owner_name ? `<div class="muted" style="font-size:12px; margin-bottom:6px;">${t("Ajoutée depuis la routine de {name}", { name: esc(r.source.owner_name) })}</div>` : ""}
+          ${r.description ? `<div class="muted" style="font-size:13px; margin-bottom:8px;">${esc(r.description)}</div>` : ""}
+          ${exs.map(e => `<div class="fold-ex"><span>${esc(e.exercise_name)}</span><span>${esc(e.target_sets || "")}${e.reps_target ? ` × ${esc(e.reps_target)}` : ""}${e.target_kg != null ? ` · ${esc(e.target_kg)} kg` : ""}</span></div>`).join("")}
+          ${r.vote_count || r.playlist_url ? `<div class="chip-row" style="margin:10px 0 0;">
+            ${r.vote_count ? `<span class="feed-muscle-badge">👍 ${r.vote_count}</span>` : ""}
+            ${r.playlist_url ? `<span class="routine-badge">🎧 ${t("playlist")}</span>` : ""}
+          </div>` : ""}
+          <div class="btn-row btn-row-wrap" style="margin-top:12px;">
+            <button class="btn btn-sm btn-secondary" data-edit="${esc(r.id)}">${t("Modifier")}</button>
+            <button class="btn btn-sm btn-secondary" data-share="${esc(r.id)}">${t("Partager")}</button>
+            <button class="btn btn-sm btn-secondary" data-send="${esc(r.id)}">${t("Envoyer")}</button>
+            <button class="btn btn-sm btn-danger" data-del="${esc(r.id)}">${t("Supprimer")}</button>
+          </div>
         </div>
-      </div>
-    `).join("")}
+      </div>`;
+    }).join("")}
   `;
   const refresh = () => renderMyRoutines(content);
+  bindFolds(content, openRoutines);
   content.querySelector("#new-routine").onclick = () => openRoutineEditor(null, refresh);
   content.querySelector("#import-plan").onclick = async () => (await import("./plan-import.js")).openPlanImport(refresh);
   const exportBtn = content.querySelector("#export-plan");

@@ -10,9 +10,9 @@
 // depuis la routine prévue (routine_id), ou porte son nom, ce jour-là.
 // ============================================================
 import * as db from "./db.js";
-import { toast, openModal, closeModal, esc, healthNoteHtml, confirmDanger } from "./utils.js";
+import { toast, openModal, closeModal, esc, healthNoteHtml, confirmDanger, bindFolds } from "./utils.js";
 import { getRoutines, getWorkouts, invalidate } from "./cache.js";
-import { t, locale } from "./i18n.js";
+import { t, tn, locale } from "./i18n.js";
 
 export const MAX_PLANS = 20;
 const DAY_MS = 86400000;
@@ -461,6 +461,7 @@ function openSlotLink(plan, week, slot, workouts, { onOpenWorkout, onChanged }) 
   });
 }
 
+const openPlanCards = new Set(); // cartes dépliées
 export async function renderPlans(content) {
   const [{ plans, active }, routines, workouts] = await Promise.all([getPlans(), getRoutines(), getWorkouts()]);
   if (!content.isConnected) return;
@@ -470,41 +471,50 @@ export async function renderPlans(content) {
     <button class="btn btn-primary" id="new-plan" ${routines.length ? "" : "disabled"}>+ ${t("Nouveau plan")}</button>
     <button class="btn btn-secondary" id="browse-programs" style="margin-top:8px;">⭐ ${t("Programmes prêts à l'emploi (PPL, split…)")}</button>
     ${routines.length ? "" : `<p class="muted">${t("Crée d'abord des routines : un plan les répartit sur les jours de la semaine.")}</p>`}
-    <p class="muted" style="font-size:13px;">${t("Un plan enchaîne tes routines sur plusieurs semaines ou mois, en blocs (ex. 4 semaines hypertrophie, puis 3 semaines force, puis 1 semaine de décharge). Le plan actif s'affiche dans l'onglet Séance.")}</p>
+    <details class="muted" style="font-size:13px; margin:10px 0 12px;">
+      <summary style="cursor:pointer;">ℹ️ ${t("Comment fonctionne un plan ?")}</summary>
+      <p style="margin:8px 0;">${t("Un plan enchaîne tes routines sur plusieurs semaines ou mois, en blocs (ex. 4 semaines hypertrophie, puis 3 semaines force, puis 1 semaine de décharge). Le plan actif s'affiche dans l'onglet Séance.")}</p>
+    </details>
     ${healthNoteHtml()}
     ${plans.map(p => {
       const pos = planPosition(p);
       const status = pos.status === "upcoming" ? t("Commence le {date}", { date: parseDay(p.start_date).toLocaleDateString(locale(), { day: "numeric", month: "long" }) })
         : pos.status === "done" ? t("Terminé") : t("Semaine {w}/{total}", { w: pos.week, total: pos.total });
+      const ids = [...new Set((p.blocks || []).flatMap(b => Object.values(b.days || {})).filter(Boolean))];
+      const rs = ids.map(id => routines.find(r => r.id === id)).filter(Boolean);
+      const perWeek = Math.max(0, ...(p.blocks || []).map(b => Object.keys(b.days || {}).length));
       return `
-      <div class="card ${p.id === active ? "plan-active" : ""}">
-        <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
-          <div class="card-title" style="margin-bottom:4px;">${esc(p.name)}</div>
-          <span style="display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end;">
-            ${p.shared_id ? `<span class="routine-badge">${p.shared_visibility === "friends" ? "👥" : "🌍"} ${t("Partagé")}</span>` : ""}
+      <div class="card fold ${p.id === active ? "plan-active" : ""}" data-fold="${esc(p.id)}">
+        <div class="fold-head">
+          <div class="fold-main">
+            <div class="card-title">${esc(p.name)}</div>
+            <div class="muted fold-sub">${status} · ${tn(perWeek, "{n} séance/sem.", "{n} séances/sem.")}</div>
+          </div>
+          <span class="fold-badges">
+            ${p.shared_id ? `<span class="routine-badge">${p.shared_visibility === "friends" ? "👥" : "🌍"}</span>` : ""}
             ${p.id === active ? `<span class="routine-badge">✅ ${t("Actif")}</span>` : ""}
           </span>
+          <span class="fold-chev">›</span>
         </div>
-        ${p.source?.official ? `<div class="muted" style="font-size:12px; margin-bottom:4px;">⭐ ${t("Programme Skullcrusher")}</div>` : p.source?.owner_name ? `<div class="muted" style="font-size:12px; margin-bottom:4px;">${t("Ajouté depuis le plan de {name}", { name: esc(p.source.owner_name) })}</div>` : ""}
-        <div class="muted" style="font-size:13px; margin-bottom:6px;">${status} · ${(p.blocks || []).map(b => `${esc(b.name || "")} ${b.weeks} ${t("sem.")}`).join(" → ")}</div>
-        ${pos.status === "running" ? `<div class="progress-bar" style="margin-bottom:8px;"><div class="progress-bar-fill" style="width:${Math.round((pos.week - 1) / pos.total * 100)}%"></div></div>` : ""}
-        ${p.id === active && pos.status === "running" ? weekStripHtml(stripCells(p, new Date(), routines, workouts)) : ""}
-        ${(() => {
-          const ids = [...new Set((p.blocks || []).flatMap(b => Object.values(b.days || {})).filter(Boolean))];
-          const rs = ids.map(id => routines.find(r => r.id === id)).filter(Boolean);
-          return rs.length ? `<div class="plan-routines"><span class="muted">${t("Séances du plan :")}</span> ${rs.map(r => `<button class="chip chip-sm" data-redit="${esc(r.id)}">✏️ ${esc(r.name)}</button>`).join("")}</div>` : "";
-        })()}
-        <div class="btn-row btn-row-wrap" style="margin-top:8px;">
-          <button class="btn btn-sm btn-secondary" data-activate="${esc(p.id)}">${p.id === active ? t("Désactiver") : t("Activer")}</button>
-          <button class="btn btn-sm btn-secondary" data-pedit="${esc(p.id)}">${t("Modifier")}</button>
-          <button class="btn btn-sm btn-secondary" data-pshare="${esc(p.id)}">${t("Partager")}</button>
-          <button class="btn btn-sm btn-secondary" data-psend="${esc(p.id)}">${t("Envoyer")}</button>
-          ${pos.status !== "done" ? `<button class="btn btn-sm btn-secondary" data-pshift="${esc(p.id)}" title="${t("Décaler d'une semaine")}">⏭ +1 ${t("sem.")}</button>` : ""}
-          <button class="btn btn-sm btn-danger" data-pdel="${esc(p.id)}">${t("Supprimer")}</button>
+        ${pos.status === "running" ? `<div class="fold-bar"><div style="width:${Math.round((pos.week - 1) / pos.total * 100)}%"></div></div>` : ""}
+        <div class="fold-body">
+          ${p.source?.official ? `<div class="muted" style="font-size:12px; margin-bottom:4px;">⭐ ${t("Programme Skullcrusher")}</div>` : p.source?.owner_name ? `<div class="muted" style="font-size:12px; margin-bottom:4px;">${t("Ajouté depuis le plan de {name}", { name: esc(p.source.owner_name) })}</div>` : ""}
+          <div class="muted" style="font-size:13px; margin-bottom:8px;">${(p.blocks || []).map(b => `${esc(b.name || "")} ${b.weeks} ${t("sem.")}`).join(" → ")}</div>
+          ${p.id === active && pos.status === "running" ? weekStripHtml(stripCells(p, new Date(), routines, workouts)) : ""}
+          ${rs.length ? `<div class="plan-routines"><span class="muted">${t("Séances du plan :")}</span> ${rs.map(r => `<button class="chip chip-sm" data-redit="${esc(r.id)}">✏️ ${esc(r.name)}</button>`).join("")}</div>` : ""}
+          <div class="btn-row btn-row-wrap" style="margin-top:8px;">
+            <button class="btn btn-sm btn-secondary" data-activate="${esc(p.id)}">${p.id === active ? t("Désactiver") : t("Activer")}</button>
+            <button class="btn btn-sm btn-secondary" data-pedit="${esc(p.id)}">${t("Modifier")}</button>
+            <button class="btn btn-sm btn-secondary" data-pshare="${esc(p.id)}">${t("Partager")}</button>
+            <button class="btn btn-sm btn-secondary" data-psend="${esc(p.id)}">${t("Envoyer")}</button>
+            ${pos.status !== "done" ? `<button class="btn btn-sm btn-secondary" data-pshift="${esc(p.id)}" title="${t("Décaler d'une semaine")}">⏭ +1 ${t("sem.")}</button>` : ""}
+            <button class="btn btn-sm btn-danger" data-pdel="${esc(p.id)}">${t("Supprimer")}</button>
+          </div>
         </div>
       </div>`;
     }).join("")}
   `;
+  bindFolds(content, openPlanCards);
   content.querySelector("#new-plan").onclick = () => openPlanEditor(null, routines, refresh);
   content.querySelector("#browse-programs").onclick = async () => {
     (await import("./routine-discover.js")).setDiscoverMode("plans");
@@ -570,8 +580,6 @@ function openPlanEditor(plan, routines, onSaved) {
     id: "", name: "", start_date: dayStr(nextMonday),
     blocks: [{ name: t("Bloc 1"), weeks: 4, days: {} }]
   };
-  const routineOptions = (selected) => `<option value="">${t("Repos")}</option>` +
-    routines.map(r => `<option value="${esc(r.id)}" ${r.id === selected ? "selected" : ""}>${esc(r.name)}</option>`).join("");
   openModal(`
     <h3>📅 ${plan ? t("Modifier le plan") : t("Nouveau plan")}</h3>
     <label>${t("Nom")}</label>
@@ -591,10 +599,11 @@ function openPlanEditor(plan, routines, onSaved) {
         const b = state.blocks[+el.dataset.block];
         b.name = el.querySelector(".pl-bname").value.trim().slice(0, 40);
         b.weeks = Math.max(1, Math.min(52, parseInt(el.querySelector(".pl-bweeks").value, 10) || 1));
-        b.days = {};
-        el.querySelectorAll("[data-dow]").forEach(s => { if (s.value) b.days[s.dataset.dow] = s.value; });
       });
     };
+    // Jour sélectionné (bloc, jour) : la liste des séances s'ouvre dessous.
+    let pick = null;
+    const shortName = (id) => routines.find(r => r.id === id)?.name || "";
     const draw = () => {
       m.querySelector("#pl-blocks").innerHTML = state.blocks.map((b, i) => `
         <div class="card" data-block="${i}" style="padding:12px; margin-top:10px;">
@@ -603,14 +612,35 @@ function openPlanEditor(plan, routines, onSaved) {
             <div><label>${t("Semaines")}</label><input class="pl-bweeks" type="number" min="1" max="52" value="${esc(b.weeks)}"></div>
             ${state.blocks.length > 1 ? `<button class="btn btn-sm btn-danger" data-bdel="${i}" style="width:auto;">✕</button>` : "<span></span>"}
           </div>
-          <div class="plan-days-edit">
-            ${DOWS.map(dow => `<label class="plan-day-edit"><span>${esc(dowLabel(dow, "short"))}</span><select data-dow="${dow}">${routineOptions(b.days?.[dow] || "")}</select></label>`).join("")}
+          <div class="pl-week">
+            ${DOWS.map(dow => { const id = b.days?.[dow] || ""; return `<button type="button" class="pl-day ${id ? "on" : ""} ${pick && pick[0] === i && pick[1] === dow ? "sel" : ""}" data-pday="${i}:${dow}">
+              <b>${esc(dowLabel(dow, "short"))}</b><small>${id ? esc(shortName(id)) : t("Repos")}</small></button>`; }).join("")}
           </div>
+          ${pick && pick[0] === i ? `<div class="pl-pick">
+            <div class="pl-pick-title">${t("Séance du {day}", { day: esc(dowLabel(pick[1], "long")) })}</div>
+            <button type="button" data-pset="" class="${!b.days?.[pick[1]] ? "cur" : ""}"><span>😴 ${t("Repos")}</span></button>
+            ${routines.map(r => `<button type="button" data-pset="${esc(r.id)}" class="${b.days?.[pick[1]] === r.id ? "cur" : ""}"><span>${esc(r.name)}</span><small>${tn((r.exercises || []).length, "{n} exercice", "{n} exercices")}</small></button>`).join("")}
+          </div>` : ""}
+          <p class="muted" style="font-size:12px; margin:6px 0 0;">${tn(Object.keys(b.days || {}).length, "{n} séance par semaine", "{n} séances par semaine")} · ${t("Touche un jour pour choisir sa séance.")}</p>
           ${i > 0 ? `<button class="btn btn-sm btn-secondary" data-bcopy="${i}" style="margin-top:6px; width:auto;">${t("Copier la semaine du bloc précédent")}</button>` : ""}
         </div>`).join("");
       const total = state.blocks.reduce((n, b) => n + (b.weeks || 0), 0);
       m.querySelector("#pl-total").textContent = t("Durée totale : {n} semaine(s) (≈ {months} mois)", { n: total, months: Math.round(total / 4.345 * 10) / 10 });
-      m.querySelectorAll("[data-bdel]").forEach(b => b.onclick = () => { readBlocks(); state.blocks.splice(+b.dataset.bdel, 1); draw(); });
+      m.querySelectorAll("[data-pday]").forEach(b => b.onclick = () => {
+        readBlocks();
+        const [bi, dow] = b.dataset.pday.split(":").map(Number);
+        pick = pick && pick[0] === bi && pick[1] === dow ? null : [bi, dow];
+        draw();
+      });
+      m.querySelectorAll("[data-pset]").forEach(b => b.onclick = () => {
+        readBlocks();
+        const days = state.blocks[pick[0]].days || (state.blocks[pick[0]].days = {});
+        if (b.dataset.pset) days[pick[1]] = b.dataset.pset; else delete days[pick[1]];
+        // Jour suivant pour enchaîner la saisie de la semaine.
+        pick = pick[1] < 7 ? [pick[0], pick[1] + 1] : null;
+        draw();
+      });
+      m.querySelectorAll("[data-bdel]").forEach(b => b.onclick = () => { readBlocks(); pick = null; state.blocks.splice(+b.dataset.bdel, 1); draw(); });
       m.querySelectorAll("[data-bcopy]").forEach(b => b.onclick = () => { readBlocks(); const i = +b.dataset.bcopy; state.blocks[i].days = { ...state.blocks[i - 1].days }; draw(); });
       m.querySelectorAll(".pl-bweeks").forEach(inp => inp.oninput = () => { readBlocks(); m.querySelector("#pl-total").textContent = t("Durée totale : {n} semaine(s) (≈ {months} mois)", { n: totalWeeks(state), months: Math.round(totalWeeks(state) / 4.345 * 10) / 10 }); });
     };

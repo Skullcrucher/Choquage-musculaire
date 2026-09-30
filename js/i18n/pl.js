@@ -1145,5 +1145,12 @@ export default {
   "En double ({n})": "Duplikaty ({n})",
   "Même créneau qu'une autre séance (import ou ajout manuel en plus) : comptée une seule fois. Touche-la pour la voir ou la supprimer.": "Ten sam czas co inny trening (dodatkowy import lub ręczne dodanie): liczony raz. Dotknij, aby zobaczyć lub usunąć.",
   "comme « {title} »": "jak „{title}”",
-  "Touche une séance pour la voir, la modifier ou la supprimer.": "Dotknij treningu, aby go zobaczyć, zmienić lub usunąć."
+  "Touche une séance pour la voir, la modifier ou la supprimer.": "Dotknij treningu, aby go zobaczyć, zmienić lub usunąć.",
+  "Séance du {day}": "Trening w {day}",
+  "Touche un jour pour choisir sa séance.": "Dotknij dnia, aby wybrać trening.",
+  "{n} séance par semaine": "{n} trening w tygodniu",
+  "{n} séances par semaine": "Treningi w tygodniu: {n}",
+  "{n} séance/sem.": "{n} trening/tydz.",
+  "{n} séances/sem.": "{n} treningi/tydz.",
+  "Comment fonctionne un plan ?": "Jak działa plan?"
 };
