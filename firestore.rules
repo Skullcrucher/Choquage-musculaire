@@ -305,6 +305,12 @@ service cloud.firestore {
       function friendsShared(data) {
         return data.get('friends_share', false) == true && areFriends(request.auth.uid, data.owner_uid);
       }
+      function canSee(data) {
+        return data.owner_uid == request.auth.uid ||
+               data.get('shared', false) == true ||
+               friendsShared(data) ||
+               request.auth.uid in data.get('partners', []);
+      }
       allow read: if isSignedIn() && (
                     resource.data.owner_uid == request.auth.uid ||
                     resource.data.get('shared', false) == true ||
@@ -323,10 +329,42 @@ service cloud.firestore {
                        request.resource.data.partners == resource.data.partners.removeAll([request.auth.uid])) ||
                       ((resource.data.get('shared', false) == true || friendsShared(resource.data)) &&
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['props']) &&
-                       request.resource.data.get('props', {}).diff(resource.data.get('props', {})).affectedKeys().hasOnly([request.auth.uid]))
+                       request.resource.data.get('props', {}).diff(resource.data.get('props', {})).affectedKeys().hasOnly([request.auth.uid])) ||
+                      // Compteur de commentaires : +1 / -1 par quiconque voit la séance.
+                      (canSee(resource.data) &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['comment_count']) &&
+                       request.resource.data.comment_count is int &&
+                       (request.resource.data.comment_count == resource.data.get('comment_count', 0) + 1 ||
+                        request.resource.data.comment_count == resource.data.get('comment_count', 0) - 1))
                     );
       allow delete: if isSignedIn()
                     && resource.data.owner_uid == request.auth.uid;
+
+      // Commentaires : lisibles et ajoutables par quiconque voit la séance
+      // (partagée, amis seulement, partenaire ou propriétaire). Supprimables
+      // par leur auteur, le propriétaire de la séance ou l'admin.
+      match /comments/{commentId} {
+        function parentVisible() {
+          let w = workoutDoc(workoutId);
+          return w.owner_uid == request.auth.uid ||
+                 w.get('shared', false) == true ||
+                 (w.get('friends_share', false) == true && areFriends(request.auth.uid, w.owner_uid)) ||
+                 request.auth.uid in w.get('partners', []);
+        }
+        allow read: if isSignedIn() && parentVisible();
+        allow create: if isSignedIn() && parentVisible()
+                      && request.resource.data.keys().hasOnly(['author_uid', 'text', 'created_at'])
+                      && request.resource.data.author_uid == request.auth.uid
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 500
+                      && request.resource.data.created_at == request.time;
+        allow delete: if isSignedIn() && (
+                        resource.data.author_uid == request.auth.uid ||
+                        workoutDoc(workoutId).owner_uid == request.auth.uid ||
+                        isAdmin()
+                      );
+      }
 
       match /sets/{setId} {
         allow read: if isSignedIn() && (

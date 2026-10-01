@@ -6,7 +6,7 @@ import {
   initializeFirestore,
   collection, doc, setDoc, getDoc, getDocs, deleteDoc,
   updateDoc, addDoc, query, orderBy, where, collectionGroup, limit,
-  writeBatch, deleteField, increment, startAfter, arrayRemove, arrayUnion
+  writeBatch, deleteField, increment, startAfter, arrayRemove, arrayUnion, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
@@ -1093,6 +1093,47 @@ export async function listFriendsOnlyWorkouts(perFriend = 10) {
       .then(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })))
       .catch(e => { console.warn("[Skullcrusher] Séances amis", e); return []; })));
   return lists.flat();
+}
+
+// Séances partagées d'un cercle (amis + moi) : partage communauté ET
+// « amis seulement », quelques séances par personne.
+export async function listCircleWorkouts(uids, perUser = 12) {
+  const runs = [];
+  [...new Set(uids)].slice(0, 80).forEach(uid => ["shared", "friends_share"].forEach(field => runs.push(
+    getDocs(query(collection(dbase, "workouts"), where(field, "==", true), where("owner_uid", "==", uid), limit(perUser)))
+      .then(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      .catch(e => { console.warn("[Skullcrusher] Séances du cercle", e); return []; }))));
+  const byId = new Map((await Promise.all(runs)).flat().map(w => [w.id, w]));
+  return [...byId.values()];
+}
+
+// ==================== COMMENTAIRES (séances partagées) ====================
+// workouts/{id}/comments/{cid} : { author_uid, text, created_at }. Le
+// compteur comment_count de la séance est tenu à jour dans la même écriture.
+export const COMMENT_MAX = 500;
+export async function listComments(workoutId, max = 200) {
+  const snap = await getDocs(query(collection(dbase, "workouts", workoutId, "comments"), orderBy("created_at", "asc"), limit(max)));
+  return snap.docs.map(d => {
+    const data = d.data();
+    return { id: d.id, ...data, created_at: data.created_at?.toDate ? data.created_at.toDate().toISOString() : new Date().toISOString() };
+  });
+}
+export async function addComment(workoutId, text) {
+  const uid = requireUid();
+  const clean = String(text || "").trim().slice(0, COMMENT_MAX);
+  if (!clean) return null;
+  const ref = doc(collection(dbase, "workouts", workoutId, "comments"));
+  const batch = writeBatch(dbase);
+  batch.set(ref, { author_uid: uid, text: clean, created_at: serverTimestamp() });
+  batch.update(doc(dbase, "workouts", workoutId), { comment_count: increment(1) });
+  await batch.commit();
+  return ref.id;
+}
+export async function deleteComment(workoutId, commentId) {
+  const batch = writeBatch(dbase);
+  batch.delete(doc(dbase, "workouts", workoutId, "comments", commentId));
+  batch.update(doc(dbase, "workouts", workoutId), { comment_count: increment(-1) });
+  await batch.commit();
 }
 
 export async function toggleProps(workoutId) {

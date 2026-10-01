@@ -164,12 +164,20 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
         </div>` : ""}
     </div>
 
+    ${workout.shared || workout.friends_share || isPartner ? `
+      <div class="detail-comments">
+        <div class="card-title" style="margin:16px 0 8px;">💬 ${t("Commentaires")}</div>
+        <div id="detail-comments"></div>
+      </div>` : ""}
+
     <div class="btn-row" style="margin-top:12px;">
       <button class="btn btn-secondary" id="close-detail">${t("Fermer")}</button>
       ${isOwner ? `<button class="btn btn-danger" id="del-workout">${t("Supprimer")}</button>` : ""}
     </div>
   `, (modalEl) => {
     modalEl.querySelector("#close-detail").onclick = closeModal;
+    const cmEl = modalEl.querySelector("#detail-comments");
+    if (cmEl) import("./comments.js").then(m => m.renderComments(cmEl, workout)).catch(e => console.warn("[Skullcrusher] Commentaires", e));
     modalEl.querySelectorAll("[data-dtab]").forEach(chip => chip.onclick = () => {
       modalEl.querySelectorAll("[data-dtab]").forEach(c => c.classList.toggle("active", c === chip));
       modalEl.querySelector("#pane-gym").style.display = chip.dataset.dtab === "gym" ? "" : "none";

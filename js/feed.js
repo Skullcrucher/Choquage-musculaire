@@ -9,6 +9,7 @@ import { renderFriends, countIncomingRequests } from "./friends.js";
 import { openProfile } from "./profile.js";
 import { songHtml, bindSongLinks, parseMusicLink, providerIcon } from "./music.js";
 import { icon, segHtml } from "./icons.js";
+import { openComments } from "./comments.js";
 import { t, tn } from "./i18n.js";
 
 // Records, "son du record", playlist et bande-son d'une séance partagée.
@@ -29,7 +30,13 @@ export function workoutMusicHtml(w) {
     </div>`;
 }
 
-let feedMode = "workouts"; // "workouts" | "challenges" | "friends" (la musique a son onglet)
+// Feed : "community" (séances partagées de tous les membres), "friends"
+// (mes amis + moi), "challenges". La gestion des amis s'ouvre depuis le fil
+// Amis (friendsManage). La musique a son onglet.
+let feedMode = "community";
+let friendsManage = false;
+const LS_SORT = "skullcrusher_feed_sort";
+let feedSort = (() => { try { return localStorage.getItem(LS_SORT) === "top" ? "top" : "recent"; } catch (_) { return "recent"; } })();
 
 const MUSCLE_EMOJI = {
   "Pectoraux": "💥", "Dos": "🦍", "Épaules": "🏔️", "Biceps": "💪", "Triceps": "🔱",
@@ -64,47 +71,103 @@ function tonnageFun(kg) {
 }
 
 export async function renderFeedTab(container) {
+  if (!["community", "friends", "challenges"].includes(feedMode)) feedMode = "community";
   container.innerHTML = `
     <h1 class="section-title">${t("Feed")} <img class="title-horns" src="icons/horns.png" alt=""></h1>
-    ${segHtml([["workouts", t("Séances"), "workouts"], ["challenges", t("Défis"), "trophy"], ["friends", t("Amis"), "friends"]], feedMode, "data-fmode", { extra: { friends: `<span id="friend-req-count"></span>` } })}
+    ${segHtml([["community", t("Communauté"), "globe"], ["friends", t("Amis"), "friends"], ["challenges", t("Défis"), "trophy"]], feedMode, "data-fmode", { extra: { friends: `<span id="friend-req-count"></span>` } })}
     <div id="feed-body"></div>
   `;
   container.querySelectorAll("[data-fmode]").forEach(chip => {
     chip.onclick = () => {
       feedMode = chip.dataset.fmode;
+      friendsManage = false;
       container.querySelectorAll("[data-fmode]").forEach(c => c.classList.toggle("active", c === chip));
       drawFeedBody(container);
     };
   });
-  countIncomingRequests().then(n => {
-    const el = container.querySelector("#friend-req-count");
-    if (el && n) el.innerHTML = ` <span class="req-dot">${n}</span>`;
-  });
+  refreshRequestBadge(container);
   await drawFeedBody(container);
+}
+
+function refreshRequestBadge(root) {
+  countIncomingRequests().then(n => {
+    root.querySelectorAll("#friend-req-count, #manage-req-count").forEach(el => {
+      el.innerHTML = n ? ` <span class="req-dot">${n}</span>` : "";
+    });
+  }).catch(() => {});
 }
 
 async function drawFeedBody(container) {
   const body = container.querySelector("#feed-body");
   if (!body) return;
-  if (feedMode === "friends") await renderFriends(body);
-  else if (feedMode === "challenges") await (await import("./challenges.js")).renderChallenges(body);
-  else await renderFeedWorkouts(body);
+  if (feedMode === "challenges") await (await import("./challenges.js")).renderChallenges(body);
+  else if (feedMode === "friends" && friendsManage) {
+    body.innerHTML = `<button class="btn btn-secondary btn-sm" id="feed-back" style="margin-bottom:12px;">← ${t("Retour au fil des amis")}</button><div id="friends-manage"></div>`;
+    body.querySelector("#feed-back").onclick = () => { friendsManage = false; drawFeedBody(container); refreshRequestBadge(container); };
+    await renderFriends(body.querySelector("#friends-manage"));
+  }
+  else await renderFeedWorkouts(body, container);
 }
 
-async function renderFeedWorkouts(body) {
-  body.innerHTML = `<div id="feed-list"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>`;
-  const wrap = body.querySelector("#feed-list");
-  // Séances partagées + séances (même privées) où un ami m'a cité.
-  // Toute la communauté (séances partagées) + séances « amis seulement » de
-  // mes amis + séances où un ami m'a cité.
-  const [feed, tagged, friendsOnly] = await Promise.all([db.listFeedWorkouts(60), db.listPartnerWorkouts(30).catch(() => []), db.listFriendsOnlyWorkouts(10).catch(() => [])]);
-  const byId = new Map([...feed, ...friendsOnly, ...tagged].map(w => [w.id, w]));
-  const workouts = [...byId.values()].sort((a, b) => String(b.start_time).localeCompare(String(a.start_time)));
+// Fil de séances : même présentation pour la communauté et les amis.
+async function renderFeedWorkouts(body, root) {
+  const mode = feedMode;
   const myUid = getUser()?.uid;
+  body.innerHTML = `
+    ${mode === "friends" ? `
+      <div class="feed-friends-bar">
+        <div id="gym-now" style="flex:1; min-width:0;"></div>
+        <button class="btn btn-secondary btn-sm" id="manage-friends">👥 ${t("Gérer mes amis")}<span id="manage-req-count"></span></button>
+      </div>` : ""}
+    <div class="chip-row feed-sort">
+      <div class="chip ${feedSort === "recent" ? "active" : ""}" data-sort="recent">🕒 ${t("Récentes")}</div>
+      <div class="chip ${feedSort === "top" ? "active" : ""}" data-sort="top">🤘 ${t("Top de la semaine")}</div>
+    </div>
+    <div id="feed-list"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>`;
+  const wrap = body.querySelector("#feed-list");
+  body.querySelectorAll("[data-sort]").forEach(c => c.onclick = () => {
+    feedSort = c.dataset.sort;
+    try { localStorage.setItem(LS_SORT, feedSort); } catch (_) {}
+    renderFeedWorkouts(body, root);
+  });
+  if (mode === "friends") {
+    body.querySelector("#manage-friends").onclick = () => { friendsManage = true; drawFeedBody(root); };
+    refreshRequestBadge(body);
+    import("./presence.js").then(m => m.renderGymNow(body.querySelector("#gym-now"), { onOpenProfile: openProfile })).catch(() => {});
+  }
+
+  let workouts;
+  try {
+    if (mode === "friends") {
+      // Mes amis + moi : séances communauté ET « amis seulement », plus
+      // celles où un ami m'a cité.
+      const friendUids = await db.listFriendUids().catch(() => []);
+      const [circle, tagged] = await Promise.all([db.listCircleWorkouts([myUid, ...friendUids]), db.listPartnerWorkouts(30).catch(() => [])]);
+      const allowed = new Set([myUid, ...friendUids]);
+      workouts = [...new Map([...circle, ...tagged.filter(w => allowed.has(w.owner_uid))].map(w => [w.id, w])).values()];
+    } else {
+      // Toute la communauté : chaque séance partagée par n'importe quel membre.
+      const [feed, tagged] = await Promise.all([db.listFeedWorkouts(80), db.listPartnerWorkouts(30).catch(() => [])]);
+      workouts = [...new Map([...feed, ...tagged].map(w => [w.id, w])).values()];
+    }
+  } catch (err) {
+    console.error("[Skullcrusher] Feed", err);
+    wrap.innerHTML = `<div class="empty-state">${t("Chargement impossible.")}</div>`;
+    return;
+  }
+  const votes = (w) => w.props ? Object.keys(w.props).length : 0;
+  workouts.sort((a, b) => String(b.start_time).localeCompare(String(a.start_time)));
+  if (feedSort === "top") {
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    const week = workouts.filter(w => String(w.start_time) >= weekAgo);
+    workouts = (week.length ? week : workouts).slice().sort((a, b) => votes(b) - votes(a) || (b.comment_count || 0) - (a.comment_count || 0));
+  }
+  workouts = workouts.slice(0, 80);
   const profiles = await db.getProfiles(workouts.flatMap(w => [w.owner_uid, ...(w.partners || [])]));
+  if (!wrap.isConnected) return;
 
   wrap.innerHTML = workouts.length === 0
-    ? `<div class="empty-state muted" style="padding:20px;">${t("Aucune séance partagée pour l'instant.")}</div>`
+    ? `<div class="empty-state muted" style="padding:20px;">${mode === "friends" ? t("Aucune séance partagée par tes amis pour l'instant.") : t("Aucune séance partagée pour l'instant.")}</div>`
     : workouts.map(w => {
         const profile = profiles[w.owner_uid];
         const name = w.owner_uid === myUid ? t("Toi") : (profile?.display_name || w.owner_name || t("Utilisateur"));
@@ -112,8 +175,10 @@ async function renderFeedWorkouts(body) {
         const muscles = w.muscle_summary || [];
         const vibe = vibeTag(w.total_sets);
         const fun = tonnageFun(w.total_tonnage);
-        const propsCount = w.props ? Object.keys(w.props).length : 0;
+        const propsCount = votes(w);
         const iReacted = !!(w.props && myUid && w.props[myUid]);
+        const comments = Math.max(0, w.comment_count || 0);
+        const social = w.shared || w.friends_share;
         return `
       <div class="card feed-card" data-w="${esc(w.id)}">
         <div style="display:flex; align-items:center; gap:10px;">
@@ -127,15 +192,16 @@ async function renderFeedWorkouts(body) {
             ${w.total_sets ? `<div style="font-size:11px;">${tn(w.total_sets, "{n} série", "{n} séries")}</div>` : ""}
           </div>
         </div>
-        ${(w.partners || []).length ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">🤝 ${t("Avec")} ${partnersHtml(w.partners, profiles, myUid)}${w.shared ? "" : ` · 🔒 ${t("visible par les partenaires")}`}</p>` : ""}
+        ${(w.partners || []).length ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">🤝 ${t("Avec")} ${partnersHtml(w.partners, profiles, myUid)}${social ? "" : ` · 🔒 ${t("visible par les partenaires")}`}</p>` : ""}
         ${muscles.length ? `<div class="chip-row" style="margin-top:10px; margin-bottom:0;">${muscles.map(m => `<span class="feed-muscle-badge">${MUSCLE_EMOJI[m] || "⚡"} ${esc(t(m))}</span>`).join("")}</div>` : ""}
         ${fun ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">🏋️ ${t("{kg} kg soulevés — ça pèse {comparison} !", { kg: w.total_tonnage, comparison: fun })}</p>` : ""}
         ${workoutMusicHtml(w)}
-        <div style="display:flex; justify-content:flex-end; margin-top:8px;${w.shared || w.friends_share ? "" : " display:none;"}">
-          <button class="props-btn ${iReacted ? "reacted" : ""}" data-props="${esc(w.id)}">
+        <div class="feed-actions">
+          ${social ? `<button class="props-btn ${iReacted ? "reacted" : ""}" data-props="${esc(w.id)}" aria-label="${t("Vote positif")}">
             <img class="props-horns" src="icons/horns.png" alt="🤘">
             <span>${propsCount > 0 ? propsCount : ""}</span>
-          </button>
+          </button>` : ""}
+          <button class="comment-btn" data-comments="${esc(w.id)}" aria-label="${t("Commentaires")}">💬 <span>${comments > 0 ? comments : t("Commenter")}</span></button>
         </div>
       </div>
     `;
@@ -148,8 +214,15 @@ async function renderFeedWorkouts(body) {
   wrap.querySelectorAll(".feed-card[data-w]").forEach(el => {
     el.onclick = () => openWorkoutDetail(
       workouts.find(w => w.id === el.dataset.w),
-      () => renderFeedWorkouts(body)
+      () => renderFeedWorkouts(body, root)
     );
+  });
+  wrap.querySelectorAll("[data-comments]").forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const w = workouts.find(x => x.id === btn.dataset.comments);
+      openComments(w, (n) => { btn.querySelector("span").textContent = n > 0 ? n : t("Commenter"); });
+    };
   });
   wrap.querySelectorAll(".props-btn").forEach(btn => {
     btn.onclick = async (e) => {
