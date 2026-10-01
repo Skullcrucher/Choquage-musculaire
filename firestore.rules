@@ -300,9 +300,15 @@ service cloud.firestore {
                && data.get('partners', []).size() <= 10
                && !(request.auth.uid in data.get('partners', []));
       }
+      // Partage « amis seulement » : lisible par les amis acceptés du
+      // propriétaire (friends_share == true).
+      function friendsShared(data) {
+        return data.get('friends_share', false) == true && areFriends(request.auth.uid, data.owner_uid);
+      }
       allow read: if isSignedIn() && (
                     resource.data.owner_uid == request.auth.uid ||
                     resource.data.get('shared', false) == true ||
+                    friendsShared(resource.data) ||
                     request.auth.uid in resource.data.get('partners', [])
                   );
       allow create: if isSignedIn()
@@ -315,7 +321,7 @@ service cloud.firestore {
                       (request.auth.uid in resource.data.get('partners', []) &&
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['partners']) &&
                        request.resource.data.partners == resource.data.partners.removeAll([request.auth.uid])) ||
-                      (resource.data.get('shared', false) == true &&
+                      ((resource.data.get('shared', false) == true || friendsShared(resource.data)) &&
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['props']) &&
                        request.resource.data.get('props', {}).diff(resource.data.get('props', {})).affectedKeys().hasOnly([request.auth.uid]))
                     );
@@ -327,6 +333,7 @@ service cloud.firestore {
                       resource.data.owner_uid == request.auth.uid ||
                       workoutDoc(workoutId).owner_uid == request.auth.uid ||
                       workoutDoc(workoutId).get('shared', false) == true ||
+                      (workoutDoc(workoutId).get('friends_share', false) == true && areFriends(request.auth.uid, workoutDoc(workoutId).owner_uid)) ||
                       request.auth.uid in workoutDoc(workoutId).get('partners', [])
                     );
         allow create: if isSignedIn()

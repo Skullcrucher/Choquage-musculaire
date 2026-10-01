@@ -168,16 +168,26 @@ export async function openFinishDialog(workout, summary) {
       ${hasBody ? healthNoteHtml() : ""}
       <input id="fin-watch" type="number" inputmode="numeric" min="0" max="5000" placeholder="${t("kcal de ta montre (facultatif)")}">
 
-      <label class="list-row" style="cursor:pointer; margin-top:10px;">
-        <span>${t("Partager sur le feed")}</span>
-        <input type="checkbox" id="fin-share" style="width:auto;">
-      </label>
+      <div style="margin-top:12px;">
+        <div class="muted" style="font-size:13px; margin-bottom:6px;">${t("Partager la séance")}</div>
+        <div class="chip-row" id="fin-share" style="margin:0;">
+          <div class="chip active" data-share="public">🌍 ${t("Communauté")}</div>
+          <div class="chip" data-share="friends">👥 ${t("Amis seulement")}</div>
+          <div class="chip" data-share="private">🔒 ${t("Privée")}</div>
+        </div>
+      </div>
       <p id="fin-error" style="color:var(--red); min-height:1em; margin:4px 0;"></p>
       <div class="btn-row">
         <button class="btn btn-secondary" id="fin-back">${t("Revenir")}</button>
         <button class="btn btn-primary" id="fin-save">${t("Enregistrer")}</button>
       </div>
     `, (m) => {
+      // Partage : communauté par défaut, ou amis seulement, ou privée.
+      let shareScope = "public";
+      m.querySelectorAll("[data-share]").forEach(c => c.onclick = () => {
+        shareScope = c.dataset.share;
+        m.querySelectorAll("[data-share]").forEach(x => x.classList.toggle("active", x === c));
+      });
       m.querySelector("#fin-back").onclick = () => { closeModal(); resolve(null); };
       m.querySelectorAll("[data-partner]").forEach(c => c.onclick = () => c.classList.toggle("active"));
       const kcalEl = m.querySelector("#fin-kcal");
@@ -208,7 +218,8 @@ export async function openFinishDialog(workout, summary) {
         const watch = parseInt(m.querySelector("#fin-watch").value, 10);
         closeModal();
         resolve({
-          shared: m.querySelector("#fin-share").checked,
+          shared: shareScope === "public",
+          friends_share: shareScope === "friends",
           routine: progress.routine,
           progressions: [...m.querySelectorAll("[data-prog]:checked")].map(c => progress.list[+c.dataset.prog]),
           partners: [...m.querySelectorAll("[data-partner].active")].map(c => c.dataset.partner).slice(0, db.MAX_PARTNERS),

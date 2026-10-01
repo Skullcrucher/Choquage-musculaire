@@ -95,8 +95,10 @@ async function renderFeedWorkouts(body) {
   body.innerHTML = `<div id="feed-list"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>`;
   const wrap = body.querySelector("#feed-list");
   // Séances partagées + séances (même privées) où un ami m'a cité.
-  const [feed, tagged] = await Promise.all([db.listFeedWorkouts(60), db.listPartnerWorkouts(30).catch(() => [])]);
-  const byId = new Map([...feed, ...tagged].map(w => [w.id, w]));
+  // Toute la communauté (séances partagées) + séances « amis seulement » de
+  // mes amis + séances où un ami m'a cité.
+  const [feed, tagged, friendsOnly] = await Promise.all([db.listFeedWorkouts(60), db.listPartnerWorkouts(30).catch(() => []), db.listFriendsOnlyWorkouts(10).catch(() => [])]);
+  const byId = new Map([...feed, ...friendsOnly, ...tagged].map(w => [w.id, w]));
   const workouts = [...byId.values()].sort((a, b) => String(b.start_time).localeCompare(String(a.start_time)));
   const myUid = getUser()?.uid;
   const profiles = await db.getProfiles(workouts.flatMap(w => [w.owner_uid, ...(w.partners || [])]));
@@ -118,7 +120,7 @@ async function renderFeedWorkouts(body) {
           ${photo ? `<div data-profile="${esc(w.owner_uid)}" style="width:38px; height:38px; border-radius:50%; background:center/cover no-repeat; background-image:url('${photo}'); flex-shrink:0; cursor:pointer;"></div>` : `<div data-profile="${esc(w.owner_uid)}" style="cursor:pointer; width:38px; height:38px; border-radius:50%; background:var(--surface-raised); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:var(--amber); flex-shrink:0;">${esc(name[0].toUpperCase())}</div>`}
           <div style="flex:1; min-width:0;">
             <div class="list-row-title"><span class="profile-link" data-profile="${esc(w.owner_uid)}">${esc(name)}</span> <span class="muted" style="font-weight:400;">· ${esc(w.title)}</span></div>
-            <div class="list-row-sub">${fmtDateTime(w.start_time)}${vibe ? ` · ${vibe.emoji} ${vibe.label}` : ""}</div>
+            <div class="list-row-sub">${fmtDateTime(w.start_time)}${vibe ? ` · ${vibe.emoji} ${vibe.label}` : ""}${!w.shared && w.friends_share ? ` · <span class="feed-scope">👥 ${t("Amis")}</span>` : ""}</div>
           </div>
           <div class="list-row-meta" style="text-align:right; flex-shrink:0;">
             ${fmtDuration(w.start_time, w.end_time)}
@@ -129,7 +131,7 @@ async function renderFeedWorkouts(body) {
         ${muscles.length ? `<div class="chip-row" style="margin-top:10px; margin-bottom:0;">${muscles.map(m => `<span class="feed-muscle-badge">${MUSCLE_EMOJI[m] || "⚡"} ${esc(t(m))}</span>`).join("")}</div>` : ""}
         ${fun ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">🏋️ ${t("{kg} kg soulevés — ça pèse {comparison} !", { kg: w.total_tonnage, comparison: fun })}</p>` : ""}
         ${workoutMusicHtml(w)}
-        <div style="display:flex; justify-content:flex-end; margin-top:8px;${w.shared ? "" : " display:none;"}">
+        <div style="display:flex; justify-content:flex-end; margin-top:8px;${w.shared || w.friends_share ? "" : " display:none;"}">
           <button class="props-btn ${iReacted ? "reacted" : ""}" data-props="${esc(w.id)}">
             <img class="props-horns" src="icons/horns.png" alt="🤘">
             <span>${propsCount > 0 ? propsCount : ""}</span>

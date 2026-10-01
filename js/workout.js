@@ -978,6 +978,7 @@ async function finishWorkout() {
     total_sets: loggedSets,
     total_tonnage: totalTonnage,
     shared: loggedSets > 0 && extra.shared,
+    friends_share: loggedSets > 0 && !!extra.friends_share,
     records: extra.records || [],
     record_song: extra.record_song || null,
     soundtrack: extra.soundtrack || null,

@@ -351,7 +351,11 @@ export function songHtml(song) {
     return link ? `<span class="song-link" data-song-url="${esc(link.url)}">${esc(songLabel(song))}</span>`
       : `<span class="song-link" data-song-query="${esc(songLabel(song).replace(" — ", " - "))}">${esc(songLabel(song))}</span>`;
   }
-  return link ? `<span class="song-link spotify-attrib" data-song-url="${esc(link.url)}">${providerIcon(link)} ${t("Écouter sur {service}", { service: providerName(link) })}</span>` : "";
+  if (!link) return "";
+  // Titre connu sur l'appareil : affiché tout de suite ; sinon recherché.
+  const known = cacheGet(link.url);
+  const label = known ? (known.artist ? `${known.title} — ${known.artist}` : known.title) : t("Écouter sur {service}", { service: providerName(link) });
+  return `<span class="song-link spotify-attrib" data-song-url="${esc(link.url)}">${providerIcon(link)} <span data-title-of="${esc(link.url)}">${esc(label)}</span></span>`;
 }
 
 // Morceau en grand (détail d'une séance) : lecteur compact pour un lien,
@@ -362,7 +366,51 @@ export function songBlockHtml(song) {
   return songHtml(song);
 }
 
+// ---------- Titres des liens ----------
+// Un lien seul (sans titre saisi) s'affichait « Écouter sur Spotify » : on
+// retrouve titre et artiste auprès du service (describeLink), mémorisés
+// sur l'appareil pour ne les demander qu'une fois.
+const LS_TITLES = "skullcrusher_link_titles";
+let titleCache = null;
+function cacheGet(url) {
+  if (!titleCache) { try { titleCache = JSON.parse(localStorage.getItem(LS_TITLES) || "{}"); } catch (_) { titleCache = {}; } }
+  return titleCache[url];
+}
+function cacheSet(url, v) {
+  cacheGet(url);
+  titleCache[url] = v;
+  const keys = Object.keys(titleCache);
+  if (keys.length > 400) keys.slice(0, keys.length - 400).forEach(k => delete titleCache[k]);
+  try { localStorage.setItem(LS_TITLES, JSON.stringify(titleCache)); } catch (_) {}
+}
+const pending = new Map();
+export async function linkTitle(url) {
+  const link = parseMusicLink(url);
+  if (!link) return null;
+  const hit = cacheGet(link.url);
+  if (hit !== undefined) return hit;
+  if (!pending.has(link.url)) {
+    pending.set(link.url, describeLink(link).then(info => {
+      const v = info?.title ? { title: info.title, artist: info.artist || "" } : null;
+      if (v) cacheSet(link.url, v);
+      return v;
+    }).finally(() => pending.delete(link.url)));
+  }
+  return pending.get(link.url);
+}
+// Remplit les éléments [data-title-of="url"] avec « Titre — Artiste ».
+export function hydrateTitles(root) {
+  root.querySelectorAll("[data-title-of]").forEach(async el => {
+    const v = await linkTitle(el.dataset.titleOf);
+    if (v && el.isConnected) {
+      el.textContent = v.artist ? `${v.title} — ${v.artist}` : v.title;
+      el.classList.add("titled");
+    }
+  });
+}
+
 export function bindSongLinks(root) {
+  hydrateTitles(root);
   root.querySelectorAll("[data-song-url]").forEach(el => {
     el.onclick = (e) => { e.stopPropagation(); openMusicPlayer(el.dataset.songUrl, t("Morceau")); };
   });

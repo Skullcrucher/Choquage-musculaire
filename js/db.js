@@ -1079,6 +1079,21 @@ export async function listFeedWorkouts(max = 60) {
 export async function setWorkoutShared(workoutId, shared) {
   await updateDoc(doc(dbase, "workouts", workoutId), { shared: !!shared });
 }
+// Partage d'une séance : "public" (communauté), "friends" (amis
+// seulement) ou "private".
+export async function setWorkoutShareScope(workoutId, scope) {
+  await updateDoc(doc(dbase, "workouts", workoutId), { shared: scope === "public", friends_share: scope === "friends" });
+}
+// Séances partagées « amis seulement » par mes amis (une requête par ami :
+// les règles vérifient l'amitié avec le propriétaire).
+export async function listFriendsOnlyWorkouts(perFriend = 10) {
+  const friendUids = await listFriendUids();
+  const lists = await Promise.all(friendUids.slice(0, 60).map(uid =>
+    getDocs(query(collection(dbase, "workouts"), where("friends_share", "==", true), where("owner_uid", "==", uid), limit(perFriend)))
+      .then(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      .catch(e => { console.warn("[Skullcrusher] Séances amis", e); return []; })));
+  return lists.flat();
+}
 
 export async function toggleProps(workoutId) {
   const uid = requireUid();
