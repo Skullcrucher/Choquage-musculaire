@@ -12,8 +12,8 @@ import { t, locale } from "./i18n.js";
 //     worker (CACHE_NAME dans service-worker.js doit valoir
 //     skullcrusher-cache-v<APP_BUILD>).
 // Puis : node tools/stamp-version.mjs
-export const APP_VERSION = "0.90.00";
-export const APP_BUILD = 100;
+export const APP_VERSION = "0.91.00";
+export const APP_BUILD = 101;
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 

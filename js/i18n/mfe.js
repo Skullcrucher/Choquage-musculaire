@@ -1271,5 +1271,22 @@ export default {
   "Vote positif": "Vot pozitif",
   "Commenter": "Komante",
   "Ligne {n} : consigne raccourcie à {max} caractères.": "Lign {n} : konsign finn rakourci a {max} karakter.",
-  "quelques mots affichés sous l'exercice pendant la séance : « Charge max », « Max reps »… (facultatif, 40 caractères max)": "enn de-trwa mo afisé anba lexersis pandan seans : « Sarz max », « Max rep »… (opsionel, 40 karakter max)"
+  "quelques mots affichés sous l'exercice pendant la séance : « Charge max », « Max reps »… (facultatif, 40 caractères max)": "enn de-trwa mo afisé anba lexersis pandan seans : « Sarz max », « Max rep »… (opsionel, 40 karakter max)",
+  "/côté": "/kote",
+  "Unilatéral : reps par côté (bras ou jambe)": "Inilateral : rep par kote (lebra ou lazam)",
+  "kg/côté": "kg/kote",
+  "reps/côté": "rep/kote",
+  "Reps comptées par côté": "Rep konte par kote",
+  "Reps comptées au total": "Rep konte an total",
+  "Reps par côté": "Rep par kote",
+  "Les reps déjà notées pour « {name} » sont-elles le total des deux côtés ? Elles seront divisées par 2 (ex. 20 → 10 par côté).": "Bann rep ki finn note pou « {name} », eski se total de kote? Zot pou divize par 2 (egz. 20 → 10 par kote).",
+  "Diviser par 2": "Divize par 2",
+  "Non, c'est déjà par côté": "Non, deza par kote",
+  "Conversion de l'historique impossible": "Pa kapav konverti listorik",
+  "{n} série de cette séance": "{n} seri sa seans-la",
+  "{n} séries de cette séance": "{n} seri sa seans-la",
+  "{n} série de ton historique": "{n} seri dan to listorik",
+  "{n} séries de ton historique": "{n} seri dan to listorik",
+  "{n} série convertie": "{n} seri konverti",
+  "{n} séries converties": "{n} seri konverti"
 };

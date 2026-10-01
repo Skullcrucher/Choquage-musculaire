@@ -60,7 +60,7 @@ function aggregate(setsArr, metricKey) {
     case "volume":
       return setsArr.length;
     case "tonnage":
-      return Math.round(setsArr.reduce((a, s) => a + (s.weight_kg || 0) * (s.reps || 0), 0));
+      return Math.round(setsArr.reduce((a, s) => a + (s.weight_kg || 0) * (s.reps || 0) * (s.unilateral ? 2 : 1), 0));
     case "reps":
       return setsArr.reduce((a, s) => a + (s.reps || 0), 0);
     default:

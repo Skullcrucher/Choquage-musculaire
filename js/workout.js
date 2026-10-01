@@ -280,6 +280,7 @@ async function startWorkout(routineId, routine = null, triggerEl = null, planInf
           muscle_group: ex.muscle_group || "Autre",
           reps_target: ex.reps_target || "", target_sets: ex.target_sets || 0, target_kg: ex.target_kg ?? null,
           cue: ex.cue || "", // consigne courte venue de l'import du plan
+          unilateral: db.isUnilateral(ex.exercise_name), // reps par côté
           rest_timer_seconds: restSecondsFor(ex.exercise_name, ex.rest_seconds),
           sets
         };
@@ -403,6 +404,7 @@ function drawExerciseList(el) {
           ${ex.cue ? `<div class="ex-cue">🎯 ${esc(ex.cue)}</div>` : ""}
         </div>
         <div class="exercise-tools">
+          <button class="ex-tool uni-tool ${ex.unilateral ? "active" : ""}" data-uni="${exIdx}" title="${t("Unilatéral : reps par côté (bras ou jambe)")}" aria-pressed="${!!ex.unilateral}">G|D</button>
           <button class="rest-chip" data-rest="${exIdx}" title="${t("Temps de repos")}">⏱ ${fmtRest(ex.rest_timer_seconds || 90)}</button>
           <button class="ex-tool" data-move-up="${exIdx}" title="${t("Monter")}" ${exIdx === 0 ? "disabled" : ""}>↑</button>
           <button class="ex-tool" data-move-down="${exIdx}" title="${t("Descendre")}" ${exIdx === count - 1 ? "disabled" : ""}>↓</button>
@@ -410,7 +412,7 @@ function drawExerciseList(el) {
         </div>
       </div>
       <div class="set-header">
-        <div>#</div><div>kg</div><div>${t("reps")}</div><div>${t("type")}</div><div></div><div></div>
+        <div>#</div><div>${ex.unilateral ? t("kg/côté") : "kg"}</div><div>${ex.unilateral ? t("reps/côté") : t("reps")}</div><div>${t("type")}</div><div></div><div></div>
       </div>
       ${ex.sets.map((s, sIdx) => setRowHtml(s, exIdx, sIdx)).join("")}
       <button class="add-set-btn" data-add-set="${exIdx}">＋ ${t("Ajouter une série")}</button>
@@ -426,6 +428,9 @@ function drawExerciseList(el) {
 
   el.querySelectorAll("[data-rest]").forEach(btn => {
     btn.onclick = () => openRestPicker(parseInt(btn.dataset.rest, 10));
+  });
+  el.querySelectorAll("[data-uni]").forEach(btn => {
+    btn.onclick = () => toggleUnilateral(currentWorkout.exercises[parseInt(btn.dataset.uni, 10)], el);
   });
 
   const moveExercise = (from, to) => {
@@ -480,7 +485,7 @@ function drawExerciseList(el) {
       set.logged_at = set.logged_at || new Date().toISOString(); // durée réelle de séance (calories)
       const payload = {
         exercise_title: ex.exercise_title, set_index: set.set_index, set_type: set.set_type,
-        weight_kg: set.weight_kg, reps: set.reps, superset_id: null, exercise_notes: "",
+        weight_kg: set.weight_kg, reps: set.reps, unilateral: !!ex.unilateral, superset_id: null, exercise_notes: "",
         distance_km: null, duration_seconds: null, rpe: set.rpe ?? null,
         workout_start_time: currentWorkout.start_time, logged_at: set.logged_at,
         exercise_index: Math.max(0, currentWorkout.exercises.indexOf(ex))
@@ -674,6 +679,51 @@ async function removeExercise(exIdx, el) {
 
 // Dernières séries loggées pour un exercice (la séance la plus récente où
 // il a été fait), pour pré-remplir poids/reps plutôt que partir de zéro.
+// Bascule « G|D » : reps saisies par côté (exercice unilatéral) ou au total.
+// Le choix est mémorisé pour l'exercice. En passant en « par côté », propose
+// de diviser par 2 les reps déjà saisies au total (séance en cours et
+// historique), pour que bilan et progression comparent bien par côté.
+async function toggleUnilateral(ex, listEl) {
+  if (!ex) return;
+  ex.unilateral = !ex.unilateral;
+  saveLocalState();
+  renderExerciseList(listEl);
+  db.setUnilateral(ex.exercise_title, ex.unilateral).catch(e => console.warn("[Skullcrusher] Choix unilatéral non mémorisé", e));
+  toast(ex.unilateral ? t("Reps comptées par côté") : t("Reps comptées au total"));
+  if (!ex.unilateral) return;
+  const current = ex.sets.filter(s => s.reps > 0);
+  const past = await db.countTotalRepsHistory(ex.exercise_title, currentWorkout.id).catch(() => 0);
+  if (!current.length && !past) return;
+  const ok = await confirmDanger({
+    title: t("Reps par côté"),
+    message: t("Les reps déjà notées pour « {name} » sont-elles le total des deux côtés ? Elles seront divisées par 2 (ex. 20 → 10 par côté).", { name: esc(ex.exercise_title) }),
+    items: [
+      ...(current.length ? [tn(current.length, "{n} série de cette séance", "{n} séries de cette séance")] : []),
+      ...(past ? [tn(past, "{n} série de ton historique", "{n} séries de ton historique")] : [])
+    ],
+    confirmLabel: t("Diviser par 2"), cancelLabel: t("Non, c'est déjà par côté")
+  });
+  if (!ok) return;
+  current.forEach(s => { s.reps = Math.ceil(s.reps / 2); });
+  saveLocalState();
+  renderExerciseList(listEl);
+  try {
+    // Séries déjà enregistrées de la séance : reps par côté, marquées
+    // unilatérales AVANT de convertir l'historique (jamais divisées 2 fois).
+    await Promise.all(ex.sets.filter(s => s.id).map(s => db.updateSet(currentWorkout.id, s.id, { reps: s.reps ?? null, unilateral: true })));
+  } catch (e) { console.warn("[Skullcrusher] Séries de la séance non mises à jour", e); return; }
+  if (past) {
+    try {
+      const n = await db.convertHistoryToPerSide(ex.exercise_title);
+      invalidate("sets");
+      toast(tn(n, "{n} série convertie", "{n} séries converties"));
+    } catch (e) {
+      console.error("[Skullcrusher] Conversion de l'historique", e);
+      toast(t("Conversion de l'historique impossible"));
+    }
+  }
+}
+
 async function getLastSetsForExercise(exerciseName) {
   let relevant = await getSetsForExercise(exerciseName);
   relevant = relevant.filter(s => s.workout_start_time);
@@ -751,6 +801,7 @@ function addExerciseToWorkout(name, group, existing) {
     exercise_title: finalName,
     muscle_group: existing ? existing.muscle_group : group,
     rest_timer_seconds: restSecondsFor(finalName, existing?.rest_timer_seconds),
+    unilateral: db.isUnilateral(finalName),
     sets: [1, 2, 3].map(i => ({ id: null, set_index: i, set_type: defaultSetType(), weight_kg: null, reps: null, done: false }))
   };
   currentWorkout.exercises.push(ex);
@@ -955,7 +1006,7 @@ async function finishWorkout() {
   }
   const loggedSets = currentWorkout.exercises.reduce((n, ex) => n + ex.sets.filter(s => s.weight_kg != null || s.reps != null).length, 0);
   const totalTonnage = Math.round(currentWorkout.exercises.reduce((sum, ex) =>
-    sum + ex.sets.reduce((s, set) => s + (set.weight_kg || 0) * (set.reps || 0), 0), 0));
+    sum + ex.sets.reduce((s, set) => s + (set.weight_kg || 0) * (set.reps || 0) * (ex.unilateral ? 2 : 1), 0), 0));
   const muscleSummary = [...new Set(
     currentWorkout.exercises
       .filter(ex => ex.sets.some(s => s.weight_kg != null || s.reps != null))

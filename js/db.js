@@ -189,11 +189,51 @@ export async function loadRestPrefs() {
   try {
     const profile = await getProfile(requireUid());
     restPrefs = { ...restPrefs, ...(profile?.rest_prefs || {}) };
+    uniPrefs = { ...readLocalUniPrefs(), ...(profile?.unilateral_prefs || {}) };
+    try { localStorage.setItem(LS_UNI_PREFS, JSON.stringify(uniPrefs)); } catch (_) {}
     localStorage.setItem(LS_REST_PREFS, JSON.stringify(restPrefs));
   } catch (e) {
     console.warn("[Skullcrusher] Temps de repos mémorisés indisponibles (copie locale utilisée) :", e);
   }
   return restPrefs;
+}
+
+// Exercices UNILATÉRAUX (un bras / une jambe à la fois) : les reps sont
+// saisies PAR CÔTÉ. Choix mémorisé par exercice dans le profil
+// (unilateral_prefs : { "nom en minuscules": true|false }) ; à défaut,
+// deviné d'après le nom.
+const LS_UNI_PREFS = "skullcrusher_unilateral_prefs";
+const UNI_GUESS = /(un bras|une jambe|unilat|single[- ]?(arm|leg)|one[- ]?arm|altern|concentration|bulgare|bulgarian)/i;
+let uniPrefs = null;
+function readLocalUniPrefs() {
+  try { return JSON.parse(localStorage.getItem(LS_UNI_PREFS) || "{}") || {}; } catch (_) { return {}; }
+}
+export function isUnilateral(exerciseName) {
+  const key = String(exerciseName || "").trim().toLowerCase();
+  const prefs = uniPrefs || readLocalUniPrefs();
+  return typeof prefs[key] === "boolean" ? prefs[key] : UNI_GUESS.test(key);
+}
+export async function setUnilateral(exerciseName, on) {
+  const key = String(exerciseName || "").trim().toLowerCase();
+  if (!key) return;
+  uniPrefs = { ...(uniPrefs || readLocalUniPrefs()), [key]: !!on };
+  try { localStorage.setItem(LS_UNI_PREFS, JSON.stringify(uniPrefs)); } catch (_) {}
+  await setDoc(doc(dbase, "profiles", requireUid()), { unilateral_prefs: { [key]: !!on } }, { merge: true });
+}
+// Historique saisi en total des deux côtés → reps par côté (÷ 2, arrondi
+// au-dessus) ; les séries converties sont marquées unilateral: true pour ne
+// jamais être divisées deux fois. Renvoie le nombre de séries converties.
+export async function convertHistoryToPerSide(exerciseName) {
+  const sets = (await listSetsForExercise(exerciseName)).filter(s => !s.unilateral && s.reps > 0);
+  for (let i = 0; i < sets.length; i += 400) {
+    const batch = writeBatch(dbase);
+    sets.slice(i, i + 400).forEach(s => batch.update(doc(dbase, "workouts", s.workout_id, "sets", s.id), { reps: Math.ceil(s.reps / 2), unilateral: true }));
+    await batch.commit();
+  }
+  return sets.length;
+}
+export async function countTotalRepsHistory(exerciseName, excludeWorkoutId = null) {
+  return (await listSetsForExercise(exerciseName)).filter(s => !s.unilateral && s.reps > 0 && s.workout_id !== excludeWorkoutId).length;
 }
 
 export function restPrefFor(exerciseName) {

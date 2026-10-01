@@ -116,7 +116,7 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
           ${exSets.sort((a, b) => a.set_index - b.set_index).map(s => `
             <div class="muted" style="display:flex; justify-content:space-between; padding:3px 0;">
               <span>${t("Série {n}", { n: esc(s.set_index) })} ${s.set_type !== "normal" ? "· " + esc(setTypeLabel(s.set_type)) : ""}${s.rpe ? ` · RPE ${esc(String(s.rpe).replace(".", ","))}` : ""}</span>
-              <span>${esc(s.weight_kg ?? "—")} kg × ${esc(s.reps ?? "—")}${s.weight_kg && s.reps ? ` (1RM ${estimate1RM(s.weight_kg, s.reps)} kg)` : ""}</span>
+              <span>${esc(s.weight_kg ?? "—")} kg × ${esc(s.reps ?? "—")}${s.unilateral ? ` ${t("/côté")}` : ""}${s.weight_kg && s.reps ? ` (1RM ${estimate1RM(s.weight_kg, s.reps)} kg)` : ""}</span>
             </div>
           `).join("")}
         </div>
@@ -326,7 +326,7 @@ async function openWorkoutEditor(workout, sets, body, onSaved, onCancel) {
   const groups = new Map();
   [...sets].sort(bySetOrder).forEach(s => {
     if (!groups.has(s.exercise_title)) { groups.set(s.exercise_title, []); order.push(s.exercise_title); }
-    groups.get(s.exercise_title).push({ id: s.id, set_type: s.set_type || "normal", weight_kg: s.weight_kg, reps: s.reps });
+    groups.get(s.exercise_title).push({ id: s.id, set_type: s.set_type || "normal", weight_kg: s.weight_kg, reps: s.reps, unilateral: !!s.unilateral });
   });
   const state = {
     title: workout.title || "",
@@ -449,11 +449,11 @@ async function openWorkoutEditor(workout, sets, body, onSaved, onCancel) {
       state.exercises.forEach(ex => ex.sets.forEach((st, j) => {
         const logged = st.weight_kg != null || st.reps != null;
         if (logged) {
-          totalSets++; tonnage += (st.weight_kg || 0) * (st.reps || 0);
+          totalSets++; tonnage += (st.weight_kg || 0) * (st.reps || 0) * ((st.unilateral ?? db.isUnilateral(ex.name)) ? 2 : 1);
           const g = groupOf(ex.name);
           if (!muscles.includes(g)) muscles.push(g);
         }
-        const data = { exercise_title: ex.name, exercise_index: state.exercises.indexOf(ex), set_index: j + 1, set_type: st.set_type, weight_kg: st.weight_kg, reps: st.reps, workout_start_time: start_time };
+        const data = { exercise_title: ex.name, exercise_index: state.exercises.indexOf(ex), set_index: j + 1, set_type: st.set_type, weight_kg: st.weight_kg, reps: st.reps, unilateral: st.unilateral ?? db.isUnilateral(ex.name), workout_start_time: start_time };
         if (st.id) {
           kept.add(st.id);
           const o = original.get(st.id);
