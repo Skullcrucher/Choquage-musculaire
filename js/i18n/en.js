@@ -1232,5 +1232,6 @@ export default {
   "Décalée": "Moved",
   "Rattraper : {routine}": "Catch up: {routine}",
   "À rattraper cette semaine": "To catch up this week",
-  "Manquée": "Missed"
+  "Manquée": "Missed",
+  "Durée de la séance": "Workout duration"
 };

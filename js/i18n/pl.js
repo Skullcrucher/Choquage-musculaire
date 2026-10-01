@@ -1241,5 +1241,6 @@ export default {
   "Décalée": "Przesunięty",
   "Rattraper : {routine}": "Nadrób: {routine}",
   "À rattraper cette semaine": "Do nadrobienia w tym tygodniu",
-  "Manquée": "Pominięty"
+  "Manquée": "Pominięty",
+  "Durée de la séance": "Czas treningu"
 };

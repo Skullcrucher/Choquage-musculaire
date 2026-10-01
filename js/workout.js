@@ -294,10 +294,27 @@ async function startWorkout(routineId, routine = null, triggerEl = null, planInf
   }
 }
 
+// Chronomètre général de la séance (depuis le début), mis à jour chaque
+// seconde tant que l'écran de la séance est affiché.
+let clockInterval = null;
+function startWorkoutClock(el) {
+  clearInterval(clockInterval);
+  if (!el || !currentWorkout) return;
+  const tick = () => {
+    if (!el.isConnected || !currentWorkout) { clearInterval(clockInterval); return; }
+    const sec = Math.max(0, Math.floor((Date.now() - new Date(currentWorkout.start_time)) / 1000));
+    const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, ss = String(sec % 60).padStart(2, "0");
+    el.textContent = h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+  };
+  tick();
+  clockInterval = setInterval(tick, 1000);
+}
+
 function renderActiveWorkout(container) {
   container.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
-      <h1 class="section-title" style="margin-bottom:0;">${esc(currentWorkout.title)}</h1>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px;">
+      <h1 class="section-title" style="margin-bottom:0; min-width:0;">${esc(currentWorkout.title)}</h1>
+      <div class="workout-clock" id="workout-clock" title="${t("Durée de la séance")}">⏱ <span>0:00</span></div>
     </div>
     <div class="workout-subline">
       <p class="muted" style="margin:0;">${t("Débutée à {time}", { time: fmtDateTime(currentWorkout.start_time) })}</p>
@@ -314,6 +331,7 @@ function renderActiveWorkout(container) {
       <button class="btn btn-danger btn-sm" id="cancel-workout">${t("Annuler la séance")}</button>
     </div>
   `;
+  startWorkoutClock(container.querySelector("#workout-clock span"));
   renderExerciseList(container.querySelector("#exercise-list"));
   renderWorkoutMusic(container.querySelector("#workout-music"));
   container.querySelector("#add-exercise").onclick = () => openAddExerciseModal();
