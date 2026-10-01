@@ -11,6 +11,7 @@ import { openExerciseDetail } from "./exercise-detail.js";
 import { parseMusicLink, openSpotifyPlayer, providerName, providerIcon } from "./music.js";
 import { t, tn, locale } from "./i18n.js";
 import { presenceDefault, startPresence, stopPresence, touchPresence } from "./presence.js";
+import { exerciseTrend, trendBadgeHtml } from "./trend.js";
 import { armReminder, clearReminder } from "./workout-reminder.js";
 
 let currentWorkout = null; // { id, title, start_time, exercises: [...] }
@@ -394,13 +395,40 @@ function renderExerciseList(el) {
   if (focusSel) el.querySelector(focusSel)?.focus({ preventScroll: true });
 }
 
+// Tendance sur un mois de chaque exercice (▲ progression, ▬ stagnation,
+// ▼ régression), calculée sur l'historique sans la séance en cours.
+const trendResults = new Map(); // "idSéance|exercice" → tendance (ou null)
+const trendLoading = new Set();
+const trendKey = (name) => `${currentWorkout?.id}|${name}`;
+function trendCached(name) {
+  return trendResults.has(trendKey(name)) ? trendBadgeHtml(trendResults.get(trendKey(name))) : "";
+}
+function fillTrends(el) {
+  if (!currentWorkout) return;
+  currentWorkout.exercises.forEach(ex => {
+    const key = trendKey(ex.exercise_title);
+    if (trendResults.has(key) || trendLoading.has(key)) return;
+    trendLoading.add(key);
+    getSetsForExercise(ex.exercise_title)
+      .then(sets => trendResults.set(key, exerciseTrend(sets, { excludeWorkoutId: currentWorkout?.id })))
+      .catch(() => trendResults.set(key, null))
+      .finally(() => {
+        trendLoading.delete(key);
+        el.querySelectorAll("[data-trend-ex]").forEach(span => {
+          const e = currentWorkout?.exercises[+span.dataset.trendEx];
+          if (e && trendKey(e.exercise_title) === key) span.innerHTML = trendCached(e.exercise_title);
+        });
+      });
+  });
+}
+
 function drawExerciseList(el) {
   const count = currentWorkout.exercises.length;
   el.innerHTML = currentWorkout.exercises.map((ex, exIdx) => `
     <div class="exercise-block">
       <div class="exercise-head">
         <div class="exercise-title-wrap">
-          <h3 class="exercise-name exercise-name-link" data-ex-detail="${exIdx}" role="button" tabindex="0">${esc(ex.exercise_title)}</h3>
+          <h3 class="exercise-name exercise-name-link" data-ex-detail="${exIdx}" role="button" tabindex="0">${esc(ex.exercise_title)} <span class="ex-trend" data-trend-ex="${exIdx}">${trendCached(ex.exercise_title)}</span></h3>
           ${ex.cue ? `<div class="ex-cue">🎯 ${esc(ex.cue)}</div>` : ""}
         </div>
         <div class="exercise-tools">
@@ -418,6 +446,7 @@ function drawExerciseList(el) {
       <button class="add-set-btn" data-add-set="${exIdx}">＋ ${t("Ajouter une série")}</button>
     </div>
   `).join("") || `<div class="empty-state"><span class="num">＋</span>${t("Ajoute un premier exercice pour commencer.")}</div>`;
+  fillTrends(el);
 
   el.querySelectorAll("[data-ex-detail]").forEach(h => {
     h.onclick = () => {

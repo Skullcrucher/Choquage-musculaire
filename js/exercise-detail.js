@@ -4,7 +4,8 @@
 import { openModal, closeModal, estimate1RM, isoWeek, fmtDateTime, esc, healthNoteHtml } from "./utils.js";
 import { getSetsForExercise } from "./cache.js";
 import { EXERCISE_GUIDES } from "./exercise-guides.js";
-import { t, getLang } from "./i18n.js";
+import { t, tn, getLang } from "./i18n.js";
+import { exerciseTrend, trendBadgeHtml, trendDetail } from "./trend.js";
 
 let detailChart = null;
 
@@ -17,7 +18,9 @@ let detailChart = null;
 
 export async function openExerciseDetail(exerciseName, muscleGroupFallback = "") {
   const guide = EXERCISE_GUIDES[exerciseName];
-  const sets = (await getSetsForExercise(exerciseName))
+  const rawSets = await getSetsForExercise(exerciseName);
+  const trend = exerciseTrend(rawSets);
+  const sets = rawSets
     .filter(s => s.weight_kg != null && s.reps != null)
     .sort((a, b) => new Date(b.workout_start_time || 0) - new Date(a.workout_start_time || 0));
 
@@ -57,6 +60,8 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "")
 
     <div style="margin-top:18px;">
       <div class="muted" style="margin-bottom:5px;">${t("Historique")}</div>
+      ${trend ? `<div class="trend-line trend-line-${trend.status}">${trendBadgeHtml(trend, { label: true })}<span>${esc(trendDetail(trend))} · ${tn(trend.sessions, "{n} séance ce mois-ci", "{n} séances ce mois-ci")}</span></div>`
+        : sets.length ? `<p class="muted" style="font-size:13px; margin:0 0 8px;">${t("Tendance sur 30 jours : pas assez de séances récentes.")}</p>` : ""}
       ${sets.length ? `
         <div class="stat-grid" style="grid-template-columns: repeat(2,1fr);">
           <div class="stat-box"><span class="num">${sets.length}</span><span class="lbl">${t("séries loggées")}</span></div>
