@@ -1279,5 +1279,7 @@ export default {
   "Top de la semaine": "Top tygodnia",
   "Aucune séance partagée par tes amis pour l'instant.": "Twoi znajomi nie udostępnili jeszcze treningów.",
   "Vote positif": "Głos na plus",
-  "Commenter": "Skomentuj"
+  "Commenter": "Skomentuj",
+  "Ligne {n} : consigne raccourcie à {max} caractères.": "Wiersz {n}: wskazówka skrócona do {max} znaków.",
+  "quelques mots affichés sous l'exercice pendant la séance : « Charge max », « Max reps »… (facultatif, 40 caractères max)": "kilka słów wyświetlanych pod ćwiczeniem podczas treningu: „Maks. ciężar”, „Maks. powtórzeń”… (opcjonalnie, maks. 40 znaków)"
 };

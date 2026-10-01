@@ -37,7 +37,7 @@ export async function editOfficialRoutine(r, onDone) {
     save: async (state) => {
       const routines = (prog.routines || []).map(x => x.key === key ? {
         ...x, name: state.name, description: state.description,
-        exercises: stripKg(state.exercises).map(e => ({ exercise_name: e.exercise_name, target_sets: e.target_sets, reps_target: e.reps_target, rest_seconds: e.rest_seconds, muscle_group: e.muscle_group }))
+        exercises: stripKg(state.exercises).map(e => ({ exercise_name: e.exercise_name, target_sets: e.target_sets, reps_target: e.reps_target, rest_seconds: e.rest_seconds, muscle_group: e.muscle_group, ...(e.cue ? { cue: e.cue } : {}) }))
       } : x);
       await db.saveOfficialProgram(prog.id, clean({ ...prog, routines }));
     }
