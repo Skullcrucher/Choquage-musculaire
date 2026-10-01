@@ -1272,5 +1272,22 @@ export default {
   "Vote positif": "Upvote",
   "Commenter": "Comment",
   "Ligne {n} : consigne raccourcie à {max} caractères.": "Line {n}: cue shortened to {max} characters.",
-  "quelques mots affichés sous l'exercice pendant la séance : « Charge max », « Max reps »… (facultatif, 40 caractères max)": "a few words shown under the exercise during the workout: \"Max load\", \"Max reps\"… (optional, 40 characters max)"
+  "quelques mots affichés sous l'exercice pendant la séance : « Charge max », « Max reps »… (facultatif, 40 caractères max)": "a few words shown under the exercise during the workout: \"Max load\", \"Max reps\"… (optional, 40 characters max)",
+  "/côté": "/side",
+  "Unilatéral : reps par côté (bras ou jambe)": "Unilateral: reps per side (arm or leg)",
+  "kg/côté": "kg/side",
+  "reps/côté": "reps/side",
+  "Reps comptées par côté": "Reps counted per side",
+  "Reps comptées au total": "Reps counted in total",
+  "Reps par côté": "Reps per side",
+  "Les reps déjà notées pour « {name} » sont-elles le total des deux côtés ? Elles seront divisées par 2 (ex. 20 → 10 par côté).": "Are the reps already logged for \"{name}\" the total of both sides? They will be halved (e.g. 20 → 10 per side).",
+  "Diviser par 2": "Halve them",
+  "Non, c'est déjà par côté": "No, already per side",
+  "Conversion de l'historique impossible": "Couldn't convert history",
+  "{n} série de cette séance": "{n} set from this workout",
+  "{n} séries de cette séance": "{n} sets from this workout",
+  "{n} série de ton historique": "{n} set from your history",
+  "{n} séries de ton historique": "{n} sets from your history",
+  "{n} série convertie": "{n} set converted",
+  "{n} séries converties": "{n} sets converted"
 };

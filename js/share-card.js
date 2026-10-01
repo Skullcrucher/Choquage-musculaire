@@ -283,7 +283,7 @@ async function workoutData(w, opts) {
   const exercises = [...byEx].map(([name, list]) => {
     const logged = list.filter(s => s.weight_kg != null || s.reps != null);
     const b = bestOf(logged);
-    return { name, sets: logged.length, best: b, volume: logged.reduce((a, s) => a + (s.weight_kg || 0) * (s.reps || 0), 0) };
+    return { name, sets: logged.length, best: b, volume: logged.reduce((a, s) => a + (s.weight_kg || 0) * (s.reps || 0) * (s.unilateral ? 2 : 1), 0) };
   }).filter(e => e.sets);
   const tonnage = w.total_tonnage ?? exercises.reduce((a, e) => a + e.volume, 0);
   const totalSets = w.total_sets ?? exercises.reduce((a, e) => a + e.sets, 0);
@@ -350,7 +350,7 @@ async function exerciseData(name, days) {
     name, days, sets, best1rm, best: bestOf(sets),
     progress: series.length >= 2 && first ? Math.round((last - first) / first * 100) : null,
     sessions: new Set(sets.map(s => s.workout_id || s.workout_start_time)).size,
-    volume: sets.reduce((a, s) => a + s.weight_kg * s.reps, 0),
+    volume: sets.reduce((a, s) => a + s.weight_kg * s.reps * (s.unilateral ? 2 : 1), 0),
     series, weeks, byMonth
   };
 }

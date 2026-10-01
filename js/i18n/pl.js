@@ -1281,5 +1281,22 @@ export default {
   "Vote positif": "Głos na plus",
   "Commenter": "Skomentuj",
   "Ligne {n} : consigne raccourcie à {max} caractères.": "Wiersz {n}: wskazówka skrócona do {max} znaków.",
-  "quelques mots affichés sous l'exercice pendant la séance : « Charge max », « Max reps »… (facultatif, 40 caractères max)": "kilka słów wyświetlanych pod ćwiczeniem podczas treningu: „Maks. ciężar”, „Maks. powtórzeń”… (opcjonalnie, maks. 40 znaków)"
+  "quelques mots affichés sous l'exercice pendant la séance : « Charge max », « Max reps »… (facultatif, 40 caractères max)": "kilka słów wyświetlanych pod ćwiczeniem podczas treningu: „Maks. ciężar”, „Maks. powtórzeń”… (opcjonalnie, maks. 40 znaków)",
+  "/côté": "/strona",
+  "Unilatéral : reps par côté (bras ou jambe)": "Jednostronne: powtórzenia na stronę (ręka lub noga)",
+  "kg/côté": "kg/strona",
+  "reps/côté": "powt./strona",
+  "Reps comptées par côté": "Powtórzenia liczone na stronę",
+  "Reps comptées au total": "Powtórzenia liczone łącznie",
+  "Reps par côté": "Powtórzenia na stronę",
+  "Les reps déjà notées pour « {name} » sont-elles le total des deux côtés ? Elles seront divisées par 2 (ex. 20 → 10 par côté).": "Czy powtórzenia zapisane dla „{name}” to suma obu stron? Zostaną podzielone przez 2 (np. 20 → 10 na stronę).",
+  "Diviser par 2": "Podziel przez 2",
+  "Non, c'est déjà par côté": "Nie, to już na stronę",
+  "Conversion de l'historique impossible": "Nie można przeliczyć historii",
+  "{n} série de cette séance": "{n} seria z tego treningu",
+  "{n} séries de cette séance": "{n} serii z tego treningu",
+  "{n} série de ton historique": "{n} seria z twojej historii",
+  "{n} séries de ton historique": "{n} serii z twojej historii",
+  "{n} série convertie": "{n} seria przeliczona",
+  "{n} séries converties": "{n} serii przeliczonych"
 };

@@ -89,7 +89,7 @@ export async function myProgress(c) {
   const byWorkout = new Map();
   for (const s of sets) byWorkout.set(s.workout_id, [...(byWorkout.get(s.workout_id) || []), s]);
   const sessions = counted.map(w => ({ w, sets: byWorkout.get(w.id) || [] })).filter(x => x.sets.length);
-  const tonnage = (list) => list.reduce((a, s) => a + (s.weight_kg || 0) * (s.reps || 0), 0);
+  const tonnage = (list) => list.reduce((a, s) => a + (s.weight_kg || 0) * (s.reps || 0) * (s.unilateral ? 2 : 1), 0);
   let value = 0;
   switch (c.type) {
     case "workouts": value = sessions.filter(x => x.sets.length >= MIN_SETS).length; break;
