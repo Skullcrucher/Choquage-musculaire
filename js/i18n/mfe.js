@@ -1269,5 +1269,7 @@ export default {
   "Top de la semaine": "Top lasemenn",
   "Aucune séance partagée par tes amis pour l'instant.": "To bann kamarad pa ankor partaz okenn seans.",
   "Vote positif": "Vot pozitif",
-  "Commenter": "Komante"
+  "Commenter": "Komante",
+  "Ligne {n} : consigne raccourcie à {max} caractères.": "Lign {n} : konsign finn rakourci a {max} karakter.",
+  "quelques mots affichés sous l'exercice pendant la séance : « Charge max », « Max reps »… (facultatif, 40 caractères max)": "enn de-trwa mo afisé anba lexersis pandan seans : « Sarz max », « Max rep »… (opsionel, 40 karakter max)"
 };

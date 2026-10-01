@@ -1270,5 +1270,7 @@ export default {
   "Top de la semaine": "Top this week",
   "Aucune séance partagée par tes amis pour l'instant.": "Your friends haven't shared any workouts yet.",
   "Vote positif": "Upvote",
-  "Commenter": "Comment"
+  "Commenter": "Comment",
+  "Ligne {n} : consigne raccourcie à {max} caractères.": "Line {n}: cue shortened to {max} characters.",
+  "quelques mots affichés sous l'exercice pendant la séance : « Charge max », « Max reps »… (facultatif, 40 caractères max)": "a few words shown under the exercise during the workout: \"Max load\", \"Max reps\"… (optional, 40 characters max)"
 };

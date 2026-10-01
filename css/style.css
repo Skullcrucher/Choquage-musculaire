@@ -778,6 +778,9 @@ canvas { max-width: 100%; }
 /* En-tête d'exercice : nom + repos + réorganiser / retirer */
 .exercise-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .exercise-head .exercise-name { min-width: 0; overflow-wrap: anywhere; }
+.exercise-title-wrap { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+/* Consigne du plan sous le nom de l'exercice : une ligne, discrète. */
+.ex-cue { font-size: 12px; font-weight: 700; color: var(--amber); letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .exercise-tools { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .ex-tool {
   width: 28px; height: 28px;

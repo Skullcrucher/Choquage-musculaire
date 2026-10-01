@@ -279,6 +279,7 @@ async function startWorkout(routineId, routine = null, triggerEl = null, planInf
           exercise_title: ex.exercise_name,
           muscle_group: ex.muscle_group || "Autre",
           reps_target: ex.reps_target || "", target_sets: ex.target_sets || 0, target_kg: ex.target_kg ?? null,
+          cue: ex.cue || "", // consigne courte venue de l'import du plan
           rest_timer_seconds: restSecondsFor(ex.exercise_name, ex.rest_seconds),
           sets
         };
@@ -397,7 +398,10 @@ function drawExerciseList(el) {
   el.innerHTML = currentWorkout.exercises.map((ex, exIdx) => `
     <div class="exercise-block">
       <div class="exercise-head">
-        <h3 class="exercise-name exercise-name-link" data-ex-detail="${exIdx}" role="button" tabindex="0">${esc(ex.exercise_title)}</h3>
+        <div class="exercise-title-wrap">
+          <h3 class="exercise-name exercise-name-link" data-ex-detail="${exIdx}" role="button" tabindex="0">${esc(ex.exercise_title)}</h3>
+          ${ex.cue ? `<div class="ex-cue">🎯 ${esc(ex.cue)}</div>` : ""}
+        </div>
         <div class="exercise-tools">
           <button class="rest-chip" data-rest="${exIdx}" title="${t("Temps de repos")}">⏱ ${fmtRest(ex.rest_timer_seconds || 90)}</button>
           <button class="ex-tool" data-move-up="${exIdx}" title="${t("Monter")}" ${exIdx === 0 ? "disabled" : ""}>↑</button>

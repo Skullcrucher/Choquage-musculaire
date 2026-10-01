@@ -17,8 +17,9 @@ import { t, locale } from "./i18n.js";
 import { getPlans, savePlans, dayStr, mondayOf, MAX_PLANS } from "./plans.js";
 
 export const PLAN_TEMPLATE_URL = "modele-plan-entrainement.csv";
-const COLUMNS = ["plan", "debut", "bloc", "semaines", "jours", "routine", "exercice", "series", "reps", "charge", "repos", "groupe", "description", "niveau", "objectif"];
+const COLUMNS = ["plan", "debut", "bloc", "semaines", "jours", "routine", "exercice", "series", "reps", "charge", "repos", "groupe", "description", "niveau", "objectif", "consigne"];
 
+const CUE_MAX = 40;
 const norm = (s) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
 // En-têtes acceptés (français ou anglais, accents et majuscules ignorés).
@@ -37,7 +38,8 @@ const HEADER_ALIASES = {
   groupe: ["groupe", "groupe musculaire", "groupe_musculaire", "muscle", "muscles", "muscle_group", "muscle group"],
   description: ["description", "notes", "note"],
   niveau: ["niveau", "level"],
-  objectif: ["objectif", "goal", "but"]
+  objectif: ["objectif", "goal", "but"],
+  consigne: ["consigne", "consignes", "note exercice", "cue", "instruction", "instructions"]
 };
 function columnOf(header) {
   const h = norm(header).replace(/[_]/g, " ").replace(/\s+/g, " ");
@@ -182,8 +184,11 @@ export function parsePlanCsv(text, library = []) {
       reps_target: (get(row, "reps") || "8-10").slice(0, 12).replace(/[<>]/g, ""),
       rest_seconds: rest != null && rest >= 0 && rest <= 900 ? rest : 90,
       target_kg: Number.isFinite(kg) ? kg : null,
-      muscle_group: groupFrom(get(row, "groupe")) || known?.muscle_group || guessMuscleGroup(name)
+      muscle_group: groupFrom(get(row, "groupe")) || known?.muscle_group || guessMuscleGroup(name),
+      // Consigne courte affichée sous l'exercice pendant la séance.
+      ...(get(row, "consigne") ? { cue: get(row, "consigne").slice(0, CUE_MAX).replace(/[<>]/g, "") } : {})
     });
+    if (get(row, "consigne").length > CUE_MAX) warnings.push(t("Ligne {n} : consigne raccourcie à {max} caractères.", { n: line, max: CUE_MAX }));
     if (get(row, "series") && !(sets >= 1 && sets <= 20)) warnings.push(t("Ligne {n} : séries invalides, 3 par défaut.", { n: line }));
     if (get(row, "repos") && rest == null) warnings.push(t("Ligne {n} : repos illisible, 90 s par défaut.", { n: line }));
     if (Number.isNaN(kg)) warnings.push(t("Ligne {n} : charge illisible, ignorée.", { n: line }));
@@ -219,7 +224,7 @@ export function planCsvFromRoutines(routines, plan = null) {
   const routineRows = (r, sched) => (r.exercises || []).forEach((e, i) => push({
     ...(i === 0 ? sched : {}),
     routine: r.name, exercice: e.exercise_name, series: e.target_sets, reps: e.reps_target,
-    charge: e.target_kg ?? "", repos: e.rest_seconds, groupe: e.muscle_group || "",
+    charge: e.target_kg ?? "", repos: e.rest_seconds, groupe: e.muscle_group || "", consigne: e.cue || "",
     description: i === 0 ? r.description || "" : "", niveau: i === 0 ? db.ROUTINE_LEVELS[r.level] || "" : "", objectif: i === 0 ? db.ROUTINE_GOALS[r.goal] || "" : ""
   }));
   const written = new Set();
@@ -282,6 +287,7 @@ export async function openPlanImport(onDone) {
         <li><b>charge</b> — ${t("charge de départ en kg (facultatif, ajustée ensuite par la progression)")}</li>
         <li><b>repos</b> — ${t("repos : 90, 90s, 1:30 ou 2min")}</li>
         <li><b>groupe</b> — ${t("groupe musculaire (facultatif, deviné sinon)")}</li>
+        <li><b>consigne</b> — ${t("quelques mots affichés sous l'exercice pendant la séance : « Charge max », « Max reps »… (facultatif, 40 caractères max)")}</li>
         <li><b>description, niveau, objectif</b> — ${t("facultatifs, sur la 1re ligne de la routine")}</li>
       </ul>
       <p class="muted" style="font-size:12px;">${t("Pour réutiliser une routine dans un autre bloc, ajoute une ligne avec seulement bloc, jours et routine.")}</p>
@@ -333,7 +339,7 @@ export async function openPlanImport(onDone) {
         </div>` : ""}
         ${res.routines.map(r => `<div class="list-row" style="cursor:default; display:block;">
           <div class="list-row-title">${esc(r.name)}</div>
-          <div class="list-row-sub">${r.exercises.map(x => `${esc(x.exercise_name)} ${esc(x.target_sets)}×${esc(x.reps_target)}${x.target_kg != null ? ` @ ${esc(x.target_kg)} kg` : ""}`).join(" · ")}</div>
+          <div class="list-row-sub">${r.exercises.map(x => `${esc(x.exercise_name)} ${esc(x.target_sets)}×${esc(x.reps_target)}${x.target_kg != null ? ` @ ${esc(x.target_kg)} kg` : ""}${x.cue ? ` 🎯 ${esc(x.cue)}` : ""}`).join(" · ")}</div>
         </div>`).join("")}
         ${parsed.matches.length ? `<div class="card" style="padding:10px; margin-top:8px;">
           <div class="list-row-title">🔗 ${t("Noms d'exercices à vérifier")}</div>
