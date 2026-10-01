@@ -141,8 +141,12 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
         </div>
       ` : ""}
       ${isOwner ? `
-        <p class="muted" id="share-status" style="margin:10px 0 6px;">${workout.shared ? t("🌍 Partagée sur le feed") : t("🔒 Privée — visible par toi seul")}</p>
-        <button class="btn btn-secondary" id="toggle-share">${workout.shared ? t("Retirer du feed") : t("Partager sur le feed")}</button>
+        <div class="muted" style="margin:10px 0 6px; font-size:13px;">${t("Partage de la séance")}</div>
+        <div class="chip-row" id="share-scope" style="margin:0;">
+          <div class="chip ${workout.shared ? "active" : ""}" data-scope="public">🌍 ${t("Communauté")}</div>
+          <div class="chip ${!workout.shared && workout.friends_share ? "active" : ""}" data-scope="friends">👥 ${t("Amis seulement")}</div>
+          <div class="chip ${!workout.shared && !workout.friends_share ? "active" : ""}" data-scope="private">🔒 ${t("Privée")}</div>
+        </div>
       ` : ""}
     </div>
 
@@ -160,12 +164,20 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
         </div>` : ""}
     </div>
 
+    ${workout.shared || workout.friends_share || isPartner ? `
+      <div class="detail-comments">
+        <div class="card-title" style="margin:16px 0 8px;">💬 ${t("Commentaires")}</div>
+        <div id="detail-comments"></div>
+      </div>` : ""}
+
     <div class="btn-row" style="margin-top:12px;">
       <button class="btn btn-secondary" id="close-detail">${t("Fermer")}</button>
       ${isOwner ? `<button class="btn btn-danger" id="del-workout">${t("Supprimer")}</button>` : ""}
     </div>
   `, (modalEl) => {
     modalEl.querySelector("#close-detail").onclick = closeModal;
+    const cmEl = modalEl.querySelector("#detail-comments");
+    if (cmEl) import("./comments.js").then(m => m.renderComments(cmEl, workout)).catch(e => console.warn("[Skullcrusher] Commentaires", e));
     modalEl.querySelectorAll("[data-dtab]").forEach(chip => chip.onclick = () => {
       modalEl.querySelectorAll("[data-dtab]").forEach(c => c.classList.toggle("active", c === chip));
       modalEl.querySelector("#pane-gym").style.display = chip.dataset.dtab === "gym" ? "" : "none";
@@ -271,23 +283,20 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
         toast(t("Action impossible, réessaie"));
       }
     };
-    const shareBtn = modalEl.querySelector("#toggle-share");
-    if (shareBtn) shareBtn.onclick = async () => {
-      shareBtn.disabled = true;
+    modalEl.querySelectorAll("#share-scope [data-scope]").forEach(chip => chip.onclick = async () => {
+      const scope = chip.dataset.scope;
       try {
-        const next = !workout.shared;
-        await db.setWorkoutShared(workout.id, next);
-        workout.shared = next;
+        await db.setWorkoutShareScope(workout.id, scope);
+        workout.shared = scope === "public";
+        workout.friends_share = scope === "friends";
         invalidate("workouts");
-        shareBtn.textContent = next ? t("Retirer du feed") : t("Partager sur le feed");
-        modalEl.querySelector("#share-status").textContent = next ? t("🌍 Partagée sur le feed") : t("🔒 Privée — visible par toi seul");
-        toast(next ? t("Séance partagée sur le feed") : t("Séance retirée du feed"));
+        modalEl.querySelectorAll("#share-scope [data-scope]").forEach(c => c.classList.toggle("active", c === chip));
+        toast(scope === "public" ? t("Séance partagée avec la communauté") : scope === "friends" ? t("Séance partagée avec tes amis") : t("Séance privée"));
       } catch (err) {
         console.error("[Skullcrusher] Erreur partage séance", err);
         toast(t("Impossible de modifier le partage"));
       }
-      shareBtn.disabled = false;
-    };
+    });
     const delBtn = modalEl.querySelector("#del-workout");
     if (delBtn) delBtn.onclick = async () => {
       if (!confirm(t("Supprimer cette séance et toutes ses séries ?"))) return;

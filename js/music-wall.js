@@ -1,41 +1,35 @@
 // ============================================================
-// MUR MUSICAL — ce qui fait soulever la salle
-// Agrège les profils (artiste, playlist de salle) et les séances
-// partagées (sons des records, bandes-son), entre amis ou pour toute la
-// communauté.
+// MUR MUSICAL — ce qui fait soulever la salle (onglet Musique)
+// Agrège les profils (artiste mis en avant, playlist de salle) et les
+// séances partagées (sons des records, playlists de séance), pour toute la
+// communauté (par défaut) ou entre amis.
+// Les écoutes récupérées via Spotify ne sont jamais agrégées en
+// classement : la politique développeurs de Spotify l'interdit. Le
+// classement des artistes repose sur ce que chacun déclare dans son profil.
 // ============================================================
 import * as db from "./db.js";
-import { esc } from "./utils.js";
-import { songHtml, bindSongLinks, parseMusicLink, providerIcon, providerName } from "./music.js";
+import { esc, safeImageUrl } from "./utils.js";
+import { songHtml, bindSongLinks, parseMusicLink, providerIcon, providerName, openMusicPlayer } from "./music.js";
 import { openProfile } from "./profile.js";
-import { t } from "./i18n.js";
+import { t, tn } from "./i18n.js";
 
-let scope = "friends"; // "friends" | "community"
+const LS_SCOPE = "skullcrusher_music_scope";
+let scope = (() => { try { return localStorage.getItem(LS_SCOPE) === "friends" ? "friends" : "community"; } catch (_) { return "community"; } })();
 
-function normArtist(name) {
-  return String(name || "").trim();
-}
-
-function topCounts(map, n = 10) {
-  return [...map.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "fr")).slice(0, n);
-}
-
-function bump(map, key, label, weight, extra = {}) {
-  if (!key) return;
-  const k = key.toLowerCase();
-  const cur = map.get(k) || { label, count: 0, ...extra };
-  cur.count += weight;
-  map.set(k, cur);
-}
+const normArtist = (name) => String(name || "").trim();
 
 export async function renderMusicWall(container) {
   container.innerHTML = `
-    <div class="chip-row" id="mw-scope" style="margin-bottom:12px;">
-      <div class="chip ${scope === "friends" ? "active" : ""}" data-scope="friends">👥 ${t("Mes amis")}</div>
+    <div class="chip-row" id="mw-scope" style="margin:0 0 14px;">
       <div class="chip ${scope === "community" ? "active" : ""}" data-scope="community">🌍 ${t("Communauté")}</div>
+      <div class="chip ${scope === "friends" ? "active" : ""}" data-scope="friends">👥 ${t("Mes amis")}</div>
     </div>
     <div id="mw-body"><div class="empty-state"><span class="num">···</span>${t("Chargement")}</div></div>`;
-  container.querySelectorAll("[data-scope]").forEach(c => c.onclick = () => { scope = c.dataset.scope; renderMusicWall(container); });
+  container.querySelectorAll("[data-scope]").forEach(c => c.onclick = () => {
+    scope = c.dataset.scope;
+    try { localStorage.setItem(LS_SCOPE, scope); } catch (_) {}
+    renderMusicWall(container);
+  });
   const body = container.querySelector("#mw-body");
 
   const myUid = db.getCurrentUser()?.uid;
@@ -60,47 +54,78 @@ export async function renderMusicWall(container) {
   if (!body.isConnected) return;
   const nameOf = (uid) => uid === myUid ? t("Toi") : (profiles.find(p => p.uid === uid)?.display_name || t("Quelqu'un"));
 
-  // Artistes déclarés par les utilisateurs dans leur profil. Les écoutes
-  // récupérées via Spotify ne sont jamais agrégées en classement : la
-  // politique développeurs de Spotify interdit d'en tirer des statistiques.
+  // Artistes mis en avant dans les profils : nombre d'athlètes, et un lien
+  // d'artiste (le premier trouvé) pour l'écouter.
   const artists = new Map();
-  profiles.forEach(p => bump(artists, normArtist(p.music?.artist_name), normArtist(p.music?.artist_name), 1));
-  const topArtists = topCounts(artists);
-  const recordSongs = workouts.filter(w => w.record_song && (w.records || []).length).slice(0, 10);
-  const playlists = profiles.filter(p => parseMusicLink(p.music?.playlist_url));
-  const max = topArtists[0]?.count || 1;
+  profiles.forEach(p => {
+    const name = normArtist(p.music?.artist_name);
+    if (!name) return;
+    const k = name.toLowerCase();
+    const cur = artists.get(k) || { name, count: 0, url: "", fans: [] };
+    cur.count++;
+    cur.fans.push(p);
+    if (!cur.url && parseMusicLink(p.music?.artist_url)) cur.url = parseMusicLink(p.music.artist_url).url;
+    artists.set(k, cur);
+  });
+  const top = [...artists.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "fr")).slice(0, 9);
+  const [hero, ...others] = top;
+
+  const recordSongs = workouts.filter(w => w.record_song && (w.records || []).length).slice(0, 12);
+  const gymPlaylists = profiles.filter(p => parseMusicLink(p.music?.playlist_url));
+  const sessionPlaylists = workouts.filter(w => parseMusicLink(w.soundtrack?.playlist_url)).slice(0, 8);
+
+  const avatar = (p, size = 26) => {
+    const photo = safeImageUrl(p?.photo_data_url);
+    return photo ? `<span class="mw-ava" style="width:${size}px; height:${size}px; background-image:url('${photo}')"></span>`
+      : `<span class="mw-ava" style="width:${size}px; height:${size}px;">${esc((p?.display_name || "?")[0].toUpperCase())}</span>`;
+  };
+  const playlistTile = (url, owner, sub) => {
+    const link = parseMusicLink(url);
+    return `<button type="button" class="mw-pl" data-playlist-url="${esc(link.url)}" data-playlist-title="${esc(t("Playlist de {name}", { name: owner }))}">
+      <span class="mw-pl-icon">${providerIcon(link)}</span>
+      <span class="mw-pl-text"><b data-title-of="${esc(link.url)}">${esc(t("Playlist de {name}", { name: owner }))}</b><small>${esc(sub)} · ${esc(providerName(link))}</small></span>
+      <span class="mw-play">▶</span>
+    </button>`;
+  };
 
   body.innerHTML = `
-    <div class="card">
-      <div class="card-title">🔥 ${t("Artistes qui font soulever")}</div>
-      <p class="muted" style="margin:-4px 0 8px; font-size:12px;">${t("D'après les artistes que chacun met en avant sur son profil.")}</p>
-      ${topArtists.length ? topArtists.map((a, i) => `
-        <div class="mw-bar-row">
-          <span class="mw-rank">${i + 1}</span>
-          <span class="mw-label">${esc(a.label)}</span>
-          <span class="mw-bar"><span style="width:${Math.max(8, Math.round((a.count / max) * 100))}%"></span></span>
-        </div>`).join("") : `<p class="muted" style="margin:0;">${t("Personne n'a encore renseigné d'artiste. Ajoute le tien : Réglages → 🎧 musique.")}</p>`}
-    </div>
+    ${hero ? `
+    <div class="mw-hero" ${hero.url ? `data-artist-url="${esc(hero.url)}" role="button"` : ""}>
+      <div class="mw-kicker">🔥 ${t("L'artiste qui fait soulever")} ${scope === "friends" ? t("tes amis") : t("la salle")}</div>
+      <div class="mw-hero-name">${esc(hero.name)}</div>
+      <div class="mw-hero-sub">
+        <span class="mw-fans">${hero.fans.slice(0, 5).map(p => avatar(p, 24)).join("")}</span>
+        ${tn(hero.count, "mis en avant par {n} athlète", "mis en avant par {n} athlètes")}
+      </div>
+      ${hero.url ? `<span class="mw-hero-play">▶ ${t("Écouter")}</span>` : ""}
+    </div>` : `
+    <div class="mw-hero mw-hero-empty">
+      <div class="mw-kicker">🔥 ${t("L'artiste qui fait soulever la salle")}</div>
+      <p style="margin:6px 0 0;">${t("Personne n'a encore mis d'artiste en avant. Ajoute le tien depuis ta photo de profil → Réglages → 🎧 musique.")}</p>
+    </div>`}
 
-    <div class="card">
-      <div class="card-title">🏆 ${t("Les sons des records")}</div>
-      ${recordSongs.length ? recordSongs.map(w => `
-        <div class="list-row" style="cursor:default; display:block;">
-          <div class="list-row-title"><span class="profile-link" data-profile="${esc(w.owner_uid)}">${esc(nameOf(w.owner_uid))}</span> — ${esc(w.records[0].exercise)} ${esc(w.records[0].kg)} kg × ${esc(w.records[0].reps)}</div>
-          <div class="list-row-sub">🎵 ${songHtml(w.record_song)}</div>
-        </div>`).join("") : `<p class="muted" style="margin:0;">${t("Bats un record et indique le son qui t'a porté à la fin de ta séance : il apparaîtra ici.")}</p>`}
-    </div>
+    ${others.length ? `<div class="mw-artists">${others.map((a, i) => `
+      <div class="mw-artist" ${a.url ? `data-artist-url="${esc(a.url)}" role="button"` : ""}>
+        <span class="mw-artist-rank">${i + 2}</span>
+        <span class="mw-artist-name">${esc(a.name)}</span>
+        <span class="mw-artist-count">${tn(a.count, "{n} athlète", "{n} athlètes")}</span>
+      </div>`).join("")}</div>` : ""}
 
-    <div class="card">
-      <div class="card-title">🎧 ${t("Playlists de salle")}</div>
-      ${playlists.length ? playlists.map(p => `
-        <div class="list-row" style="cursor:default;">
-          <span class="list-row-title profile-link" data-profile="${esc(p.uid)}">${esc(p.uid === myUid ? t("Toi") : p.display_name || t("Utilisateur"))}</span>
-          <button class="btn btn-sm btn-secondary" style="width:auto;" data-playlist-url="${esc(parseMusicLink(p.music.playlist_url).url)}" data-playlist-title="${esc(t("Playlist de {name}", { name: p.display_name || t("salle") }))}">${providerIcon(parseMusicLink(p.music.playlist_url))} ${t("Écouter sur {service}", { service: providerName(parseMusicLink(p.music.playlist_url)) })}</button>
-        </div>`).join("") : `<p class="muted" style="margin:0;">${t("Aucune playlist de salle partagée pour l'instant.")}</p>`}
-    </div>
+    <h2 class="mw-h2">🏆 ${t("Les sons des records")}</h2>
+    ${recordSongs.length ? `<div class="mw-songs">${recordSongs.map(w => `
+      <div class="mw-song">
+        <div class="mw-song-title">${songHtml(w.record_song)}</div>
+        <div class="mw-song-sub"><span class="profile-link" data-profile="${esc(w.owner_uid)}">${esc(nameOf(w.owner_uid))}</span> · ${esc(w.records[0].exercise)} <b>${esc(w.records[0].kg)} kg × ${esc(w.records[0].reps)}</b></div>
+      </div>`).join("")}</div>` : `<p class="muted">${t("Bats un record et indique le son qui t'a porté à la fin de ta séance : il apparaîtra ici.")}</p>`}
 
+    <h2 class="mw-h2">🎧 ${t("Playlists de salle")}</h2>
+    ${gymPlaylists.length ? `<div class="mw-pls">${gymPlaylists.map(p => playlistTile(p.music.playlist_url, p.uid === myUid ? t("Toi") : (p.display_name || t("Utilisateur")), t("de {name}", { name: p.uid === myUid ? t("toi") : (p.display_name || t("Utilisateur")) }))).join("")}</div>`
+      : `<p class="muted">${t("Aucune playlist de salle partagée pour l'instant.")}</p>`}
+
+    ${sessionPlaylists.length ? `<h2 class="mw-h2">🎶 ${t("Playlists des dernières séances")}</h2>
+      <div class="mw-pls">${sessionPlaylists.map(w => playlistTile(w.soundtrack.playlist_url, nameOf(w.owner_uid), `${nameOf(w.owner_uid)} · ${w.title || t("Séance")}`)).join("")}</div>` : ""}
   `;
   bindSongLinks(body);
-  body.querySelectorAll("[data-profile]").forEach(el => el.onclick = () => openProfile(el.dataset.profile));
+  body.querySelectorAll("[data-artist-url]").forEach(el => el.onclick = () => openMusicPlayer(el.dataset.artistUrl, t("Artiste")));
+  body.querySelectorAll("[data-profile]").forEach(el => el.onclick = (e) => { e.stopPropagation(); openProfile(el.dataset.profile); });
 }
