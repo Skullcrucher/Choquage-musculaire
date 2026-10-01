@@ -1257,3 +1257,11 @@ html.desktop .fold-head:hover .card-title { color: var(--red); }
 .plan-day.moved { opacity: .6; }
 .plan-day.moved .plan-mark { color: var(--text-dim); }
 .plan-day.moved .plan-rname { font-style: italic; }
+
+/* ---------- Chronomètre de la séance en cours ---------- */
+.workout-clock {
+  flex-shrink: 0; display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(224,36,36,0.5);
+  background: rgba(224,36,36,0.12); color: var(--text);
+  font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; letter-spacing: .02em;
+}

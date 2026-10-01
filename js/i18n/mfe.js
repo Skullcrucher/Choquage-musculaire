@@ -1231,5 +1231,6 @@ export default {
   "Décalée": "Deplase",
   "Rattraper : {routine}": "Ratrap : {routine}",
   "À rattraper cette semaine": "Pou ratrap sa semenn-la",
-  "Manquée": "Rate"
+  "Manquée": "Rate",
+  "Durée de la séance": "Dire seans"
 };
