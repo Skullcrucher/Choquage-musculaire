@@ -49,6 +49,7 @@
   --blue: #B8B8BE;
   --green: #5FBE72;
   --red: #FF5C5C;
+  --orange: #F0A23B;
   --radius: 6px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -846,6 +847,54 @@ canvas { max-width: 100%; }
 .profile-link { cursor: pointer; }
 .profile-link:active { opacity: 0.6; }
 .spotify-embed { width: 100%; border: 0; border-radius: 12px; margin-top: 10px; background: var(--surface-raised); }
+
+/* Tendance sur un mois : ▲ progression, ▬ stagnation, ▼ régression */
+.trend { display: inline-flex; align-items: center; gap: 2px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 999px; vertical-align: 2px; white-space: nowrap; letter-spacing: 0; text-transform: none; }
+.trend-up { color: var(--green); background: rgba(95,190,114,0.14); }
+.trend-flat { color: var(--orange); background: rgba(240,162,59,0.14); }
+.trend-down { color: var(--red); background: rgba(255,92,92,0.14); }
+.ex-trend:empty { display: none; }
+.trend-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; padding: 8px 10px; margin: 0 0 10px; border-radius: var(--radius); background: var(--surface-raised); border-left: 3px solid var(--border); }
+.trend-line .trend { font-size: 12px; }
+.trend-line-up { border-left-color: var(--green); }
+.trend-line-flat { border-left-color: var(--orange); }
+.trend-line-down { border-left-color: var(--red); }
+
+/* Bannière du profil */
+.pf-banner {
+  position: relative; overflow: hidden; border-radius: 14px; padding: 14px 14px 16px;
+  background: radial-gradient(120% 90% at 100% 0%, rgba(224,36,36,0.35), transparent 60%), linear-gradient(160deg, var(--surface-raised), var(--surface));
+  border: 1px solid rgba(224,36,36,0.45);
+}
+.pf-brand { display: flex; align-items: center; gap: 6px; font-family: 'Anton', sans-serif; font-size: 13px; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 10px; }
+.pf-brand img { width: 20px; height: 20px; border-radius: 5px; }
+.pf-ident { display: flex; align-items: center; gap: 14px; }
+.pf-ident .profile-avatar { box-shadow: 0 0 0 3px var(--amber), 0 0 22px rgba(224,36,36,0.6); }
+.pf-name { font-family: 'Anton', sans-serif; font-size: 30px; line-height: 1.05; text-transform: uppercase; overflow-wrap: anywhere; }
+.pf-me { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--text-dim); text-transform: none; vertical-align: 6px; }
+.pf-bio { margin: 4px 0 0; color: var(--text-dim); font-size: 14px; }
+.pf-bests { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.pf-best { background: rgba(11,11,12,0.55); border: 1px solid var(--border); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pf-best:first-child { border-color: var(--amber); }
+.pf-best-val { font-family: 'Anton', sans-serif; font-size: 19px; color: var(--amber); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-best-ex { font-size: 11px; color: var(--text-dim); line-height: 1.25; overflow-wrap: anywhere; }
+.pf-song { display: flex; flex-direction: column; gap: 2px; margin-top: 12px; padding: 8px 10px; background: rgba(11,11,12,0.55); border-radius: 10px; }
+.pf-song-k { font-size: 11px; font-weight: 800; letter-spacing: 0.04em; color: var(--text-dim); text-transform: uppercase; }
+.pf-song-v { font-size: 15px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.pf-share-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.pf-share-row .btn { flex: 1; min-width: 140px; }
+.pf-trend-counts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+.pf-tc { background: var(--surface-raised); border-radius: 10px; padding: 8px; text-align: center; display: flex; flex-direction: column; }
+.pf-tc b { font-family: 'Anton', sans-serif; font-size: 24px; font-weight: 400; }
+.pf-tc span { font-size: 11px; color: var(--text-dim); }
+.pf-tc.up b { color: var(--green); } .pf-tc.flat b { color: var(--orange); } .pf-tc.down b { color: var(--red); }
+.pf-trend-h { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); margin: 10px 0 4px; }
+.pf-trend-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.pf-trend-ex { font-weight: 700; font-size: 14px; overflow-wrap: anywhere; }
+.pf-trend-detail { grid-column: 1 / -1; font-size: 12px; color: var(--text-dim); }
+.pf-modules { display: grid; gap: 6px; }
+.pf-module { display: flex; align-items: center; gap: 10px; margin: 0; padding: 8px 10px; background: var(--surface-raised); border-radius: var(--radius); cursor: pointer; font-size: 14px; }
+.pf-module input { width: auto; margin: 0; }
 
 /* ---------- Musique : fin de séance, feed, séance ---------- */
 .finish-records {

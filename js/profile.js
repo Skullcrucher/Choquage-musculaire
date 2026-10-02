@@ -9,9 +9,10 @@
 // ============================================================
 import * as db from "./db.js";
 import { openModal, closeModal, toast, esc, safeImageUrl, attachAutocomplete, estimate1RM } from "./utils.js";
-import { getExercises, getWorkouts, getSetsForExercise } from "./cache.js";
-import { parseMusicLink, musicEmbed, PROVIDERS, providerIcon, providerName, shortLinkHint, getMyProvider, setMyProvider, openOnMyService, searchArtists } from "./music.js";
-import { t } from "./i18n.js";
+import { getExercises, getWorkouts, getSetsForExercise, getSetsForPeriod } from "./cache.js";
+import { allTrends, trendBadgeHtml, trendDetail, TREND_DAYS } from "./trend.js";
+import { songHtml, bindSongLinks, parseMusicLink, musicEmbed, PROVIDERS, providerIcon, providerName, shortLinkHint, getMyProvider, setMyProvider, openOnMyService, searchArtists } from "./music.js";
+import { t, tn } from "./i18n.js";
 
 const MAX_HIGHLIGHTS = 3;
 const WEEK_MS = 7 * 24 * 3600 * 1000;
@@ -90,6 +91,72 @@ async function computePublicStats() {
   };
 }
 
+// Modules du profil, au choix dans « Modifier » (tous affichés par défaut,
+// sauf les chiffres qui restent derrière leur case historique show_stats).
+// i18n-keys: "Meilleures performances", "Son de séance", "Progression du mois", "Exercices phares", "Musique de salle"
+export const PROFILE_MODULES = [
+  { key: "bests", label: "Meilleures performances", icon: "🏋️" },
+  { key: "session_music", label: "Son de séance", icon: "🎵" },
+  { key: "progress", label: "Progression du mois", icon: "📈" },
+  { key: "highlights", label: "Exercices phares", icon: "🏆" },
+  { key: "music", label: "Musique de salle", icon: "🎧" }
+];
+export function profileModules(p) {
+  const m = p?.profile_modules || {};
+  const out = {};
+  PROFILE_MODULES.forEach(x => { out[x.key] = m[x.key] !== false; });
+  return out;
+}
+
+// Vitrine du profil, calculée sur l'appareil du propriétaire :
+//  - meilleures performances (records des séances + séries des 3 derniers mois) ;
+//  - son le plus présent dans ses séances (son du record, bande-son) ;
+//  - progression du mois : nombre d'exercices en progression / stagnation /
+//    régression et les plus fortes évolutions.
+// full : liste complète des tendances (affichée au propriétaire seulement).
+export async function computeShowcase() {
+  const [workouts, sets] = await Promise.all([getWorkouts(), getSetsForPeriod(13).catch(() => [])]);
+  const best = new Map();
+  const consider = (exercise, kg, reps, date) => {
+    if (!exercise || !(kg > 0) || !(reps > 0) || reps > 15) return;
+    const one_rm = estimate1RM(kg, reps);
+    const cur = best.get(exercise);
+    if (!cur || one_rm > cur.one_rm) best.set(exercise, { exercise, kg, reps, one_rm, date: String(date || "").slice(0, 10) });
+  };
+  workouts.forEach(w => (w.records || []).forEach(r => consider(r.exercise, +r.kg, +r.reps, w.start_time)));
+  sets.filter(s => s.set_type !== "warmup").forEach(s => consider(s.exercise_title, s.weight_kg, s.reps, s.workout_start_time));
+  const best_lifts = [...best.values()].sort((a, b) => b.one_rm - a.one_rm).slice(0, 3);
+
+  const songs = new Map();
+  const addSong = (song, weight) => {
+    const url = song?.url || "";
+    const key = url || [song?.title, song?.artist].filter(Boolean).join(" - ").toLowerCase();
+    if (!key) return;
+    const cur = songs.get(key) || { song: { url, source: song.source || "", ...(song.title ? { title: song.title } : {}), ...(song.artist ? { artist: song.artist } : {}) }, count: 0 };
+    cur.count += weight;
+    songs.set(key, cur);
+  };
+  workouts.forEach(w => {
+    if (w.record_song) addSong(w.record_song, 2); // choisi par l'utilisateur : compte double
+    (w.soundtrack?.tracks || []).forEach(tr => addSong(tr, 1));
+  });
+  const topSong = [...songs.values()].sort((a, b) => b.count - a.count)[0];
+
+  const full = allTrends(sets).sort((a, b) => b.pct - a.pct);
+  const slim = (x) => ({ exercise: x.exercise, status: x.status, pct: x.pct, from: x.from, to: x.to, metric: x.metric, sessions: x.sessions });
+  const progress = {
+    up: full.filter(x => x.status === "up").length,
+    flat: full.filter(x => x.status === "flat").length,
+    down: full.filter(x => x.status === "down").length,
+    top: full.filter(x => x.status === "up").slice(0, 5).map(slim),
+    bottom: full.filter(x => x.status === "down").reverse().slice(0, 5).map(slim)
+  };
+  return {
+    showcase: { best_lifts, session_music: topSong ? { ...topSong.song, count: topSong.count } : null, progress, updated: new Date().toISOString().slice(0, 10) },
+    full: full.map(slim)
+  };
+}
+
 // Recalcule les mises en avant (après une séance, à l'enregistrement du profil).
 export async function refreshMyProfileHighlights(profile = null) {
   const uid = db.getCurrentUser()?.uid;
@@ -99,6 +166,7 @@ export async function refreshMyProfileHighlights(profile = null) {
   const patch = {};
   if (names.length) patch.highlights = await Promise.all(names.map(computeHighlight));
   if (p?.show_stats) patch.public_stats = await computePublicStats();
+  try { patch.showcase = (await computeShowcase()).showcase; } catch (e) { console.warn("[Skullcrusher] Vitrine du profil", e); }
   if (p?.challenge?.opt_in) {
     const { computeMyWeeks } = await import("./challenges.js");
     patch.challenge = await computeMyWeeks();
@@ -148,6 +216,56 @@ function highlightCard(h) {
     </div>`;
 }
 
+function liftValue(b) {
+  return `${String(b.kg).replace(".", ",")} kg × ${b.reps}`;
+}
+// Bandeau : meilleures performances + son de séance (selon les modules).
+function bannerExtraHtml(sc, mods) {
+  const bests = (sc?.best_lifts || []).slice(0, 3);
+  const song = sc?.session_music;
+  return `
+    ${mods.bests && bests.length ? `<div class="pf-bests">${bests.map(b => `
+      <div class="pf-best"><span class="pf-best-val">${esc(liftValue(b))}</span><span class="pf-best-ex">${esc(b.exercise)}</span></div>`).join("")}</div>` : ""}
+    ${mods.session_music && song ? `<div class="pf-song"><span class="pf-song-k">🎵 ${t("Son de séance")}</span><span class="pf-song-v">${songHtml(song)}</span></div>` : ""}`;
+}
+
+// Module « Progression du mois » : compteurs, plus fortes progressions et
+// régressions ; pour soi, la liste complète de ses exercices.
+function progressHtml(pr, full, isMe) {
+  if (!pr || !(pr.up + pr.flat + pr.down)) {
+    return isMe ? `<div class="profile-section-title">📈 ${t("Progression du mois")}</div><p class="muted" style="margin:0;">${t("Pas encore assez de séances ce mois-ci pour mesurer ta progression.")}</p>` : "";
+  }
+  const row = (x) => `<div class="pf-trend-row"><span class="pf-trend-ex">${esc(x.exercise)}</span>${trendBadgeHtml(x)}<span class="pf-trend-detail">${esc(trendDetail(x))}</span></div>`;
+  return `
+    <div class="profile-section-title">📈 ${t("Progression du mois")}</div>
+    <div class="pf-trend-counts">
+      <div class="pf-tc up"><b>${pr.up}</b><span>▲ ${t("en progression")}</span></div>
+      <div class="pf-tc flat"><b>${pr.flat}</b><span>▬ ${t("stables")}</span></div>
+      <div class="pf-tc down"><b>${pr.down}</b><span>▼ ${t("en baisse")}</span></div>
+    </div>
+    ${pr.top?.length ? `<div class="pf-trend-h">🚀 ${t("Plus fortes progressions")}</div>${pr.top.map(row).join("")}` : ""}
+    ${pr.bottom?.length ? `<div class="pf-trend-h">⚠️ ${t("Plus fortes régressions")}</div>${pr.bottom.map(row).join("")}` : ""}
+    ${isMe && full?.length ? `<button class="btn btn-secondary btn-sm" data-pf-all style="margin-top:8px;">${t("Voir tous mes exercices ({n})", { n: full.length })}</button>
+      <div class="pf-trend-all" hidden>${full.map(row).join("")}</div>` : ""}
+    <p class="muted" style="font-size:12px; margin:6px 0 0;">${t("Sur {n} jours : meilleure 1RM estimée (ou reps sans charge) des dernières séances comparée au début du mois.", { n: TREND_DAYS })}</p>`;
+}
+function bindProgressToggle(root) {
+  const btn = root.querySelector("[data-pf-all]");
+  if (btn) btn.onclick = () => { const list = root.querySelector(".pf-trend-all"); list.hidden = !list.hidden; };
+}
+
+// Lien de l'app à partager (menu de partage du téléphone, sinon copie).
+async function inviteFriends(name) {
+  const url = location.origin + location.pathname;
+  const text = t("{name} s'entraîne avec Skullcrusher 🤘 Rejoins-moi pour suivre tes séances, tes records et ta musique de salle :", { name: name || t("Je") });
+  if (navigator.share) {
+    try { await navigator.share({ title: "Skullcrusher", text, url }); return; }
+    catch (e) { if (e?.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(`${text} ${url}`); toast(t("Lien copié : colle-le où tu veux")); }
+  catch (_) { toast(url, 6000); }
+}
+
 export async function openProfile(uid) {
   const myUid = db.getCurrentUser()?.uid;
   let profile;
@@ -176,15 +294,25 @@ export async function openProfile(uid) {
   const highlights = (profile.highlights || []).filter(h => h?.exercise);
   const hasMusic = playlist || music.artist_name || artist || spotifyProfile || service;
 
+  const mods = profileModules(profile);
+  const showcase = profile.showcase || {};
   openModal(`
-    <div style="display:flex; align-items:center; gap:14px;">
-      ${avatarHtml(profile, 64)}
-      <div style="min-width:0;">
-        <h3 style="margin:0;">${esc(profile.display_name || t("Utilisateur"))}${isMe ? ` <span class="muted" style="font-size:14px; font-family:Inter,sans-serif; text-transform:none;">(${t("toi")})</span>` : ""}</h3>
-        ${profile.bio ? `<p class="muted" style="margin:4px 0 0;">${esc(profile.bio)}</p>` : ""}
+    <div class="pf-banner">
+      <div class="pf-brand"><img src="icons/icon-192.png" alt=""><span>SKULLCRUSHER</span></div>
+      <div class="pf-ident">
+        ${avatarHtml(profile, 76)}
+        <div style="min-width:0;">
+          <div class="pf-name">${esc(profile.display_name || t("Utilisateur"))}${isMe ? ` <span class="pf-me">${t("toi")}</span>` : ""}</div>
+          ${profile.bio ? `<p class="pf-bio">${esc(profile.bio)}</p>` : ""}
+        </div>
       </div>
+      ${chips.length ? `<div class="chip-row" style="margin:10px 0 0;">${chips.map(c => `<span class="routine-badge">${esc(c)}</span>`).join("")}</div>` : ""}
+      <div id="pf-banner-extra">${bannerExtraHtml(showcase, mods)}</div>
     </div>
-    ${chips.length ? `<div class="chip-row" style="margin-top:12px;">${chips.map(c => `<span class="routine-badge">${esc(c)}</span>`).join("")}</div>` : ""}
+    ${isMe ? `<div class="pf-share-row">
+      <button class="btn btn-primary btn-sm" id="pf-share-card">📸 ${t("Partager ma carte")}</button>
+      <button class="btn btn-secondary btn-sm" id="pf-invite">🔗 ${t("Inviter des potes")}</button>
+    </div>` : ""}
 
     ${st ? `<div class="stat-grid" style="margin-top:14px;">
       <div class="stat-box"><span class="num">${esc(st.workouts)}</span><span class="lbl">${t("séances")}</span></div>
@@ -192,9 +320,11 @@ export async function openProfile(uid) {
       <div class="stat-box"><span class="num">${esc(st.per_week)}</span><span class="lbl">${t("séances / sem.")}</span></div>
     </div>` : ""}
 
-    ${highlights.length ? `<div class="profile-section-title">🏆 ${t("Exercices phares")}</div>${highlights.map(highlightCard).join("")}` : ""}
+    ${mods.progress ? `<div id="pf-progress">${progressHtml(showcase.progress, null, isMe)}</div>` : ""}
 
-    ${hasMusic ? `<div class="profile-section-title">🎧 ${t("Musique de salle")}</div>
+    ${mods.highlights && highlights.length ? `<div class="profile-section-title">🏆 ${t("Exercices phares")}</div>${highlights.map(highlightCard).join("")}` : ""}
+
+    ${mods.music && hasMusic ? `<div class="profile-section-title">🎧 ${t("Musique de salle")}</div>
       ${service ? `<p class="muted spotify-attrib" style="margin:0 0 8px;">${providerIcon(service)} ${t("Écoute sur {service}", { service: providerName(service) })}</p>` : ""}
       ${music.artist_name || artist ? `<div class="list-row" style="cursor:default;">
         <div><div class="list-row-sub">${t("Artiste pour se chauffer")}</div><div class="list-row-title">${esc(music.artist_name || t("Voir l'artiste"))}</div></div>
@@ -206,7 +336,7 @@ export async function openProfile(uid) {
       ${playlist ? musicEmbed(playlist) : ""}
       ${spotifyProfile ? `<a class="service-btn" style="margin-top:10px;" href="${spotifyProfile.url}" target="_blank" rel="noopener">${providerIcon(spotifyProfile)} ${t("Profil {service}", { service: providerName(spotifyProfile) })}</a>` : ""}` : ""}
 
-    ${!highlights.length && !hasMusic && !st && !profile.bio && !chips.length
+    ${!highlights.length && !hasMusic && !st && !profile.bio && !chips.length && !(showcase.best_lifts || []).length && !(isMe && mods.progress)
       ? `<p class="muted" style="margin-top:14px;">${isMe ? t("Ton profil est encore vide : ajoute tes exercices phares et ta musique de salle.") : t("Ce profil n'a encore rien mis en avant.")}</p>` : ""}
 
     <div class="btn-row" style="margin-top:16px;">
@@ -216,6 +346,25 @@ export async function openProfile(uid) {
     ${!isMe ? `<button class="report-link" id="pf-report">🚩 ${t("Signaler ce profil")}</button>` : ""}
   `, (modalEl) => {
     modalEl.querySelector("#pf-close").onclick = closeModal;
+    bindSongLinks(modalEl);
+    bindProgressToggle(modalEl);
+    if (isMe) {
+      modalEl.querySelector("#pf-share-card").onclick = async () => {
+        closeModal();
+        (await import("./share-card.js")).openShareCard({ kind: "profile", profileData: { showcase: profile.showcase || {}, modules: mods } });
+      };
+      modalEl.querySelector("#pf-invite").onclick = () => inviteFriends(profile.display_name);
+      // Vitrine recalculée à l'ouverture (et enregistrée) : toujours à jour,
+      // avec la liste complète des tendances pour soi.
+      computeShowcase().then(({ showcase: fresh, full }) => {
+        profile.showcase = fresh;
+        const extra = modalEl.querySelector("#pf-banner-extra");
+        if (extra) { extra.innerHTML = bannerExtraHtml(fresh, mods); bindSongLinks(extra); }
+        const prog = modalEl.querySelector("#pf-progress");
+        if (prog) { prog.innerHTML = progressHtml(fresh.progress, full, true); bindProgressToggle(prog); }
+        db.updatePublicProfile({ showcase: fresh }).catch(e => console.warn("[Skullcrusher] Vitrine non enregistrée", e));
+      }).catch(e => console.warn("[Skullcrusher] Vitrine du profil", e));
+    }
     const reportBtn = modalEl.querySelector("#pf-report");
     if (reportBtn) reportBtn.onclick = () => openReportDialog(uid, profile.display_name || t("Utilisateur"));
     const artistMine = modalEl.querySelector("#pf-artist-mine");
@@ -328,6 +477,7 @@ export async function openProfileEditor(onSaved = () => {}) {
   const hl = (p.highlights || []).map(h => h.exercise);
   const opt = (map, cur) => `<option value="">—</option>` + Object.entries(map).map(([k, v]) => `<option value="${k}" ${k === cur ? "selected" : ""}>${esc(v)}</option>`).join("");
   const year = new Date().getFullYear();
+  const mods = profileModules(p);
 
   openModal(`
     <h3>${t("Mon profil public")}</h3>
@@ -343,10 +493,11 @@ export async function openProfileEditor(onSaved = () => {}) {
       <div><label>${t("Salle")}</label><input id="pf-gym" maxlength="60" value="${esc(p.gym || "")}" placeholder="${t("ex : Basic-Fit Lyon 7")}"></div>
       <div><label>${t("Muscu depuis")}</label><input id="pf-since" type="number" min="1950" max="${year}" value="${esc(p.since_year || "")}" placeholder="${year - 3}"></div>
     </div>
-    <label class="list-row" style="cursor:pointer; margin-top:10px;">
-      <span>${t("Afficher mes chiffres (séances, tonnes, rythme)")}</span>
-      <input type="checkbox" id="pf-stats" ${p.show_stats ? "checked" : ""} style="width:auto;">
-    </label>
+    <div class="profile-section-title">🧩 ${t("Modules affichés sur mon profil")}</div>
+    <div class="pf-modules">
+      ${PROFILE_MODULES.map(m => `<label class="pf-module"><input type="checkbox" data-mod="${m.key}" ${mods[m.key] ? "checked" : ""}> <span>${m.icon} ${t(m.label)}</span></label>`).join("")}
+      <label class="pf-module"><input type="checkbox" id="pf-stats" ${p.show_stats ? "checked" : ""}> <span>📊 ${t("Mes chiffres (séances, tonnes, rythme)")}</span></label>
+    </div>
     <label class="list-row" style="cursor:pointer;">
       <span>🟢 ${t("Montrer à mes amis quand je suis à la salle")}<br><span class="muted" style="font-size:12px;">${t("Pendant une séance en cours, dans leur feed. Modifiable pour chaque séance.")}</span></span>
       <input type="checkbox" id="pf-presence" ${p.show_presence !== false ? "checked" : ""} style="width:auto;">
@@ -427,6 +578,8 @@ export async function openProfileEditor(onSaved = () => {}) {
           public_stats: publicStats,
           highlights,
           music: { ...links, artist_name: val("#pf-artist-name"), provider: val("#pf-provider") },
+          profile_modules: Object.fromEntries([...modalEl.querySelectorAll("[data-mod]")].map(c => [c.dataset.mod, c.checked])),
+          showcase: (await computeShowcase().catch(() => null))?.showcase || p.showcase || null,
           has_music: !!(links.playlist_url || links.artist_url || links.spotify_profile_url || val("#pf-artist-name"))
         });
         setMyProvider(val("#pf-provider"));

@@ -509,6 +509,49 @@ function renderExercise(ctx, W, H, d, assets, fmt, periodLabel) {
   footer(ctx, W, H, pad, assets, d.opts.showWeights ? t("1RM estimée (formule d'Epley) : valeur indicative") : "");
 }
 
+// ---------- Carte de profil ----------
+// Avatar, pseudo, meilleures performances, progression du mois, son de
+// séance, signature de l'app (selon les modules choisis dans le profil).
+function renderProfile(ctx, W, H, d, assets, fmt) {
+  const pad = 70, inner = W - pad * 2;
+  const compact = fmt !== "story";
+  let y = header(ctx, W, pad, assets, t("Ma carte"), d.opts, fmt);
+  y = withPhoto(ctx, y, W, pad, d, fmt);
+  const tight = compact && d.opts.photo;
+  y += tight ? 56 : compact ? 64 : 96;
+  const footerTop = H - pad - 100;
+  const room = () => footerTop - y;
+  const bests = d.modules.bests ? d.bests : [];
+  if (bests.length) {
+    font(ctx, 30, INTER, 700); ctx.fillStyle = C.red; ctx.fillText(t("Meilleures performances").toUpperCase(), pad, y); y += 24;
+    const h = tight ? 150 : compact ? 170 : 210;
+    y = tiles(ctx, pad, y, inner, h, bests.map((b, i) => ({
+      value: d.opts.showWeights ? `${nf(b.kg, 1)}×${b.reps}` : `${nf(b.one_rm)}`,
+      label: b.exercise, accent: i === 0
+    }))) + (compact ? 30 : 50);
+  }
+  const pr = d.modules.progress ? d.progress : null;
+  if (pr && pr.up + pr.flat + pr.down && room() > 260) {
+    y = sectionTitle(ctx, t("Progression du mois"), pad, y + 30) + 22;
+    y = tiles(ctx, pad, y, inner, compact ? 150 : 180, [
+      { value: `▲ ${pr.up}`, label: t("en progression"), accent: true },
+      { value: `▬ ${pr.flat}`, label: t("stables") },
+      { value: `▼ ${pr.down}`, label: t("en baisse") }
+    ]) + 26;
+    const top = (pr.top || []).slice(0, fmt === "story" ? 3 : 1);
+    const n = Math.min(top.length, Math.floor((room() - (d.song ? 200 : 20)) / 78));
+    if (n > 0) y = rows(ctx, pad, y, inner, top.slice(0, n).map(x => ({ label: x.exercise, value: `+${nf(x.pct)} %`, accent: true }))) + 10;
+  }
+  if (d.song && room() > 170) {
+    y = sectionTitle(ctx, `🎵 ${t("Son de séance")}`, pad, y + 30) + 20;
+    rr(ctx, pad, y, inner, 92, 22); ctx.fillStyle = "rgba(22,22,23,0.9)"; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = C.line; ctx.stroke();
+    fitText(ctx, d.song, pad + 28, y + 60, inner - 56, 38, INTER, 800, C.text, "left", 22);
+    y += 92;
+  }
+  footer(ctx, W, H, pad, assets, "");
+}
+
 // ---------- État des lieux du plan en cours ----------
 function renderPlan(ctx, W, H, d, assets, fmt) {
   const pad = 70, inner = W - pad * 2;
@@ -583,7 +626,7 @@ function renderPlan(ctx, W, H, d, assets, fmt) {
 // ---------- Fenêtre de partage ----------
 // kind : "workout" (séance), "period" (bilan d'une période), "exercise",
 // "plan" (état des lieux du plan en cours).
-export async function openShareCard({ kind, workout = null, exercise = null, partners = [], periodDays = 30, planId = null }) {
+export async function openShareCard({ kind, workout = null, exercise = null, partners = [], periodDays = 30, planId = null, profileData = null }) {
   const me = db.getCurrentUser()?.uid;
   const [profile, assets] = await Promise.all([db.getProfile(me).catch(() => null), loadAssets()]);
   const name = profile?.display_name || "";
@@ -597,7 +640,7 @@ export async function openShareCard({ kind, workout = null, exercise = null, par
     try { const { getBody, workoutCalories } = await import("./calories.js"); kcal = workoutCalories(workout, await getBody())?.kcal || null; } catch (_) {}
   }
   const periodChoice = () => PERIOD_CHOICES.find(p => p.key === state.period);
-  const title = kind === "workout" ? t("Partager ma séance") : kind === "period" ? t("Partager mon bilan") : kind === "plan" ? t("Partager l'état de mon plan") : t("Partager ma progression");
+  const title = kind === "workout" ? t("Partager ma séance") : kind === "period" ? t("Partager mon bilan") : kind === "plan" ? t("Partager l'état de mon plan") : kind === "profile" ? t("Partager ma carte") : t("Partager ma progression");
   let blob = null, dataCache = {};
 
   openModal(`
@@ -605,7 +648,7 @@ export async function openShareCard({ kind, workout = null, exercise = null, par
     <div class="chip-row" id="sc-formats" style="margin:0 0 6px;">
       ${Object.entries(FORMATS).map(([k, f]) => `<div class="chip" data-fmt="${k}">${esc(t(f.label))} <span class="muted" style="font-size:11px;">${f.ratio}</span></div>`).join("")}
     </div>
-    ${kind !== "workout" && kind !== "plan" ? `<div class="chip-row pk-scroll" id="sc-periods" style="margin:0 0 6px;">
+    ${kind !== "workout" && kind !== "plan" && kind !== "profile" ? `<div class="chip-row pk-scroll" id="sc-periods" style="margin:0 0 6px;">
       ${PERIOD_CHOICES.map(p => `<div class="chip chip-sm" data-period="${p.key}">${esc(t(p.label))}</div>`).join("")}
     </div>` : ""}
     <div class="chip-row pk-scroll" id="sc-photo" style="margin:0 0 6px;">
@@ -649,6 +692,21 @@ export async function openShareCard({ kind, workout = null, exercise = null, par
             dataCache.plan = await planShareData(planId);
           }
           if (dataCache.plan) renderPlan(ctx, f.w, f.h, { ...dataCache.plan, opts }, assets, state.fmt);
+        } else if (kind === "profile") {
+          if (!dataCache.profile) {
+            const sc = profileData?.showcase || {};
+            let song = "";
+            const sm = profileData?.modules?.session_music !== false ? sc.session_music : null;
+            if (sm) {
+              song = [sm.title, sm.artist].filter(Boolean).join(" — ");
+              if (!song && sm.url) {
+                const lt = await (await import("./music.js")).linkTitle(sm.url).catch(() => null);
+                song = lt ? [lt.title, lt.artist].filter(Boolean).join(" — ") : "";
+              }
+            }
+            dataCache.profile = { bests: sc.best_lifts || [], progress: sc.progress || null, song, modules: profileData?.modules || {} };
+          }
+          renderProfile(ctx, f.w, f.h, { ...dataCache.profile, opts }, assets, state.fmt);
         } else if (kind === "period") {
           const p = periodChoice();
           dataCache[p.key] = dataCache[p.key] || await periodData(p.days);
@@ -696,7 +754,7 @@ export async function openShareCard({ kind, workout = null, exercise = null, par
     m.querySelector("#sc-weights").onchange = (e) => { state.showWeights = e.target.checked; draw(); };
     m.querySelector("#sc-name").onchange = (e) => { state.showName = e.target.checked; draw(); };
     const kc = m.querySelector("#sc-kcal"); if (kc) kc.onchange = (e) => { state.showKcal = e.target.checked; draw(); };
-    const fileName = () => `skullcrusher-${kind === "workout" ? "seance" : kind === "period" ? "bilan" : kind === "plan" ? "plan" : "progression"}-${state.fmt}.png`;
+    const fileName = () => `skullcrusher-${kind === "workout" ? "seance" : kind === "period" ? "bilan" : kind === "plan" ? "plan" : kind === "profile" ? "carte" : "progression"}-${state.fmt}.png`;
     m.querySelector("#sc-save").onclick = () => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
