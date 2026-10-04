@@ -169,7 +169,10 @@ export async function openFinishDialog(workout, summary) {
   const hasBody = bodyComplete(body);
   const defaultPlaylist = workout.playlist_url || profile?.music?.playlist_url || "";
   const nowPlaying = spotify?.nowPlaying;
-  const tracks = spotify?.tracks || [];
+  // Le morceau en cours n'apparaît dans l'historique Spotify qu'une fois
+  // terminé : on l'ajoute à la bande-son s'il n'y est pas.
+  const tracks = [...(spotify?.tracks || [])];
+  if (nowPlaying?.url && !tracks.some(tr => tr.url === nowPlaying.url)) tracks.push(nowPlaying);
 
   return new Promise((resolve) => {
     openModal(`

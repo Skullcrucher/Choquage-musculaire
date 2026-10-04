@@ -138,8 +138,17 @@ export async function disconnectSpotify() {
   return db.purgeSpotifyData();
 }
 
+// Un seul rafraîchissement à la fois : Spotify remplace le jeton de
+// rafraîchissement à chaque usage, donc deux demandes simultanées avec le
+// même jeton (morceau en cours + morceaux écoutés, à la fin de séance)
+// faisaient échouer la seconde, qui effaçait alors la connexion.
+let refreshing = null;
 async function getAccessToken() {
   if (access && access.expiresAt > Date.now()) return access.token;
+  if (!refreshing) refreshing = refreshAccess().finally(() => { refreshing = null; });
+  return refreshing;
+}
+async function refreshAccess(retry = true) {
   const priv = await db.getPrivateData();
   const refresh = priv?.spotify_refresh_token;
   if (!refresh) return null;
@@ -149,7 +158,13 @@ async function getAccessToken() {
     return access.token;
   } catch (e) {
     console.warn("[Skullcrusher] Jeton Spotify expiré ou révoqué :", e);
-    if (/invalid_grant|revoked/i.test(e.message)) await db.setPrivateData({ spotify_refresh_token: null });
+    if (/invalid_grant|revoked/i.test(e.message)) {
+      // Un autre appareil (ou onglet) vient peut-être de le renouveler :
+      // on relit le jeton enregistré avant de conclure à une déconnexion.
+      const now = (await db.getPrivateData().catch(() => null))?.spotify_refresh_token;
+      if (now && now !== refresh && retry) return refreshAccess(false);
+      if (now === refresh) await db.setPrivateData({ spotify_refresh_token: null });
+    }
     return null;
   }
 }
