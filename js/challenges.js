@@ -53,7 +53,7 @@ function totalsFor(workouts, refDate) {
   const inWeek = (w, wk) => w.start_time && isoWeek(w.start_time) === wk;
   // Même règle que « Cette semaine » : terminées, pas dans le futur,
   // doublons comptés une fois (week-sessions.js).
-  const ws = weekSessions(workouts, refDate).counted;
+  const ws = weekSessions(workouts, refDate, { iso: true }).counted;
   // Moyenne de tonnage des 4 semaines précédentes où il y a eu entraînement.
   const past = [1, 2, 3, 4]
     .map(k => weekOf(new Date(refDate.getTime() - k * 7 * DAY)))

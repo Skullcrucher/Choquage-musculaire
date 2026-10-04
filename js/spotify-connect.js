@@ -66,7 +66,9 @@ export async function connectSpotify() {
     client_id: clientId, response_type: "code", redirect_uri: redirectUri(),
     code_challenge_method: "S256", code_challenge: challenge, scope: SCOPES, state
   });
-  location.href = `https://accounts.spotify.com/authorize?${params}`;
+  // replace : la page de connexion Spotify ne reste pas dans l'historique
+  // (le bouton retour ne ramène pas vers elle, ni vers une page noire).
+  location.replace(`https://accounts.spotify.com/authorize?${params}`);
 }
 
 async function tokenRequest(clientId, body) {

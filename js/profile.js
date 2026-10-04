@@ -81,7 +81,8 @@ async function computeHighlight(exerciseName) {
 }
 
 async function computePublicStats() {
-  const workouts = await getWorkouts();
+  const { allSessions } = await import("./week-sessions.js");
+  const workouts = allSessions(await getWorkouts()); // terminées, sans doublon ni date future
   const since = new Date(Date.now() - 12 * WEEK_MS).toISOString().slice(0, 10);
   const recent = workouts.filter(w => (w.start_time || "") >= since).length;
   return {

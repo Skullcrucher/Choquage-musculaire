@@ -10,16 +10,15 @@
 // depuis la routine prévue (routine_id), ou porte son nom, ce jour-là.
 // ============================================================
 import * as db from "./db.js";
-import { toast, openModal, closeModal, esc, healthNoteHtml, confirmDanger, bindFolds } from "./utils.js";
+import { toast, openModal, closeModal, esc, healthNoteHtml, confirmDanger, bindFolds, startOfWeek, weekDows, attachAutocomplete } from "./utils.js";
 import { getRoutines, getWorkouts, invalidate } from "./cache.js";
 import { t, tn, locale } from "./i18n.js";
-import { sessionsBetween } from "./week-sessions.js";
+import { sessionsBetween, sessionMinutes } from "./week-sessions.js";
 import { guessMuscleGroup } from "./muscles.js";
 
 export const MAX_PLANS = 20;
 const DAY_MS = 86400000;
 // 1 = lundi … 7 = dimanche
-const DOWS = [1, 2, 3, 4, 5, 6, 7];
 
 let plansPromise = null, plansUid = null;
 export function getPlans() {
@@ -54,10 +53,9 @@ export function dayStr(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 export const dowOf = (date) => ((date.getDay() + 6) % 7) + 1;
+// Premier jour de la semaine (lundi, ou dimanche selon Réglages).
 export function mondayOf(date) {
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  d.setDate(d.getDate() - (dowOf(d) - 1));
-  return d;
+  return startOfWeek(date);
 }
 function dowLabel(dow, style = "short") {
   // 2024-01-01 était un lundi.
@@ -97,8 +95,8 @@ function weekCells(plan, date, routines, workouts) {
   const pos = planPosition(plan, date);
   const monday = mondayOf(date);
   const todayKey = dayStr(new Date());
-  return DOWS.map(dow => {
-    const d = new Date(monday); d.setDate(monday.getDate() + dow - 1);
+  return weekDows().map((dow, i) => {
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
     const p = planPosition(plan, d);
     const routine = p.status === "running" ? routines.find(r => r.id === p.routineId) : null;
     const key = dayStr(d);
@@ -327,7 +325,7 @@ export function weekSessions(plan, date, routines, workouts) {
 // Liste des séances de la semaine pour « Depuis un plan » (écran Séance).
 // Les séances pas encore faites d'abord (aujourd'hui en tête), celles
 // déjà faites à la fin, en vert.
-export async function planSessionsHtml() {
+export async function planSessionsHtml(weekOffset = 0) {
   const { plans, active } = await getPlans();
   const plan = plans.find(p => p.id === active);
   if (!plan) {
@@ -338,32 +336,56 @@ export async function planSessionsHtml() {
   const [routines, workouts, card] = await Promise.all([getRoutines(), getWorkouts(), todayPlanCard({ compact: true })]);
   const pos = planPosition(plan);
   if (pos.status !== "running") return { html: card?.html || "", sessions: [], card };
-  const slots = weekSessions(plan, new Date(), routines, workouts);
+  // Semaine affichée : celle d'aujourd'hui, ou une autre (‹ ›) dans les
+  // limites du plan.
+  const total = pos.total;
+  const shown = Math.min(total, Math.max(1, pos.week + weekOffset));
+  const offset = shown - pos.week;
+  const target = new Date(); target.setDate(target.getDate() + 7 * offset);
+  const tpos = planPosition(plan, target);
+  const slots = weekSessions(plan, target, routines, workouts);
+  const isPast = offset < 0, isFuture = offset > 0;
   // À faire : aujourd'hui, puis les jours suivants (ordre du plan), puis
   // les séances en retard ; les séances faites à la fin.
   const todo = slots.filter(s => !s.done).sort((a, b) => (b.today - a.today) || (!!a.overdue - !!b.overdue) || ((a.dow || 0) - (b.dow || 0)));
   const done = slots.filter(s => s.done);
-  const ordered = [...todo, ...done];
+  const ordered = isFuture ? [...todo] : [...todo, ...done];
   const doneLabel = (s) => new Date(s.workout.start_time).toLocaleDateString(locale(), { weekday: "long" });
+  const weekLabel = t("Semaine {w}/{total}", { w: shown, total });
+  const range = (() => {
+    const a = mondayOf(target), b = new Date(a); b.setDate(a.getDate() + 6);
+    const f = (d) => d.toLocaleDateString(locale(), { day: "numeric", month: "short" });
+    return `${f(a)} – ${f(b)}`;
+  })();
+  const otherWeekCard = offset ? `<div class="card plan-card"><div class="card-title">📅 ${esc(plan.name)}</div>
+      <div class="muted" style="font-size:13px; margin-bottom:6px;">${esc(tpos.block?.name || t("Bloc {n}", { n: (tpos.blockIndex ?? 0) + 1 }))} · ${range}</div>
+      ${weekStripHtml(stripCells(plan, target, routines, workouts))}</div>` : "";
   const html = `
-    ${card?.html || ""}
+    <div class="plan-week-nav">
+      <button class="btn btn-sm btn-secondary" data-plan-week="-1" ${shown <= 1 ? "disabled" : ""} aria-label="${t("Semaine précédente")}">‹</button>
+      <span class="plan-week-label">${weekLabel}${offset ? ` <small class="muted">${isPast ? t("passée") : t("à venir")}</small>` : ` <small class="muted">${t("en cours")}</small>`}</span>
+      <button class="btn btn-sm btn-secondary" data-plan-week="1" ${shown >= total ? "disabled" : ""} aria-label="${t("Semaine suivante")}">›</button>
+    </div>
+    ${offset ? `<button class="btn btn-sm btn-secondary plan-week-today" data-plan-week="0">↩ ${t("Revenir à cette semaine")}</button>` : ""}
+    ${offset ? otherWeekCard : (card?.html || "")}
     <div class="plan-sessions-head">
-      <span>${t("Séances de la semaine")}</span>
-      <span class="muted">${t("{done}/{total} faite(s)", { done: done.length, total: slots.length })}</span>
+      <span>${isFuture ? t("Séances prévues") : t("Séances de la semaine")}</span>
+      <span class="muted">${isFuture ? tn(slots.length, "{n} séance", "{n} séances") : t("{done}/{total} faite(s)", { done: done.length, total: slots.length })}</span>
     </div>
     ${ordered.length ? ordered.map((s, i) => `
-      <div class="card plan-session ${s.done ? "done" : ""} ${s.today && !s.done ? "today" : ""}" data-plan-session="${i}" role="button" tabindex="0">
-        <div class="plan-session-mark">${s.done ? "✓" : s.today ? "▶" : s.overdue ? "↺" : esc(dowLabel(s.dow, "short"))}</div>
+      <div class="card plan-session ${s.done ? "done" : ""} ${s.today && !s.done ? "today" : ""} ${isFuture ? "future" : ""} ${isPast && !s.done ? "missed" : ""}" data-plan-session="${i}" role="button" tabindex="0">
+        <div class="plan-session-mark">${s.done ? "✓" : s.today ? "▶" : s.overdue ? (isPast ? "✗" : "↺") : esc(dowLabel(s.dow, "short"))}</div>
         <div style="flex:1; min-width:0;">
           <div class="card-title" style="margin:0;">${esc(s.routine.name)}</div>
           <div class="muted plan-session-sub">${s.done ? t("Faite ({day})", { day: doneLabel(s) })
             : s.today ? t("Prévue aujourd'hui")
-            : s.overdue ? t("À rattraper cette semaine")
+            : s.overdue ? (isPast ? t("Manquée") : t("À rattraper cette semaine"))
             : t("Prévue {day}", { day: dowLabel(s.dow, "long") })} · ${(s.routine.exercises || []).length} ${t("exercice(s)")}</div>
         </div>
       </div>`).join("") : `<p class="muted">😴 ${t("Pas de séance prévue cette semaine.")}</p>`}
+    <button class="btn btn-secondary btn-sm" id="plan-replace-ex" style="margin-top:6px;">🔁 ${t("Remplacer un exercice dans tout le plan")}</button>
   `;
-  return { html, sessions: ordered, plan, week: pos.week, card };
+  return { html, sessions: ordered, plan, week: pos.week, card: offset ? null : card, weekOffset: offset, otherWeek: offset !== 0 };
 }
 
 // ==================== SUIVI DE PLAN (Historique) ====================
@@ -396,7 +418,7 @@ function planStats(plan, routines, workouts) {
     adherence: due ? Math.round(done / due * 100) : null,
     tonnage: list.reduce((n, w) => n + (w.total_tonnage || 0), 0),
     sets: list.reduce((n, w) => n + (w.total_sets || 0), 0),
-    minutes: list.reduce((n, w) => n + (w.end_time && w.start_time ? Math.max(0, (new Date(w.end_time) - new Date(w.start_time)) / 60000) : 0), 0),
+    minutes: list.reduce((n, w) => n + sessionMinutes(w), 0),
     workouts: list.sort((a, b) => String(b.start_time).localeCompare(String(a.start_time)))
   };
 }
@@ -597,6 +619,7 @@ export async function renderPlans(content) {
           <div class="btn-row btn-row-wrap" style="margin-top:8px;">
             <button class="btn btn-sm btn-secondary" data-activate="${esc(p.id)}">${p.id === active ? t("Désactiver") : t("Activer")}</button>
             <button class="btn btn-sm btn-secondary" data-pedit="${esc(p.id)}">${t("Modifier")}</button>
+            ${rs.length ? `<button class="btn btn-sm btn-secondary" data-preplace="${esc(p.id)}">🔁 ${t("Remplacer un exercice")}</button>` : ""}
             <button class="btn btn-sm btn-secondary" data-pshare="${esc(p.id)}">${t("Partager")}</button>
             <button class="btn btn-sm btn-secondary" data-psend="${esc(p.id)}">${t("Envoyer")}</button>
             ${pos.status !== "done" ? `<button class="btn btn-sm btn-secondary" data-pshift="${esc(p.id)}" title="${t("Décaler d'une semaine")}">⏭ +1 ${t("sem.")}</button>` : ""}
@@ -629,6 +652,7 @@ export async function renderPlans(content) {
     const { openRoutineEditor } = await import("./routines.js");
     openRoutineEditor(routines.find(r => r.id === b.dataset.redit), async () => { invalidate("routines"); refresh(); });
   });
+  content.querySelectorAll("[data-preplace]").forEach(b => b.onclick = () => openReplaceExercise(plans.find(p => p.id === b.dataset.preplace), refresh));
   content.querySelectorAll("[data-pedit]").forEach(b => b.onclick = () => openPlanEditor(plans.find(p => p.id === b.dataset.pedit), routines, refresh));
   content.querySelectorAll("[data-activate]").forEach(b => b.onclick = async () => {
     const id = b.dataset.activate;
@@ -669,8 +693,82 @@ export async function renderPlans(content) {
   });
 }
 
+// ---------- Remplacer un exercice dans tout le plan ----------
+// Toutes les routines du plan qui contiennent l'exercice sont modifiées
+// (donc toutes ses occurrences, toutes semaines confondues). Séries, reps,
+// repos et consigne sont gardés ; la charge visée repart de zéro (autre
+// exercice) sauf si on choisit de la garder.
+export async function openReplaceExercise(plan, onDone = () => {}) {
+  const [routines, library] = await Promise.all([getRoutines(), import("./cache.js").then(c => c.getExercises())]);
+  const { EXERCISE_SEED } = await import("./exercises-seed.js");
+  const ids = new Set((plan.blocks || []).flatMap(b => Object.values(b.days || {})).filter(Boolean));
+  const planRoutines = routines.filter(r => ids.has(r.id));
+  const uses = new Map(); // exercice → routines
+  planRoutines.forEach(r => (r.exercises || []).forEach(e => {
+    if (!e.exercise_name) return;
+    if (!uses.has(e.exercise_name)) uses.set(e.exercise_name, new Set());
+    uses.get(e.exercise_name).add(r.name);
+  }));
+  const names = [...uses.keys()].sort((a, b) => a.localeCompare(b, "fr"));
+  if (!names.length) { toast(t("Ce plan n'a pas encore d'exercice.")); return; }
+  const allNames = [...new Set([...library.map(e => e.name), ...EXERCISE_SEED.map(([n]) => n)])].sort((a, b) => a.localeCompare(b, "fr"));
+  const groupOf = (n) => library.find(e => e.name === n)?.muscle_group || EXERCISE_SEED.find(([x]) => x === n)?.[1] || guessMuscleGroup(n);
+  openModal(`
+    <h3>🔁 ${t("Remplacer un exercice")}</h3>
+    <p class="muted" style="margin-top:-6px;">${t("Dans toutes les séances du plan « {plan} », toutes semaines confondues.", { plan: esc(plan.name) })}</p>
+    <label>${t("Exercice à remplacer")}</label>
+    <select id="rx-from">${names.map(n => `<option value="${esc(n)}">${esc(n)} (${[...uses.get(n)].map(esc).join(", ")})</option>`).join("")}</select>
+    <label>${t("Nouvel exercice")}</label>
+    <div style="position:relative;"><input id="rx-to" placeholder="${t("Rechercher un exercice…")}" autocomplete="off"></div>
+    <label class="list-row" style="cursor:pointer; margin-top:10px;">
+      <span>${t("Garder la charge visée")}<br><span class="muted" style="font-size:12px;">${t("À cocher seulement pour une variante très proche (même charge).")}</span></span>
+      <input type="checkbox" id="rx-keepkg" style="width:auto;">
+    </label>
+    <p id="rx-err" style="color:var(--red); min-height:1em; margin:4px 0;"></p>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="rx-cancel">${t("Annuler")}</button>
+      <button class="btn btn-primary" id="rx-go">${t("Remplacer partout")}</button>
+    </div>
+  `, (m) => {
+    const toInput = m.querySelector("#rx-to");
+    attachAutocomplete(toInput, allNames, () => {});
+    m.querySelector("#rx-cancel").onclick = closeModal;
+    m.querySelector("#rx-go").onclick = async () => {
+      const from = m.querySelector("#rx-from").value;
+      const to = toInput.value.trim();
+      const err = m.querySelector("#rx-err");
+      if (!to) { err.textContent = t("Choisis le nouvel exercice."); return; }
+      if (/[<>]/.test(to) || to.length > 80) { err.textContent = t("Nom invalide."); return; }
+      if (to === from) { err.textContent = t("C'est déjà cet exercice."); return; }
+      const keepKg = m.querySelector("#rx-keepkg").checked;
+      const btn = m.querySelector("#rx-go"); btn.disabled = true;
+      try {
+        const known = allNames.find(n => n.toLowerCase() === to.toLowerCase()) || to;
+        let n = 0;
+        for (const r of planRoutines) {
+          if (!(r.exercises || []).some(e => e.exercise_name === from)) continue;
+          const exercises = r.exercises.map(e => e.exercise_name !== from ? e : {
+            ...e, exercise_name: known, muscle_group: groupOf(known), ...(keepKg ? {} : { target_kg: null })
+          });
+          await db.saveRoutine({ ...r, exercises }, r.id);
+          n++;
+        }
+        if (!library.some(e => e.name.toLowerCase() === known.toLowerCase())) await db.upsertExercise(known, groupOf(known)).catch(() => null);
+        invalidate("routines", "exercises");
+        closeModal();
+        toast(tn(n, "« {from} » remplacé par « {to} » dans {n} séance du plan", "« {from} » remplacé par « {to} » dans {n} séances du plan", { from, to: known }));
+        onDone();
+      } catch (e) {
+        console.error("[Skullcrusher] Remplacement d'exercice", e);
+        err.textContent = t("Enregistrement impossible, réessaie.");
+        btn.disabled = false;
+      }
+    };
+  });
+}
+
 function openPlanEditor(plan, routines, onSaved) {
-  const nextMonday = (() => { const d = mondayOf(new Date()); if (dowOf(new Date()) > 1) d.setDate(d.getDate() + 7); return d; })();
+  const nextMonday = (() => { const today = new Date(); today.setHours(0, 0, 0, 0); const d = mondayOf(today); if (d < today) d.setDate(d.getDate() + 7); return d; })();
   const state = plan ? JSON.parse(JSON.stringify(plan)) : {
     id: "", name: "", start_date: dayStr(nextMonday),
     blocks: [{ name: t("Bloc 1"), weeks: 4, days: {} }]
@@ -708,7 +806,7 @@ function openPlanEditor(plan, routines, onSaved) {
             ${state.blocks.length > 1 ? `<button class="btn btn-sm btn-danger" data-bdel="${i}" style="width:auto;">✕</button>` : "<span></span>"}
           </div>
           <div class="pl-week">
-            ${DOWS.map(dow => { const id = b.days?.[dow] || ""; return `<button type="button" class="pl-day ${id ? "on" : ""} ${pick && pick[0] === i && pick[1] === dow ? "sel" : ""}" data-pday="${i}:${dow}">
+            ${weekDows().map(dow => { const id = b.days?.[dow] || ""; return `<button type="button" class="pl-day ${id ? "on" : ""} ${pick && pick[0] === i && pick[1] === dow ? "sel" : ""}" data-pday="${i}:${dow}">
               <b>${esc(dowLabel(dow, "short"))}</b><small>${id ? esc(shortName(id)) : t("Repos")}</small></button>`; }).join("")}
           </div>
           ${pick && pick[0] === i ? `<div class="pl-pick">

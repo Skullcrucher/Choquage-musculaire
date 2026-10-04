@@ -12,8 +12,8 @@ import { t, locale } from "./i18n.js";
 //     worker (CACHE_NAME dans service-worker.js doit valoir
 //     skullcrusher-cache-v<APP_BUILD>).
 // Puis : node tools/stamp-version.mjs
-export const APP_VERSION = "0.92.00";
-export const APP_BUILD = 102;
+export const APP_VERSION = "0.93.00";
+export const APP_BUILD = 103;
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
@@ -174,6 +174,30 @@ export function estimate1RM(weight, reps) {
   if (!weight || !reps) return 0;
   if (reps === 1) return weight;
   return Math.round(weight * (1 + reps / 30) * 10) / 10;
+}
+
+// Début de semaine choisi dans Réglages : lundi (par défaut) ou dimanche.
+// Sert au compteur « Cette semaine », aux semaines des plans et au
+// calendrier. Le défi de la semaine reste du lundi au dimanche (commun à
+// toute la communauté).
+const LS_WEEK_START = "skullcrusher_week_start";
+export function weekStartsSunday() {
+  try { return localStorage.getItem(LS_WEEK_START) === "sun"; } catch (_) { return false; }
+}
+export function setWeekStartsSunday(on) {
+  try { localStorage.setItem(LS_WEEK_START, on ? "sun" : "mon"); } catch (_) {}
+}
+// Premier jour (minuit) de la semaine contenant `date`.
+export function startOfWeek(date = new Date(), { iso = false } = {}) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const sunday = !iso && weekStartsSunday();
+  d.setDate(d.getDate() - (sunday ? d.getDay() : (d.getDay() + 6) % 7));
+  return d;
+}
+// Jours de la semaine dans l'ordre d'affichage (1 = lundi … 7 = dimanche).
+export function weekDows() {
+  return weekStartsSunday() ? [7, 1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5, 6, 7];
 }
 
 export function isoWeek(dateIso) {

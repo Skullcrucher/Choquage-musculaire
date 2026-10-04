@@ -13,6 +13,7 @@ import * as db from "./db.js";
 import { openModal, closeModal, toast, esc, estimate1RM, isoWeek, safeImageUrl } from "./utils.js";
 import { getWorkouts, getSetsForPeriod, getSetsForExercise, getExercises } from "./cache.js";
 import { t, locale } from "./i18n.js";
+import { sessionsBetween, sessionMinutes } from "./week-sessions.js";
 
 // ---------- Palette et polices de l'app ----------
 const C = {
@@ -266,9 +267,9 @@ function fmtLoad(kg) {
 }
 
 // ---------- Données ----------
+// Durée réaliste (une séance oubliée ouverte ne compte pas des heures).
 function workoutMinutes(w) {
-  const s = Date.parse(w.start_time), e = Date.parse(w.end_time);
-  return s && e && e > s ? Math.round((e - s) / 60000) : 0;
+  return Math.round(sessionMinutes(w));
 }
 function bestOf(sets) {
   return sets.filter(s => s.weight_kg > 0 && s.reps > 0 && s.set_type !== "warmup")
@@ -299,7 +300,9 @@ const PERIOD_CHOICES = [
 
 async function periodData(days) {
   const since = days ? Date.now() - days * 86400000 : 0;
-  const workouts = (await getWorkouts()).filter(w => w.end_time && Date.parse(w.start_time) >= since);
+  // Mêmes règles que le compteur de la semaine : terminées, pas dans le
+  // futur, doublons comptés une fois.
+  const workouts = sessionsBetween(await getWorkouts(), new Date(since), new Date()).counted;
   const sets = (await getSetsForPeriod(days ? Math.ceil(days / 7) + 1 : null))
     .filter(s => Date.parse(s.workout_start_time || 0) >= since && (s.weight_kg != null || s.reps != null));
   const library = await getExercises();

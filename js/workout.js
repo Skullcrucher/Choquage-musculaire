@@ -155,6 +155,7 @@ export async function renderSeance(container) {
 }
 
 const LS_START_MODE = "skullcrusher_start_mode"; // "routine" | "plan"
+let planWeekOffset = 0; // semaine du plan affichée (0 = semaine en cours)
 
 // Écran Séance sans séance en cours : deux onglets, « Routines » (démarrer
 // une routine) et « Plan en cours » (séances de la semaine du plan actif).
@@ -162,12 +163,13 @@ const LS_START_MODE = "skullcrusher_start_mode"; // "routine" | "plan"
 // et plans se gèrent dans l'onglet Biblio.
 async function renderStartScreen(container) {
   const refreshAll = () => renderStartScreen(container);
-  const [allRoutines, workouts, planView, planIds] = await Promise.all([
+  const [allRoutines, workouts, firstPlanView, planIds] = await Promise.all([
     getRoutines(), getWorkouts(),
-    import("./plans.js").then(m => m.planSessionsHtml()).catch(e => { console.warn("[Skullcrusher] Plan indisponible", e); return null; }),
+    import("./plans.js").then(m => m.planSessionsHtml(planWeekOffset)).catch(e => { console.warn("[Skullcrusher] Plan indisponible", e); return null; }),
     import("./plans.js").then(m => m.planRoutineIds()).catch(() => new Set())
   ]);
   if (!container.isConnected) return;
+  let planView = firstPlanView;
   // Les séances des plans sont dans l'onglet « Plan en cours ».
   const routines = allRoutines.filter(r => !planIds.has(r.id));
   let startMode = null;
@@ -194,10 +196,22 @@ async function renderStartScreen(container) {
       body.innerHTML = (planView?.html || `<p class="muted">${t("Plan indisponible.")}</p>`) +
         `<button class="btn btn-secondary" id="manage-plans" style="margin-top:12px;">${icon("gear")}${t("Mes plans et programmes (Biblio)")}</button>`;
       if (planView?.card?.bind) planView.card.bind(body, refreshAll);
+      // ‹ › : semaines précédentes / suivantes du plan.
+      body.querySelectorAll("[data-plan-week]").forEach(b => b.onclick = async () => {
+        const step = +b.dataset.planWeek;
+        planWeekOffset = step === 0 ? 0 : (planView?.weekOffset || 0) + step;
+        b.disabled = true;
+        planView = await import("./plans.js").then(m => m.planSessionsHtml(planWeekOffset)).catch(() => planView);
+        planWeekOffset = planView?.weekOffset || 0;
+        if (container.isConnected && startMode === "plan") draw();
+      });
+      const replaceBtn = body.querySelector("#plan-replace-ex");
+      if (replaceBtn) replaceBtn.onclick = async () => (await import("./plans.js")).openReplaceExercise(planView.plan, refreshAll);
       body.querySelectorAll("[data-plan-session]").forEach(el => {
         const s = planView.sessions[+el.dataset.planSession];
         el.onclick = (e) => {
           if (s.done && !confirm(t("{routine} est déjà faite cette semaine. La refaire ?", { routine: s.routine.name }))) return;
+          if (planView.otherWeek && !s.done && !confirm(t("{routine} est prévue une autre semaine. La faire maintenant ?", { routine: s.routine.name }))) return;
           startWorkout(s.routine.id, s.routine, e.currentTarget, { plan_id: planView.plan.id, plan_week: planView.week });
         };
       });
@@ -1033,12 +1047,15 @@ async function finishWorkout() {
     if (ok) await discardCurrentWorkout();
     return null;
   }
-  const loggedSets = currentWorkout.exercises.reduce((n, ex) => n + ex.sets.filter(s => s.weight_kg != null || s.reps != null).length, 0);
+  // Séries réellement faites : saisies ou validées. Une charge pré-remplie
+  // depuis le plan ou l'historique, jamais touchée, ne compte pas.
+  const doneSet = (s) => (s.weight_kg != null || s.reps != null) && !!(s.id || s.done || s.touched) && !(s.reps == null && !s.done);
+  const loggedSets = currentWorkout.exercises.reduce((n, ex) => n + ex.sets.filter(doneSet).length, 0);
   const totalTonnage = Math.round(currentWorkout.exercises.reduce((sum, ex) =>
-    sum + ex.sets.reduce((s, set) => s + (set.weight_kg || 0) * (set.reps || 0) * (ex.unilateral ? 2 : 1), 0), 0));
+    sum + ex.sets.filter(doneSet).reduce((s, set) => s + (set.weight_kg || 0) * (set.reps || 0) * (ex.unilateral ? 2 : 1), 0), 0));
   const muscleSummary = [...new Set(
     currentWorkout.exercises
-      .filter(ex => ex.sets.some(s => s.weight_kg != null || s.reps != null))
+      .filter(ex => ex.sets.some(doneSet))
       .map(ex => ex.muscle_group || "Autre")
   )];
   const lastSetAt = currentWorkout.exercises.flatMap(ex => ex.sets.map(st => st.logged_at || "")).sort().pop() || null;
@@ -1078,6 +1095,18 @@ async function finishWorkout() {
       await applyProgressions(extra.routine, extra.progressions);
       invalidate("routines");
     } catch (e) { console.warn("[Skullcrusher] Progression non enregistrée :", e); }
+  }
+  // Écarts cochés (exercices ajoutés / retirés, séries, ordre) : la routine
+  // (et donc le plan) reprend la séance d'aujourd'hui.
+  if (extra.routineChanges?.length && extra.routine) {
+    try {
+      const { applyRoutineChanges } = await import("./finish.js");
+      const fresh = (await getRoutines()).find(r => r.id === extra.routine.id) || extra.routine;
+      const exercises = applyRoutineChanges(fresh, extra.routineChanges, currentWorkout);
+      await db.saveRoutine({ ...fresh, exercises }, fresh.id);
+      invalidate("routines");
+      toast(t("Routine « {routine} » mise à jour", { routine: fresh.name }));
+    } catch (e) { console.warn("[Skullcrusher] Routine non mise à jour :", e); toast(t("Routine non mise à jour, réessaie depuis Biblio")); }
   }
   stopPresence();
   clearReminder();

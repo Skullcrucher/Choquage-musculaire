@@ -87,6 +87,67 @@ async function progressionChoices(workout) {
   return { routine, list: suggestProgressions(exercises) };
 }
 
+// Séance faite depuis une routine (plan) mais différente : exercices
+// ajoutés ou non faits, nombre de séries, ordre. Chaque écart devient une
+// case à cocher « mettre à jour la routine avec la séance d'aujourd'hui ».
+// Série vraiment faite : saisie ou validée (une charge pré-remplie depuis
+// le plan, sans reps, ne compte pas).
+const hasData = (s) => (s.weight_kg != null || s.reps != null) && !!(s.id || s.done || s.touched) && !(s.weight_kg != null && s.reps == null && !s.done);
+export function routineChanges(workout, routine) {
+  if (!routine) return [];
+  const defs = routine.exercises || [];
+  const logged = (workout.exercises || []).filter(ex => ex.sets.some(hasData));
+  const out = [];
+  logged.forEach(ex => {
+    const n = ex.sets.filter(hasData).length;
+    const def = defs.find(d => d.exercise_name === ex.exercise_title);
+    if (!def) out.push({ type: "add", name: ex.exercise_title, sets: n, checked: false });
+    else if (n !== (Number(def.target_sets) || 0)) out.push({ type: "sets", name: ex.exercise_title, from: Number(def.target_sets) || 0, to: n, checked: false });
+  });
+  defs.forEach(d => {
+    if (!logged.some(ex => ex.exercise_title === d.exercise_name)) out.push({ type: "remove", name: d.exercise_name, checked: false });
+  });
+  const common = logged.map(ex => ex.exercise_title).filter(n => defs.some(d => d.exercise_name === n));
+  const defOrder = defs.map(d => d.exercise_name).filter(n => common.includes(n));
+  if (common.join("|") !== defOrder.join("|")) out.push({ type: "order", checked: false });
+  return out;
+}
+function changeLabel(c) {
+  if (c.type === "add") return `➕ ${t("Ajouter <b>{name}</b> ({n} séries)", { name: esc(c.name), n: c.sets })}`;
+  if (c.type === "sets") return `🔢 ${t("<b>{name}</b> : {from} → {to} séries", { name: esc(c.name), from: c.from, to: c.to })}`;
+  if (c.type === "remove") return `➖ ${t("Retirer <b>{name}</b> (pas fait aujourd'hui)", { name: esc(c.name) })}`;
+  return `↕️ ${t("Garder l'ordre des exercices d'aujourd'hui")}`;
+}
+// Applique les écarts cochés à la routine (relue fraîche avant).
+export function applyRoutineChanges(routine, changes, workout) {
+  let list = (routine.exercises || []).map(e => ({ ...e }));
+  const sessionOrder = (workout.exercises || []).map(ex => ex.exercise_title);
+  for (const c of changes) {
+    if (c.type === "sets") list = list.map(e => e.exercise_name === c.name ? { ...e, target_sets: c.to } : e);
+    if (c.type === "remove") list = list.filter(e => e.exercise_name !== c.name);
+  }
+  for (const c of changes.filter(x => x.type === "add")) {
+    const ex = workout.exercises.find(x => x.exercise_title === c.name);
+    const reps = ex.sets.filter(hasData).map(s => s.reps).filter(r => r > 0);
+    const lo = reps.length ? Math.min(...reps) : null, hi = reps.length ? Math.max(...reps) : null;
+    const item = {
+      exercise_name: c.name, target_sets: c.sets,
+      reps_target: lo == null ? "8-10" : lo === hi ? String(lo) : `${lo}-${hi}`,
+      rest_seconds: ex.rest_timer_seconds || 90, muscle_group: ex.muscle_group || "Autre", target_kg: null
+    };
+    // Placé après l'exercice qui le précède dans la séance.
+    const idx = sessionOrder.indexOf(c.name);
+    const prev = sessionOrder.slice(0, idx).reverse().find(n => list.some(e => e.exercise_name === n));
+    const at = prev ? list.findIndex(e => e.exercise_name === prev) + 1 : 0;
+    list.splice(at, 0, item);
+  }
+  if (changes.some(c => c.type === "order")) {
+    const rank = (n) => { const i = sessionOrder.indexOf(n); return i < 0 ? 1e6 : i; };
+    list = list.map((e, i) => ({ e, i })).sort((a, b) => (rank(a.e.exercise_name) - rank(b.e.exercise_name)) || (a.i - b.i)).map(x => x.e);
+  }
+  return list;
+}
+
 // Fenêtre de fin de séance. Résout avec les champs à enregistrer sur la
 // séance, ou null si l'utilisateur revient à sa séance.
 export async function openFinishDialog(workout, summary) {
@@ -102,6 +163,7 @@ export async function openFinishDialog(workout, summary) {
     getBody(),
     progressionChoices(workout).catch(e => { console.warn("[Skullcrusher] Progression", e); return { routine: null, list: [] }; })
   ]);
+  const changes = routineChanges(workout, progress.routine);
   const minutes = Math.min(300, Math.round(((summary.lastSetAt ? Math.min(Date.now(), Date.parse(summary.lastSetAt) + 10 * 60000) : Date.now()) - Date.parse(workout.start_time)) / 60000));
   let effort = autoEffort(summary.sets, minutes);
   const hasBody = bodyComplete(body);
@@ -148,6 +210,18 @@ export async function openFinishDialog(workout, summary) {
         </div>
         <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Coché = la routine (et ton plan) utilisera cette charge à la prochaine séance. Décoche pour garder la charge actuelle.")}</p>
         ${healthNoteHtml()}
+      ` : ""}
+
+      ${changes.length ? `
+        <label>🗓️ ${t("Mettre à jour la routine « {routine} » avec la séance d'aujourd'hui", { routine: esc(progress.routine.name) })}</label>
+        <div id="fin-changes">
+          ${changes.map((c, i) => `
+            <label class="list-row" style="cursor:pointer;">
+              <span style="font-size:14px;">${changeLabel(c)}</span>
+              <input type="checkbox" data-change="${i}" ${c.checked ? "checked" : ""} style="width:auto;">
+            </label>`).join("")}
+        </div>
+        <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Coché = appliqué à la routine, donc à toutes les semaines de ton plan qui l'utilisent. Rien n'est changé sinon.")}</p>
       ` : ""}
 
       ${partners.friends.length ? `
@@ -222,6 +296,7 @@ export async function openFinishDialog(workout, summary) {
           friends_share: shareScope === "friends",
           routine: progress.routine,
           progressions: [...m.querySelectorAll("[data-prog]:checked")].map(c => progress.list[+c.dataset.prog]),
+          routineChanges: [...m.querySelectorAll("[data-change]:checked")].map(c => changes[+c.dataset.change]),
           partners: [...m.querySelectorAll("[data-partner].active")].map(c => c.dataset.partner).slice(0, db.MAX_PARTNERS),
           effort: hasBody ? effort : null,
           watch_kcal: watch > 0 && watch <= 5000 ? watch : null,
