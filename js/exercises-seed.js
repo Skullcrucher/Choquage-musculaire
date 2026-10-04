@@ -3,6 +3,30 @@
 // pour démarrer avec un catalogue complet plutôt que seulement les
 // exercices déjà présents dans ton historique.
 // ============================================================
+// Exercices faisables à la maison (filtre « 🏠 Maison » du sélecteur).
+// Déclarés en fonction pour être utilisables dans EXERCISE_SEED ci-dessous.
+function HOME_SEED() {
+  return [
+    ["Pompes Inclinées (Mains surélevées)", "Pectoraux"], ["Pompes Déclinées (Pieds surélevés)", "Pectoraux"],
+    ["Pompes Diamant", "Triceps"], ["Pompes Larges", "Pectoraux"], ["Pompes sur les Genoux", "Pectoraux"],
+    ["Écarté (Élastique)", "Pectoraux"], ["Dips sur Chaise", "Triceps"],
+    ["Rowing Inversé (Table)", "Dos"], ["Rowing (Élastique)", "Dos"], ["Tirage Vertical (Élastique)", "Dos"],
+    ["Rowing (Kettlebell)", "Dos"], ["Superman", "Dos"],
+    ["Pompes Pike", "Épaules"], ["Pompes en Équilibre (Mur)", "Épaules"],
+    ["Élévation Latérale (Élastique)", "Épaules"], ["Développé Épaules (Élastique)", "Épaules"], ["Face Pull (Élastique)", "Épaules"],
+    ["Curl Biceps (Élastique)", "Biceps"], ["Extension Triceps (Élastique)", "Triceps"],
+    ["Squat (Poids du Corps)", "Jambes"], ["Squat Sauté", "Jambes"], ["Fentes (Poids du Corps)", "Jambes"],
+    ["Fentes Bulgares (Poids du Corps)", "Jambes"], ["Chaise Murale", "Jambes"], ["Pistol Squat", "Jambes"],
+    ["Step-Up (Chaise)", "Jambes"], ["Mollets (Poids du Corps)", "Jambes"], ["Nordic Curl", "Jambes"],
+    ["Squat Gobelet (Kettlebell)", "Jambes"], ["Swing (Kettlebell)", "Fessiers"],
+    ["Pont Fessier Une Jambe", "Fessiers"], ["Donkey Kick", "Fessiers"], ["Fire Hydrant", "Fessiers"], ["Abduction (Élastique)", "Fessiers"],
+    ["Mountain Climbers", "Abdominaux"], ["Relevé de Jambes au Sol", "Abdominaux"], ["Crunch Vélo", "Abdominaux"],
+    ["Hollow Hold", "Abdominaux"], ["Dead Bug", "Abdominaux"], ["Sit-Up", "Abdominaux"],
+    ["Burpees", "Cardio"], ["Jumping Jacks", "Cardio"], ["Montées de Genoux", "Cardio"]
+  ];
+}
+export const HOME_NAMES = new Set(HOME_SEED().map(([n]) => n));
+
 export const EXERCISE_SEED = [
   ["Développé Couché (Barre)", "Pectoraux"], ["Développé Couché (Haltère)", "Pectoraux"],
   ["Développé Couché Incliné (Barre)", "Pectoraux"], ["Développé Couché Incliné (Haltère)", "Pectoraux"],
@@ -59,6 +83,9 @@ export const EXERCISE_SEED = [
 
   ["Curl Poignet (Barre)", "Avant-bras"], ["Extension Poignet (Barre)", "Avant-bras"],
   ["Farmer's Walk (Haltère)", "Avant-bras"], ["Préhension (Grip Trainer)", "Avant-bras"],
+
+  // À la maison : poids du corps, élastiques, kettlebell, chaise.
+  ...HOME_SEED(),
 
   ["Course à Pied", "Cardio"], ["Tapis de Course", "Cardio"], ["Vélo Elliptique", "Cardio"],
   ["Rameur", "Cardio"], ["Vélo Stationnaire", "Cardio"], ["Corde à Sauter", "Cardio"],

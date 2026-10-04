@@ -4,7 +4,7 @@
 import * as db from "./db.js";
 import { icon } from "./icons.js";
 import { importCsvFile } from "./import.js";
-import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl, APP_VERSION, healthNoteHtml, forceUpdate, defaultSetType, setDefaultSetType } from "./utils.js";
+import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl, APP_VERSION, healthNoteHtml, forceUpdate, defaultSetType, setDefaultSetType, weekStartsSunday, setWeekStartsSunday } from "./utils.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { invalidateStatsCache } from "./stats.js";
 import { getExercises, invalidate } from "./cache.js";
@@ -232,6 +232,12 @@ export async function renderReglages(container) {
         <option value="failure" ${defaultSetType() === "failure" ? "selected" : ""}>💀 ${t("Échec")}</option>
         <option value="normal" ${defaultSetType() === "normal" ? "selected" : ""}>${t("Normale")}</option>
       </select>
+      <label>📅 ${t("La semaine commence le")}</label>
+      <select id="week-start">
+        <option value="mon" ${weekStartsSunday() ? "" : "selected"}>${t("Lundi")}</option>
+        <option value="sun" ${weekStartsSunday() ? "selected" : ""}>${t("Dimanche")}</option>
+      </select>
+      <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Compteur « Cette semaine », semaines du plan et calendrier. Le défi de la semaine reste du lundi au dimanche pour tout le monde.")}</p>
     </div>
 
     <div class="card" data-icon="reset" data-sub="${esc(t("Supprimer toutes mes séances"))}">
@@ -359,6 +365,12 @@ export async function renderReglages(container) {
       toast(sel.value === "0" ? t("Rappel désactivé") : t("Rappel enregistré"));
     };
   }).catch(() => null);
+  container.querySelector("#week-start").onchange = (e) => {
+    setWeekStartsSunday(e.target.value === "sun");
+    db.updatePublicProfile({ week_start: e.target.value }).catch(() => null); // suit sur tes autres appareils
+    invalidate("workouts");
+    toast(e.target.value === "sun" ? t("Semaine du dimanche au samedi") : t("Semaine du lundi au dimanche"));
+  };
   container.querySelector("#default-set-type").onchange = (e) => {
     setDefaultSetType(e.target.value);
     toast(e.target.value === "failure" ? t("Les nouvelles séries seront en échec") : t("Les nouvelles séries seront normales"));

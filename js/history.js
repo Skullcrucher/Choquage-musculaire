@@ -2,9 +2,9 @@
 // ONGLET HISTORIQUE — calendrier + liste des séances passées
 // (routines, plans et suivi du plan : onglet Séance)
 // ============================================================
-import { fmtDateTime, fmtDuration, esc } from "./utils.js";
+import { fmtDateTime, fmtDuration, esc, weekDows, weekStartsSunday, startOfWeek } from "./utils.js";
 import { getBody, workoutCalories } from "./calories.js";
-import { getWorkouts } from "./cache.js";
+import { getWorkouts, getRoutines } from "./cache.js";
 import { openWorkoutDetail } from "./workout-detail.js";
 import { t, locale } from "./i18n.js";
 
@@ -12,14 +12,42 @@ let viewMonth = new Date();
 let workoutsCache = [];
 let selectedDay = null;
 
-// Initiales des jours (lundi → dimanche) dans la langue de l'app.
-const DOW = Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(locale(), { weekday: "narrow" }));
+// Initiales des jours dans la langue de l'app, dans l'ordre de la semaine
+// choisi (lundi ou dimanche en premier). 2024-01-01 était un lundi.
+const dowInitials = () => weekDows().map(dow => new Date(2024, 0, dow).toLocaleDateString(locale(), { weekday: "narrow" }));
+
+// Séances à venir du plan actif (jour "AAAA-MM-JJ" → nom de la routine),
+// affichées d'une autre couleur dans le calendrier.
+let planCtx = null; // { plan, routines, planWeek, dayStr }
+async function loadPlanCtx() {
+  try {
+    const plansMod = await import("./plans.js");
+    const { plans, active } = await plansMod.getPlans();
+    const plan = plans.find(p => p.id === active);
+    planCtx = plan ? { plan, routines: await getRoutines(), planWeek: plansMod.planWeek, dayStr: plansMod.dayStr } : null;
+  } catch (e) { console.warn("[Skullcrusher] Plan (calendrier)", e); planCtx = null; }
+}
+function plannedDays(year, month) {
+  const out = new Map();
+  if (!planCtx) return out;
+  const { plan, routines, planWeek, dayStr } = planCtx;
+  const todayKey = dayStr(new Date());
+  const last = new Date(year, month + 1, 0);
+  for (let d = startOfWeek(new Date(year, month, 1)); d <= last; d.setDate(d.getDate() + 7)) {
+    const lastDayOfWeek = new Date(d); lastDayOfWeek.setDate(d.getDate() + 6);
+    if (dayStr(lastDayOfWeek) < todayKey) continue; // semaine passée
+    planWeek(plan, new Date(d), routines, workoutsCache).cells.forEach(c => {
+      if (c.routine && !c.done && dayStr(c.date) >= todayKey && c.date.getMonth() === month) out.set(c.date.getDate(), c.routine.name);
+    });
+  }
+  return out;
+}
 
 // embedded : dans l'onglet Progrès (sans titre, sous les onglets du haut).
 let histContainer = null, histEmbedded = false;
 export async function renderHistorique(container, { embedded = false } = {}) {
   histContainer = container; histEmbedded = embedded;
-  workoutsCache = await getWorkouts();
+  [workoutsCache] = await Promise.all([getWorkouts(), loadPlanCtx()]);
   container.innerHTML = `
     ${embedded ? "" : `<h1 class="section-title">${t("Historique")}</h1>`}
     <div id="hist-content"></div>
@@ -36,6 +64,7 @@ function renderMine(content) {
         <button class="btn btn-sm btn-secondary" id="next-month">→</button>
       </div>
       <div class="cal-grid" id="cal-grid"></div>
+      <div class="cal-legend" id="cal-legend" hidden><span><i class="cal-dot done"></i>${t("faite")}</span><span><i class="cal-dot planned"></i>${t("à venir (plan)")}</span></div>
     </div>
     <h3 class="muted" style="margin:18px 0 6px;" id="list-label">${t("Séances récentes")}</h3>
     <div id="workout-list"></div>
@@ -52,7 +81,8 @@ function renderCalendar(container) {
 
   const grid = container.querySelector("#cal-grid");
   const year = viewMonth.getFullYear(), month = viewMonth.getMonth();
-  const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // lundi=0
+  const first = new Date(year, month, 1).getDay();
+  const firstDow = weekStartsSunday() ? first : (first + 6) % 7; // cases vides avant le 1er
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const workoutDays = new Set(
@@ -64,13 +94,19 @@ function renderCalendar(container) {
       .map(w => new Date(w.start_time).getDate())
   );
 
-  let html = DOW.map(d => `<div class="cal-dow">${d}</div>`).join("");
+  const planned = plannedDays(year, month);
+  const now = new Date();
+  const isToday = (day) => now.getFullYear() === year && now.getMonth() === month && now.getDate() === day;
+  let html = dowInitials().map(d => `<div class="cal-dow">${d}</div>`).join("");
   for (let i = 0; i < firstDow; i++) html += `<div class="cal-day empty"></div>`;
   for (let day = 1; day <= daysInMonth; day++) {
     const has = workoutDays.has(day);
-    html += `<div class="cal-day ${has ? "has-workout" : ""}" data-day="${day}">${day}</div>`;
+    const plan = !has && planned.get(day);
+    html += `<div class="cal-day ${has ? "has-workout" : ""} ${plan ? "planned" : ""} ${isToday(day) ? "today" : ""}" data-day="${day}" ${plan ? `title="${esc(t("Prévue : {routine}", { routine: plan }))}"` : ""}>${day}</div>`;
   }
   grid.innerHTML = html;
+  const legend = container.querySelector("#cal-legend");
+  if (legend) legend.hidden = !planned.size;
   grid.querySelectorAll("[data-day]").forEach(el => {
     el.onclick = () => {
       const day = parseInt(el.dataset.day, 10);
@@ -94,7 +130,10 @@ function renderList(container) {
     label.textContent = t("Séances du mois");
   }
   const wrap = container.querySelector("#workout-list");
-  wrap.innerHTML = list.length === 0
+  const plannedName = selectedDay ? plannedDays(year, month).get(selectedDay) : null;
+  wrap.innerHTML = plannedName && !list.length
+    ? `<div class="list-row cal-planned-row" style="cursor:default;"><div><div class="list-row-title">📅 ${esc(plannedName)}</div><div class="list-row-sub">${t("Séance prévue par ton plan")}</div></div></div>`
+    : list.length === 0
     ? `<div class="empty-state muted" style="padding:20px;">${t("Aucune séance.")}</div>`
     : list.map(w => `
       <div class="list-row" data-w="${w.id}">

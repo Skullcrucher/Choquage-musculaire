@@ -37,6 +37,11 @@ export async function refreshTopAvatar() {
     const u = db.getCurrentUser();
     if (!u) { topAvatar.hidden = true; return; }
     const prof = await db.getProfile(u.uid).catch(() => null);
+    // Début de semaine choisi sur un autre appareil.
+    if (prof?.week_start === "sun" || prof?.week_start === "mon") {
+      const { setWeekStartsSunday } = await import("./utils.js");
+      setWeekStartsSunday(prof.week_start === "sun");
+    }
     const { safeImageUrl } = await import("./utils.js");
     const photo = safeImageUrl(prof?.photo_data_url || u.photoURL || "");
     const name = prof?.display_name || u.displayName || u.email || "?";
@@ -62,6 +67,7 @@ if (activeTab === "historique" || activeTab === "stats") activeTab = "progres";
 if (activeTab === "reglages") activeTab = "seance";
 if (!TABS[activeTab]) activeTab = "seance";
 let renderToken = 0;
+let appReady = false; // connecté et autorisé : les onglets peuvent s'afficher
 
 // ---------- Bouton « retour » (Android) ----------
 // Le retour ferme d'abord la fenêtre ouverte (ou réduit le lecteur agrandi),
@@ -116,13 +122,23 @@ function syncBackHandling() {
   }
 }
 if (!hasCloseWatcher) {
-  window.addEventListener("popstate", () => {
+  window.addEventListener("popstate", (e) => {
     if (ignoreNextPop) { ignoreNextPop = false; return; }
+    // Retour sur une entrée qui n'est pas notre garde alors qu'aucune n'était
+    // posée (Firefox) : rien à fermer, on laisse le navigateur faire.
+    if (!backGuard && !needsBackIntercept()) return;
     backGuard = false;
     handleBack();
     setTimeout(syncBackHandling, 0);
+    // Jamais d'écran vide après un retour.
+    setTimeout(() => { if (view && !view.children.length && appReady) switchTab(activeTab); }, 50);
   });
 }
+// Retour vers l'app restaurée depuis le cache du navigateur (Firefox) :
+// si l'écran est resté vide, on redessine l'onglet au lieu d'un écran noir.
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted && view && !view.children.length && appReady) switchTab(activeTab);
+});
 window.addEventListener("sc:modal-open", () => setTimeout(syncBackHandling, 0));
 window.addEventListener("sc:modal-close", () => setTimeout(syncBackHandling, 0));
 window.addEventListener("sc:dock-change", () => setTimeout(syncBackHandling, 0));
@@ -194,6 +210,7 @@ initAuth((user) => {
       console.log("[Skullcrusher] Diagnostic connexion → email:", JSON.stringify(user.email), "| email_verified:", token.claims.email_verified, "| uid:", user.uid, "| token émis:", token.issuedAtTime, "| token expire:", token.expirationTime);
     }).catch((e) => console.error("[Skullcrusher] Diagnostic connexion → erreur lecture token:", e));
   }
+  appReady = !!(user && isAuthorized(user));
   if (user && isAuthorized(user)) {
     tabbar.style.display = "flex";
     if (!appStarted) {

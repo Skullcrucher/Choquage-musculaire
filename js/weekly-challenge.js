@@ -82,7 +82,7 @@ function mondayOfIsoWeek(wk) {
 // Renvoie { value, sessions: [{ w, sets }] } (séances qui comptent).
 export async function myProgress(c) {
   if (!c || !TYPES[c.type]) return { value: 0, sessions: [] };
-  const { counted } = weekSessions(await getWorkouts(), c.week === weekKey() ? new Date() : mondayOfIsoWeek(c.week));
+  const { counted } = weekSessions(await getWorkouts(), c.week === weekKey() ? new Date() : mondayOfIsoWeek(c.week), { iso: true });
   if (!counted.length) return { value: 0, sessions: [] };
   const ids = new Set(counted.map(w => w.id));
   const sets = (await getSetsForPeriod(2)).filter(s => ids.has(s.workout_id) && s.set_type !== "warmup" && ((s.reps || 0) > 0 || (s.weight_kg || 0) > 0));

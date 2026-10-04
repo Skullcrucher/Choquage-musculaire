@@ -119,17 +119,20 @@ async function renderGeneralStats(container) {
   const body = await getBody();
   // Même règle que « Cette semaine » : séances terminées jusqu'à
   // maintenant (pas de date dans le futur), doublons comptés une fois.
-  const { weekSessions, sessionsBetween } = await import("./week-sessions.js");
+  const { weekSessions, sessionsBetween, allSessions } = await import("./week-sessions.js");
   const kcalOf = (list) => Math.round(list.reduce((acc, w) => acc + (workoutCalories(w, body)?.kcal || 0), 0));
   const kcal7 = kcalOf(weekSessions(workouts).counted);
   const kcal30 = kcalOf(sessionsBetween(workouts, new Date(Date.now() - 30 * 86400000), new Date()).counted);
-  const totalSets = workouts.reduce((acc, w) => acc + (w.total_sets || 0), 0);
-  const totalTonnage = workouts.reduce((acc, w) => acc + (w.total_tonnage || 0), 0);
+  // Bilan : mêmes règles partout (séances terminées, pas de date future,
+  // doublons — même séance importée ou ajoutée deux fois — comptés une fois).
+  const counted = allSessions(workouts);
+  const totalSets = counted.reduce((acc, w) => acc + (w.total_sets || 0), 0);
+  const totalTonnage = counted.reduce((acc, w) => acc + (w.total_tonnage || 0), 0);
 
   if (!container.isConnected) return;
   container.innerHTML = `
     <div class="stat-grid">
-      <div class="stat-box"><span class="num">${workouts.length}</span><span class="lbl">${t("séances")}</span></div>
+      <div class="stat-box"><span class="num">${counted.length}</span><span class="lbl">${t("séances")}</span></div>
       <div class="stat-box"><span class="num">${Math.round(totalTonnage / 1000)}</span><span class="lbl">${t("tonnes soulevées")}</span></div>
       <div class="stat-box"><span class="num">${totalSets}</span><span class="lbl">${t("séries loggées")}</span></div>
     </div>

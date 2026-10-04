@@ -15,14 +15,18 @@ import { getExercises, getSetsForExercise } from "./cache.js";
 import { EXERCISE_GUIDES } from "./exercise-guides.js";
 import { GUIDE_TO_GROUP, guessMuscleGroup } from "./muscles.js";
 import { t, getLang } from "./i18n.js";
-import { exerciseOrigin as originOf } from "./exercises-seed.js";
+import { exerciseOrigin as originOf, EXERCISE_SEED, HOME_NAMES } from "./exercises-seed.js";
 import { normName } from "./exercise-match.js";
 
 const LS_RECENT = "skullcrusher_recent_exercises";
 const RECENT_MAX = 15;
 const MAX_ROWS = 80;
-// i18n-keys: "Barre", "Haltère", "Machine", "Poulie", "Poids du corps"
-const EQUIPMENTS = ["Barre", "Haltère", "Machine", "Poulie", "Poids du corps"];
+// i18n-keys: "Barre", "Haltère", "Machine", "Poulie", "Poids du corps", "Élastique", "Kettlebell", "Maison"
+const EQUIPMENTS = ["Barre", "Haltère", "Machine", "Poulie", "Poids du corps", "Élastique", "Kettlebell"];
+const HOME_EQUIP = new Set(["Poids du corps", "Élastique", "Kettlebell"]);
+// Faisable à la maison : exercice « maison » de la bibliothèque, ou au
+// poids du corps / élastique / kettlebell (hors machines et barres de traction).
+const isHome = (ex) => HOME_NAMES.has(ex.name) || (HOME_EQUIP.has(equipmentOf(ex)) && !/(suspendu|traction|assist|machine)/i.test(ex.name));
 
 function readRecent() {
   try { return JSON.parse(localStorage.getItem(LS_RECENT) || "[]").filter(n => typeof n === "string"); } catch (_) { return []; }
@@ -36,11 +40,13 @@ function equipmentOf(ex) {
   const guide = EXERCISE_GUIDES[ex.name];
   if (guide?.equipment) return guide.equipment === "Barre EZ" ? "Barre" : guide.equipment;
   const n = ex.name.toLowerCase();
+  if (/(élastique|elastique|band)/.test(n)) return "Élastique";
+  if (/kettlebell/.test(n)) return "Kettlebell";
   if (/(haltère|haltere|dumbbell)/.test(n)) return "Haltère";
   if (/(poulie|cable)/.test(n)) return "Poulie";
   if (/(machine|smith|presse|leg press)/.test(n)) return "Machine";
   if (/(barre|barbell|ez bar)/.test(n)) return "Barre";
-  if (/(poids du corps|bodyweight|pompes|tractions|dips|push up|pull up|gainage|planche|crunch)/.test(n)) return "Poids du corps";
+  if (/(poids du corps|bodyweight|pompes|tractions|dips|push up|pull up|gainage|planche|crunch|burpees|jumping|mountain|superman|squat sauté|pistol|chaise|fentes|kick|hydrant|hollow|dead bug|sit-up|nordic|montées|relevé|table)/.test(n)) return "Poids du corps";
   return "";
 }
 
@@ -96,7 +102,13 @@ async function fillHistory(el, name) {
 // onAdd(nom, groupe, exerciceExistantOuNull) est appelé pour chaque ajout ;
 // la fenêtre reste ouverte pour en ajouter plusieurs (« Terminé » la ferme).
 export async function openExercisePicker({ onAdd, title = t("Ajouter un exercice") }) {
-  const library = (await getExercises()).slice().sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  // Bibliothèque + exercices standards pas encore dans la bibliothèque
+  // (nouveaux exercices de l'app, dont ceux « à la maison ») : créés au
+  // premier ajout.
+  const own = await getExercises();
+  const ownNames = new Set(own.map(e => e.name.toLowerCase()));
+  const virtual = EXERCISE_SEED.filter(([n]) => !ownNames.has(n.toLowerCase())).map(([name, muscle_group]) => ({ name, muscle_group, virtual: true }));
+  const library = [...own, ...virtual].sort((a, b) => a.name.localeCompare(b.name, "fr"));
   const byName = new Map(library.map(e => [e.name, e]));
   let search = null;
   try { search = await import("./exercise-search.js"); await search.loadAliases(); } catch (_) {}
@@ -134,6 +146,7 @@ export async function openExercisePicker({ onAdd, title = t("Ajouter un exercice
       ${groups.map(g => `<div class="chip" data-group="${esc(g)}">${esc(t(g))}</div>`).join("")}
     </div>
     <div class="chip-row pk-scroll" id="pk-equip" style="margin-top:0;">
+      <div class="chip chip-sm" data-equip="__home">🏠 ${t("Maison")}</div>
       ${EQUIPMENTS.map(e => `<div class="chip chip-sm" data-equip="${esc(e)}">${esc(t(e))}</div>`).join("")}
       ${hasImported ? `<div class="chip chip-sm" data-origin="app">💀 ${t("App")}</div><div class="chip chip-sm" data-origin="import">📥 ${t("Importés")}</div>` : ""}
     </div>
@@ -173,7 +186,8 @@ export async function openExercisePicker({ onAdd, title = t("Ajouter un exercice
       else rows = library.map(ex => ({ ex }));
       if (!state.query && state.group && state.group !== "__recent") rows = rows.filter(r => groupsOf(r.ex).has(state.group));
       // Recherche par nom : dans toute la bibliothèque (le filtre muscle s'efface).
-      if (state.equipment) rows = rows.filter(r => equipmentOf(r.ex) === state.equipment);
+      if (state.equipment === "__home") rows = rows.filter(r => isHome(r.ex));
+      else if (state.equipment) rows = rows.filter(r => equipmentOf(r.ex) === state.equipment);
       if (state.origin) rows = rows.filter(r => originOf(r.ex) === state.origin);
       const total = rows.length;
       rows = rows.slice(0, MAX_ROWS);
@@ -222,11 +236,11 @@ export async function openExercisePicker({ onAdd, title = t("Ajouter un exercice
       list.querySelectorAll("[data-add]").forEach(el => el.onclick = (e) => {
         e.stopPropagation();
         const ex = byName.get(el.dataset.add);
-        if (ex) toggle(ex.name, ex.muscle_group, ex);
+        if (ex) toggle(ex.name, ex.muscle_group, ex.virtual ? null : ex);
       });
       const confirmBtn = create.querySelector("#confirm-add-ex");
       if (confirmBtn) confirmBtn.onclick = () => {
-        if (exact) { if (!isSelected(exact.name)) toggle(exact.name, exact.muscle_group, exact); }
+        if (exact) { if (!isSelected(exact.name)) toggle(exact.name, exact.muscle_group, exact.virtual ? null : exact); }
         else if (!isSelected(q.slice(0, 80))) toggle(q.slice(0, 80), create.querySelector("#ex-group").value, null);
         input.value = ""; state.query = "";
         draw();

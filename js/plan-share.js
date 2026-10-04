@@ -114,8 +114,9 @@ export async function openPlanShare(plan, routines, onDone = () => {}) {
 // Date de début au choix à l'ajout d'un plan : lundi prochain par défaut,
 // ou une date passée si on l'avait déjà commencé.
 export function nextMondayStr() {
-  const start = mondayOf(new Date());
-  if (dowOf(new Date()) > 1) start.setDate(start.getDate() + 7);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const start = mondayOf(today);
+  if (start < today) start.setDate(start.getDate() + 7);
   return dayStr(start);
 }
 export function startFieldHtml() {
