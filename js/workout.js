@@ -183,11 +183,13 @@ async function renderStartScreen(container) {
       <span class="num" style="font-size:56px; color:var(--amber); display:block; line-height:1;">${weekCount}</span>
       <div class="muted">${weekCount > 1 ? t("séances bouclées") : t("séance bouclée")}</div>
     </div>
+    <div id="xp-slot"></div>
     <div id="gift-inbox"></div>
     <div id="start-tabs">${segHtml([["plan", t("Plan en cours"), "plan"], ["routine", t("Séance libre"), "workouts"]], startMode, "data-smode")}</div>
     <div id="start-body"></div>
   `;
   container.querySelector("#week-hero").onclick = () => openWeekDetail(workouts, refreshAll);
+  import("./xp-ui.js").then(m => m.renderXpCard(container.querySelector("#xp-slot"))).catch(e => console.warn("[Skullcrusher] XP", e));
   cleanupAbandonedWorkouts(workouts).then(n => { if (n && container.isConnected && !currentWorkout) refreshAll(); });
   const body = container.querySelector("#start-body");
   import("./gifts.js").then(m => m.renderGiftInbox(container.querySelector("#gift-inbox"), refreshAll));
@@ -1073,6 +1075,9 @@ async function finishWorkout() {
   }
   if (finishBtn) { finishBtn.disabled = false; finishBtn.textContent = t("Terminer la séance"); }
   if (!extra) return null; // retour à la séance
+  // XP avant la séance (pour afficher le gain et un éventuel nouveau niveau).
+  const xpMod = await import("./xp.js").catch(() => null);
+  const xpBefore = xpMod ? xpMod.computeXp(await getWorkouts().catch(() => [])) : null;
   await db.updateWorkout(currentWorkout.id, {
     end_time: new Date().toISOString(),
     muscle_summary: muscleSummary,
@@ -1124,6 +1129,12 @@ async function finishWorkout() {
   // Met à jour les exercices phares / chiffres du profil public, en arrière-plan.
   import("./profile.js").then(m => m.refreshMyProfileHighlights()).catch(e => console.warn("[Skullcrusher] Profil public non mis à jour :", e));
   await renderSeance(document.getElementById("view"));
+  if (xpMod && xpBefore) {
+    try {
+      const xpAfter = xpMod.computeXp(await getWorkouts());
+      (await import("./xp-ui.js")).showXpGain(xpBefore, xpAfter, finished.id);
+    } catch (e) { console.warn("[Skullcrusher] XP", e); }
+  }
   return finished;
 }
 

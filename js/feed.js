@@ -10,6 +10,7 @@ import { openProfile } from "./profile.js";
 import { songHtml, bindSongLinks, parseMusicLink, providerIcon } from "./music.js";
 import { icon, segHtml } from "./icons.js";
 import { openComments } from "./comments.js";
+import { gradeBadgeHtml } from "./xp.js";
 import { t, tn } from "./i18n.js";
 
 // Records, "son du record", playlist et bande-son d'une séance partagée.
@@ -119,6 +120,7 @@ async function renderFeedWorkouts(body, root) {
         <div id="gym-now" style="flex:1; min-width:0;"></div>
         <button class="btn btn-secondary btn-sm" id="manage-friends">👥 ${t("Gérer mes amis")}<span id="manage-req-count"></span></button>
       </div>` : ""}
+    ${mode === "community" ? `<div id="feed-podium"></div>` : ""}
     <div class="chip-row feed-sort">
       <div class="chip ${feedSort === "recent" ? "active" : ""}" data-sort="recent">🕒 ${t("Récentes")}</div>
       <div class="chip ${feedSort === "top" ? "active" : ""}" data-sort="top">🤘 ${t("Top de la semaine")}</div>
@@ -130,6 +132,17 @@ async function renderFeedWorkouts(body, root) {
     try { localStorage.setItem(LS_SORT, feedSort); } catch (_) {}
     renderFeedWorkouts(body, root);
   });
+  if (mode === "community") {
+    // Le dimanche (et le lundi : podium final), podium de la semaine.
+    import("./challenges.js").then(m => m.podiumHtml()).then(html => {
+      const el = body.querySelector("#feed-podium");
+      if (!html || !el) return;
+      el.innerHTML = html;
+      el.querySelectorAll("[data-profile]").forEach(x => x.onclick = () => openProfile(x.dataset.profile));
+      const go = el.querySelector("#podium-go");
+      if (go) go.onclick = () => root.querySelector('[data-fmode="challenges"]')?.click();
+    }).catch(e => console.warn("[Skullcrusher] Podium", e));
+  }
   if (mode === "friends") {
     body.querySelector("#manage-friends").onclick = () => { friendsManage = true; drawFeedBody(root); };
     refreshRequestBadge(body);
@@ -184,7 +197,7 @@ async function renderFeedWorkouts(body, root) {
         <div style="display:flex; align-items:center; gap:10px;">
           ${photo ? `<div data-profile="${esc(w.owner_uid)}" style="width:38px; height:38px; border-radius:50%; background:center/cover no-repeat; background-image:url('${photo}'); flex-shrink:0; cursor:pointer;"></div>` : `<div data-profile="${esc(w.owner_uid)}" style="cursor:pointer; width:38px; height:38px; border-radius:50%; background:var(--surface-raised); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:var(--amber); flex-shrink:0;">${esc(name[0].toUpperCase())}</div>`}
           <div style="flex:1; min-width:0;">
-            <div class="list-row-title"><span class="profile-link" data-profile="${esc(w.owner_uid)}">${esc(name)}</span> <span class="muted" style="font-weight:400;">· ${esc(w.title)}</span></div>
+            <div class="list-row-title"><span class="profile-link" data-profile="${esc(w.owner_uid)}">${esc(name)}</span>${gradeBadgeHtml(profile?.xp)} <span class="muted" style="font-weight:400;">· ${esc(w.title)}</span></div>
             <div class="list-row-sub">${fmtDateTime(w.start_time)}${vibe ? ` · ${vibe.emoji} ${vibe.label}` : ""}${!w.shared && w.friends_share ? ` · <span class="feed-scope">👥 ${t("Amis")}</span>` : ""}</div>
           </div>
           <div class="list-row-meta" style="text-align:right; flex-shrink:0;">

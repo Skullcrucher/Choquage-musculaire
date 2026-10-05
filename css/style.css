@@ -1407,3 +1407,85 @@ html.desktop .fold-head:hover .card-title { color: var(--red); }
 html.desktop .mw-artists { grid-template-columns: repeat(4, 1fr); }
 html.desktop .mw-pls { display: grid; grid-template-columns: 1fr 1fr; }
 .feed-scope { color: var(--amber); font-weight: 700; }
+
+/* ---------- Expérience : niveaux et grades ---------- */
+.tier-bronze { --tier: #CD7F32; --tier-glow: rgba(205,127,50,0.35); }
+.tier-silver { --tier: #C9D1DB; --tier-glow: rgba(201,209,219,0.35); }
+.tier-gold { --tier: #F2C14E; --tier-glow: rgba(242,193,78,0.45); }
+.tier-platinum { --tier: #7FE3D8; --tier-glow: rgba(127,227,216,0.45); }
+.tier-diamond { --tier: #6FB7FF; --tier-glow: rgba(111,183,255,0.55); }
+.tier-mythic { --tier: #C77DFF; --tier-glow: rgba(199,125,255,0.6); }
+.tier-legend { --tier: #FF5C2A; --tier-glow: rgba(255,92,42,0.7); }
+.xp-badge {
+  display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; padding: 1px 6px 1px 4px; border-radius: 999px;
+  font-size: 11px; font-weight: 800; line-height: 1.5; vertical-align: 1px; white-space: nowrap;
+  color: var(--tier); border: 1px solid var(--tier); background: color-mix(in srgb, var(--tier) 12%, transparent);
+  font-family: 'Inter', sans-serif; text-transform: none; letter-spacing: 0;
+}
+.xp-badge b { font-weight: 800; }
+.tier-diamond.xp-badge, .tier-mythic.xp-badge, .tier-legend.xp-badge { box-shadow: 0 0 8px var(--tier-glow); }
+.tier-legend.xp-badge { background: linear-gradient(90deg, rgba(255,92,42,0.25), rgba(242,193,78,0.25)); }
+
+.xp-card {
+  display: flex; align-items: center; gap: 14px; margin: 0 0 14px; padding: 12px 14px; cursor: pointer;
+  border-radius: var(--radius); border: 1px solid var(--tier); background: linear-gradient(120deg, color-mix(in srgb, var(--tier) 16%, var(--surface)), var(--surface) 70%);
+  box-shadow: 0 0 18px var(--tier-glow);
+}
+.xp-emblem { font-size: 34px; width: 52px; height: 52px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(11,11,12,0.6); box-shadow: 0 0 0 2px var(--tier), 0 0 16px var(--tier-glow); }
+.xp-main { flex: 1; min-width: 0; }
+.xp-grade { font-family: 'Anton', sans-serif; font-size: 20px; text-transform: uppercase; line-height: 1.1; color: var(--tier); }
+.xp-tier { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); vertical-align: 3px; }
+.xp-level { font-size: 12px; font-weight: 700; color: var(--text); margin: 1px 0 6px; }
+.xp-bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.xp-bar > div { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--amber), var(--tier, var(--amber))); transition: width 0.8s ease; }
+.xp-bar-lg { height: 12px; margin: 12px 0 6px; }
+.xp-sub { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--text-dim); margin-top: 4px; flex-wrap: wrap; }
+.xp-hero { text-align: center; padding: 16px 12px; border-radius: 12px; border: 1px solid var(--tier); background: radial-gradient(100% 80% at 50% 0%, var(--tier-glow), transparent 70%), var(--surface-raised); }
+.xp-hero-icon { font-size: 54px; filter: drop-shadow(0 0 14px var(--tier-glow)); }
+.xp-hero-name { font-family: 'Anton', sans-serif; font-size: 30px; text-transform: uppercase; color: var(--tier); line-height: 1.1; }
+.xp-hero-sub { font-size: 12px; color: var(--text-dim); }
+.xp-rules { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: var(--text-dim); }
+.xp-rules b { color: var(--text); }
+.xp-ladder { display: grid; gap: 6px; }
+.xp-rung { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--radius); background: var(--surface-raised); opacity: 0.5; font-size: 13px; }
+.xp-rung.reached { opacity: 1; border-left: 3px solid var(--tier); }
+.xp-rung.current { box-shadow: 0 0 0 1px var(--tier), 0 0 14px var(--tier-glow); }
+.xp-rung-icon { font-size: 20px; text-align: center; }
+.xp-rung-name { font-weight: 700; color: var(--tier); }
+.xp-rung-lvl { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+.xp-gain { text-align: center; }
+.xp-gain-kicker { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tier, var(--amber)); }
+.xp-gain-title { font-family: 'Anton', sans-serif; font-size: 34px; text-transform: uppercase; color: var(--tier); line-height: 1.1; }
+.xp-gain-num { font-family: 'Anton', sans-serif; font-size: 46px; color: var(--amber); line-height: 1.1; margin: 4px 0 10px; text-shadow: 0 0 18px rgba(224,36,36,0.5); }
+.xp-gain-parts { text-align: left; display: grid; gap: 4px; }
+.xp-part { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 5px 10px; border-radius: 6px; background: var(--surface-raised); }
+.xp-part b { color: var(--green); }
+.xp-burst { font-size: 64px; animation: xp-pop 0.9s cubic-bezier(.2,1.6,.4,1) both; filter: drop-shadow(0 0 20px var(--tier-glow)); }
+.xp-gain.levelup { animation: xp-glow 1.6s ease-in-out 2; border-radius: 12px; }
+@keyframes xp-pop { 0% { transform: scale(0.2) rotate(-20deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+@keyframes xp-glow { 0%, 100% { box-shadow: 0 0 0 transparent; } 50% { box-shadow: 0 0 40px var(--tier-glow); } }
+@media (prefers-reduced-motion: reduce) { .xp-burst, .xp-gain.levelup { animation: none; } }
+
+/* ---------- Podium du dimanche ---------- */
+.podium-card { border-color: #F2C14E; background: radial-gradient(120% 80% at 50% 0%, rgba(242,193,78,0.18), transparent 60%), var(--surface); }
+.podium-title { font-family: 'Anton', sans-serif; font-size: 22px; text-transform: uppercase; text-align: center; }
+.podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 8px; }
+.podium-step { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; cursor: pointer; text-align: center; }
+.podium-step.empty { cursor: default; opacity: 0.4; }
+.podium-medal { font-size: 26px; }
+.podium-name { font-weight: 800; font-size: 13px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.podium-score { font-size: 12px; color: var(--text-dim); font-weight: 700; }
+.podium-step .xp-badge { margin-left: 0; }
+.podium-block { width: 100%; border-radius: 8px 8px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 6px; font-family: 'Anton', sans-serif; font-size: 22px; color: rgba(11,11,12,0.75); }
+.p1 .podium-block { height: 74px; background: linear-gradient(#F7D774, #C99A2E); }
+.p2 .podium-block { height: 54px; background: linear-gradient(#E3E8EE, #9AA3AD); }
+.p3 .podium-block { height: 40px; background: linear-gradient(#E0A46A, #A8642C); }
+.p1 .profile-avatar { box-shadow: 0 0 0 3px #F2C14E, 0 0 18px rgba(242,193,78,0.6); }
+
+/* ---------- Rappel des défis ---------- */
+.ch-reminder { text-align: center; }
+.ch-reminder-icon { font-size: 52px; filter: drop-shadow(0 0 16px rgba(242,193,78,0.6)); }
+.ch-reminder-title { font-family: 'Anton', sans-serif; font-size: 24px; text-transform: uppercase; line-height: 1.15; }
+.ch-reminder-box { text-align: left; background: var(--surface-raised); border-radius: var(--radius); padding: 10px 12px; margin-top: 8px; }
+.ch-reminder-k { font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-dim); }
+.ch-reminder-v { font-weight: 700; font-size: 15px; margin-top: 2px; }
