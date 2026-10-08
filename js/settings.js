@@ -872,6 +872,19 @@ async function setupSpotifyCard(container) {
     : !settings.clientId
       ? t("Pour connecter Spotify, crée ta propre app Spotify ci-dessous.")
       : t("Non connecté. Sur iPhone, lance la connexion depuis Safari (pas depuis l'icône) : elle marchera ensuite aussi dans l'app installée.");
+  // Connecté : Spotify accepte-t-il vraiment de lire ce compte ?
+  if (connected) sp.checkSpotifyAccess().then(res => {
+    if (!status.isConnected) return;
+    if (res === "denied") {
+      status.innerHTML = `⚠️ <b>${t("Spotify refuse l'accès à ton compte.")}</b> ${settings.own
+        ? t("Vérifie que ton compte Spotify est ajouté dans ton app (Dashboard → User Management) et qu'il est Premium.")
+        : t("L'app Spotify partagée est en mode développement : Spotify n'y autorise que quelques comptes ajoutés à la main. Crée ta propre app ci-dessous (5 minutes), ou envoie l'e-mail de ton compte Spotify à l'administrateur pour qu'il t'ajoute.")}`;
+      status.style.color = "var(--red)";
+      own.open = true;
+    } else if (res === "ok") {
+      status.textContent += " " + t("Les morceaux écoutés seront joints à tes séances.");
+    }
+  });
   btn.textContent = connected ? t("Déconnecter Spotify") : t("Connecter Spotify");
   btn.disabled = !connected && !settings.clientId;
   btn.onclick = async () => {

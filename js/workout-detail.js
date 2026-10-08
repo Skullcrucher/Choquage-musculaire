@@ -5,7 +5,7 @@ import * as db from "./db.js";
 import { openModal, closeModal, fmtDateTime, fmtDuration, estimate1RM, toast, esc, attachAutocomplete, defaultSetType } from "./utils.js";
 import { getUser } from "./auth.js";
 import { invalidate, getWorkouts, getExercises, getRoutines } from "./cache.js";
-import { songBlockHtml, bindSongLinks, spotifyEmbed, parseMusicLink, normalizePlaylistUrl, parseSongInput, SPOTIFY_ICON } from "./music.js";
+import { songBlockHtml, songHtml, bindSongLinks, spotifyEmbed, parseMusicLink, normalizePlaylistUrl, parseSongInput, SPOTIFY_ICON } from "./music.js";
 import { t } from "./i18n.js";
 import { getBody, workoutCalories, EFFORTS } from "./calories.js";
 import { guessMuscleGroup } from "./muscles.js";
@@ -34,7 +34,7 @@ function musicPaneHtml(w) {
     ${w.record_song ? `<div class="muted">🎵 ${t("Le son qui t'a porté")}${(w.records || []).length ? ` (${esc(w.records[0].exercise)})` : ""}</div>${songBlockHtml(w.record_song)}` : ""}
     ${playlist ? `<div class="muted" style="margin-top:10px;">🎧 ${t("Playlist de la séance")}</div>${spotifyEmbed(playlist, 152)}` : ""}
     ${tracks.length ? `<div class="muted" style="margin-top:10px;">🎶 ${t("Bande-son de la séance")}</div>
-      ${tracks.map(tr => parseMusicLink(tr.url) ? spotifyEmbed(tr.url, 80) : "").join("")}` : ""}`;
+      <ol class="soundtrack-list">${tracks.filter(tr => parseMusicLink(tr.url)).map(tr => `<li>${songHtml({ url: tr.url, source: "spotify" })}</li>`).join("")}</ol>` : ""}`;
 }
 
 // Texte du champ « son » pour un morceau enregistré.

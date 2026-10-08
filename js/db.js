@@ -140,6 +140,12 @@ export async function updatePublicProfile(patch) {
   await setDoc(doc(dbase, "profiles", requireUid()), { ...patch, profile_updated_at: new Date().toISOString() }, { merge: true });
 }
 
+// Participants aux défis (classement « Tout le monde », podium du dimanche).
+export async function listChallengeProfiles(max = 300) {
+  const snap = await getDocs(query(collection(dbase, "profiles"), where("challenge.opt_in", "==", true), limit(max)));
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+}
+
 // Profils ayant renseigné de la musique (mur musical, portée "Communauté").
 export async function listMusicProfiles(max = 300) {
   const snap = await getDocs(query(collection(dbase, "profiles"), where("has_music", "==", true), limit(max)));

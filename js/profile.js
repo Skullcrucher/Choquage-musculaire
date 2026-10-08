@@ -11,6 +11,7 @@ import * as db from "./db.js";
 import { openModal, closeModal, toast, esc, safeImageUrl, attachAutocomplete, estimate1RM } from "./utils.js";
 import { getExercises, getWorkouts, getSetsForExercise, getSetsForPeriod } from "./cache.js";
 import { allTrends, trendBadgeHtml, trendDetail, TREND_DAYS } from "./trend.js";
+import { gradeBadgeHtml } from "./xp.js";
 import { songHtml, bindSongLinks, parseMusicLink, musicEmbed, PROVIDERS, providerIcon, providerName, shortLinkHint, getMyProvider, setMyProvider, openOnMyService, searchArtists } from "./music.js";
 import { t, tn } from "./i18n.js";
 
@@ -158,6 +159,13 @@ export async function computeShowcase() {
   };
 }
 
+// Niveau publié dans le profil (badge de grade visible par les autres).
+export async function myXpSummary() {
+  const { computeXp } = await import("./xp.js");
+  const x = computeXp(await getWorkouts());
+  return { total: x.total, level: x.level, updated: new Date().toISOString().slice(0, 10) };
+}
+
 // Recalcule les mises en avant (après une séance, à l'enregistrement du profil).
 export async function refreshMyProfileHighlights(profile = null) {
   const uid = db.getCurrentUser()?.uid;
@@ -168,6 +176,7 @@ export async function refreshMyProfileHighlights(profile = null) {
   if (names.length) patch.highlights = await Promise.all(names.map(computeHighlight));
   if (p?.show_stats) patch.public_stats = await computePublicStats();
   try { patch.showcase = (await computeShowcase()).showcase; } catch (e) { console.warn("[Skullcrusher] Vitrine du profil", e); }
+  try { patch.xp = await myXpSummary(); } catch (e) { console.warn("[Skullcrusher] XP du profil", e); }
   if (p?.challenge?.opt_in) {
     const { computeMyWeeks } = await import("./challenges.js");
     patch.challenge = await computeMyWeeks();
@@ -304,6 +313,7 @@ export async function openProfile(uid) {
         ${avatarHtml(profile, 76)}
         <div style="min-width:0;">
           <div class="pf-name">${esc(profile.display_name || t("Utilisateur"))}${isMe ? ` <span class="pf-me">${t("toi")}</span>` : ""}</div>
+          <div id="pf-grade">${profile.xp?.level ? gradeBadgeHtml(profile.xp, { withName: true }) : ""}</div>
           ${profile.bio ? `<p class="pf-bio">${esc(profile.bio)}</p>` : ""}
         </div>
       </div>
@@ -364,6 +374,12 @@ export async function openProfile(uid) {
         const prog = modalEl.querySelector("#pf-progress");
         if (prog) { prog.innerHTML = progressHtml(fresh.progress, full, true); bindProgressToggle(prog); }
         db.updatePublicProfile({ showcase: fresh }).catch(e => console.warn("[Skullcrusher] Vitrine non enregistrée", e));
+      }).catch(e => console.warn("[Skullcrusher] Vitrine du profil", e));
+      // Niveau à jour (et publié) à l'ouverture de son profil.
+      myXpSummary().then(xp => {
+        const el = modalEl.querySelector("#pf-grade");
+        if (el) el.innerHTML = gradeBadgeHtml(xp, { withName: true });
+        db.updatePublicProfile({ xp }).catch(() => null);
       }).catch(e => console.warn("[Skullcrusher] Vitrine du profil", e));
     }
     const reportBtn = modalEl.querySelector("#pf-report");

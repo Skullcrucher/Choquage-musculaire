@@ -230,7 +230,11 @@ initAuth((user) => {
       import("./presence.js").then(m => m.syncPresenceDefault()).catch(() => null);
       // Nouvelle version publiée ? Proposée d'abord, puis les conditions.
       import("./update-check.js").then(m => m.checkForUpdate({ force: true })).catch(() => null)
-        .then(() => import("./terms.js")).then(m => m.ensureTermsAccepted(user)).catch(e => console.warn("[Skullcrusher] Conditions :", e));
+        .then(() => import("./terms.js")).then(m => m.ensureTermsAccepted(user)).catch(e => console.warn("[Skullcrusher] Conditions :", e))
+        // Puis, au plus une fois par jour : rappel des défis ouverts à tous.
+        .then(() => new Promise(r => setTimeout(r, 2500)))
+        .then(() => import("./challenge-reminder.js")).then(m => m.maybeShowChallengeReminder())
+        .catch(e => console.warn("[Skullcrusher] Rappel des défis :", e));
       // Retour de la page de connexion Spotify (?code=...), s'il y en a un.
       if (/[?&](code|error)=/.test(location.search)) {
         import("./spotify-connect.js")

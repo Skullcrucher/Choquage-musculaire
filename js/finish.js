@@ -156,7 +156,7 @@ export async function openFinishDialog(workout, summary) {
     import("./spotify-connect.js").then(async m => {
       if (!(await m.isSpotifyConnected())) return null;
       const [nowPlaying, tracks] = await Promise.all([m.getNowPlaying(), m.getTracksSince(new Date(workout.start_time).getTime())]);
-      return { nowPlaying, tracks };
+      return { nowPlaying, tracks, denied: m.spotifyAccessDenied() };
     }).catch(() => null),
     db.getProfile(db.getCurrentUser()?.uid).catch(() => null),
     partnerChoices(workout).catch(() => ({ friends: [], preselected: new Set() })),
@@ -191,6 +191,7 @@ export async function openFinishDialog(workout, summary) {
       <label>🎧 ${t("Playlist de la séance (facultatif)")}</label>
       <input id="fin-playlist" placeholder="${t("Lien de playlist (Spotify, Apple Music, Deezer)")}" value="${esc(defaultPlaylist)}" inputmode="url">
 
+      ${spotify?.denied ? `<p class="muted" style="font-size:12px; margin:8px 0 0; color:var(--red);">⚠️ ${t("Bande-son indisponible : Spotify refuse l'accès à ton compte depuis l'app partagée. Réglages → Spotify pour régler ça en quelques minutes.")}</p>` : ""}
       ${tracks.length ? `
         <label class="list-row" style="cursor:pointer; margin-top:10px;">
           <span>🎶 ${tn(Math.min(tracks.length, MAX_SOUNDTRACK), "Joindre la bande-son ({n} morceau écouté)", "Joindre la bande-son ({n} morceaux écoutés)")}</span>

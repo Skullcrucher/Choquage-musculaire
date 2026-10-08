@@ -13,6 +13,7 @@ import { weekSessions } from "./week-sessions.js";
 import { normalizePlaylistUrl, spotifyEmbed } from "./music.js";
 import { openProfile } from "./profile.js";
 import { t, locale } from "./i18n.js";
+import { gradeBadgeHtml } from "./xp.js";
 
 const METRICS = {
   // i18n-keys: "Score", "Tonnage", "Séances", "Séries"
@@ -23,6 +24,8 @@ const METRICS = {
 };
 // Le score (équilibré) est la mesure par défaut et désigne le vainqueur.
 let metric = "score";
+// Classement : toute la communauté (par défaut) ou entre amis.
+let scope = "all";
 
 const DAY = 24 * 3600 * 1000;
 const weekOf = (date) => isoWeek(date.toISOString());
@@ -124,9 +127,9 @@ export async function renderChallenges(container) {
     container.innerHTML = `
       ${wc.html}
       <div class="card">
-        <div class="card-title">🏆 ${t("Défis entre amis")}</div>
-        <p class="muted" style="margin-top:0;">${t("Chaque semaine, un classement entre toi et tes amis. Le score récompense la régularité et ta progression par rapport à toi-même : débutant ou confirmé, tout le monde peut gagner. Le vainqueur de la semaine choisit la <b>playlist de la semaine</b> pour tout le monde.")}</p>
-        <p class="muted" style="font-size:13px;">${t("En participant, seuls tes totaux de la semaine sont visibles par tes amis — tes séances restent privées.")}</p>
+        <div class="card-title">🏆 ${t("Le classement de la semaine")}</div>
+        <p class="muted" style="margin-top:0;">${t("Chaque semaine, un classement ouvert à toute la communauté (et entre amis). Le score récompense la régularité et ta progression par rapport à toi-même : débutant ou confirmé, tout le monde peut gagner. Le podium est dévoilé le dimanche sur le Feed, et le vainqueur choisit la <b>playlist de la semaine</b>.")}</p>
+        <p class="muted" style="font-size:13px;">${t("En participant, seuls tes totaux de la semaine sont visibles — tes séances restent privées.")}</p>
         <button class="btn btn-primary" id="ch-join">${t("Participer aux défis")}</button>
       </div>`;
     wcMod.bindWeeklyChallenge(container, redraw);
@@ -149,9 +152,15 @@ export async function renderChallenges(container) {
   // Avancement sur le défi de la semaine, visible par les amis participants.
   mine.wc = wc.challenge ? { week: wc.challenge.week, value: wc.challenge.value, target: wc.challenge.target, done: wc.challenge.done } : null;
   db.updatePublicProfile({ challenge: mine }).catch(() => null);
-  const profiles = await db.getProfiles(friendUids);
   const me = { ...(myProfile || {}), uid: myUid, challenge: { ...(myProfile?.challenge || {}), ...mine } };
-  const people = [me, ...friendUids.map(uid => ({ uid, ...(profiles[uid] || {}) }))].filter(p => p.challenge?.opt_in);
+  let others;
+  if (scope === "all") {
+    others = (await db.listChallengeProfiles().catch(() => [])).filter(p => p.uid !== myUid);
+  } else {
+    const profiles = await db.getProfiles(friendUids);
+    others = friendUids.map(uid => ({ uid, ...(profiles[uid] || {}) }));
+  }
+  const people = [me, ...others].filter(p => p.challenge?.opt_in);
 
   const cw = currentWeek(), lw = lastWeek();
   const board = people.map(p => ({ p, s: statsFor(p, cw) })).sort(byMetric(metric));
@@ -187,6 +196,10 @@ export async function renderChallenges(container) {
 
     <div class="card">
       <div class="card-title">${t("Classement de la semaine")}</div>
+      <div class="chip-row" id="ch-scope" style="margin-bottom:6px;">
+        <div class="chip ${scope === "all" ? "active" : ""}" data-scope="all">🌍 ${t("Tout le monde")}</div>
+        <div class="chip ${scope === "friends" ? "active" : ""}" data-scope="friends">👥 ${t("Amis")}</div>
+      </div>
       <div class="chip-row" id="ch-metrics">
         ${Object.entries(METRICS).map(([k, m]) => `<div class="chip ${k === metric ? "active" : ""}" data-metric="${k}">${t(m.label)}</div>`).join("")}
       </div>
@@ -196,11 +209,11 @@ export async function renderChallenges(container) {
           <div style="display:flex; align-items:center; gap:10px; min-width:0; cursor:pointer;" data-profile="${esc(x.p.uid)}">
             <span class="num" style="width:22px; color:${i === 0 && x.s[metric] > 0 ? "var(--amber)" : "var(--text-dim)"};">${i + 1}</span>
             ${avatar(x.p)}
-            <span class="list-row-title" style="overflow:hidden; text-overflow:ellipsis;">${esc(x.p.uid === myUid ? t("Toi") : x.p.display_name || t("Utilisateur"))}${i === 0 && x.s[metric] > 0 ? " 🔥" : ""}</span>
+            <span class="list-row-title" style="overflow:hidden; text-overflow:ellipsis;">${esc(x.p.uid === myUid ? t("Toi") : x.p.display_name || t("Utilisateur"))}${i === 0 && x.s[metric] > 0 ? " 🔥" : ""}</span>${gradeBadgeHtml(x.p.xp)}
           </div>
           <span class="list-row-meta" style="font-weight:700; color:var(--text); white-space:nowrap;">${metric === "score" && progressLabel(x.s) ? `<span class="muted" style="font-size:11px; font-weight:600;">${esc(progressLabel(x.s))}</span> ` : ""}${fmt(x.s[metric], metric)}</span>
         </div>`).join("")}
-      ${people.length < 2 ? `<p class="muted" style="margin-bottom:0;">${friendUids.length ? t("Aucun de tes amis ne participe encore : invite-les à rejoindre les défis !") : t("Ajoute des amis (onglet 👥 Amis) pour vous défier.")}</p>` : ""}
+      ${people.length < 2 ? `<p class="muted" style="margin-bottom:0;">${scope === "all" ? t("Tu es le premier participant : invite la communauté à te rejoindre !") : friendUids.length ? t("Aucun de tes amis ne participe encore : invite-les à rejoindre les défis !") : t("Ajoute des amis (onglet 👥 Amis) pour vous défier.")}</p>` : ""}
       <p class="muted" style="font-size:12px; margin-bottom:0;">${t("Semaine {n} · les totaux des amis se mettent à jour après chacune de leurs séances.", { n: esc(cw.split("-W")[1]) })}</p>
     </div>
 
@@ -209,6 +222,7 @@ export async function renderChallenges(container) {
 
   wcMod.bindWeeklyChallenge(container, redraw);
   container.querySelectorAll("[data-metric]").forEach(c => c.onclick = () => { metric = c.dataset.metric; renderChallenges(container); });
+  container.querySelectorAll("#ch-scope [data-scope]").forEach(c => c.onclick = () => { scope = c.dataset.scope; renderChallenges(container); });
   container.querySelectorAll("[data-profile]").forEach(el => el.onclick = () => openProfile(el.dataset.profile));
   const setBtn = container.querySelector("#ch-set-playlist");
   if (setBtn) setBtn.onclick = async () => {
@@ -223,4 +237,35 @@ export async function renderChallenges(container) {
     await db.updatePublicProfile({ challenge: { opt_in: false, weekly: null, prev: null } });
     renderChallenges(container);
   };
+}
+
+// ---------- Podium du dimanche (Feed) ----------
+// Dimanche : podium de la semaine (provisoire, jusqu'à minuit) ; lundi :
+// podium final de la semaine passée. Toute la communauté participante.
+export async function podiumHtml(now = new Date()) {
+  const dow = now.getDay();
+  if (dow !== 0 && dow !== 1) return null;
+  const week = dow === 0 ? weekOf(now) : weekOf(new Date(now.getTime() - 7 * DAY));
+  const myUid = db.getCurrentUser()?.uid;
+  const people = await db.listChallengeProfiles().catch(() => []);
+  const ranked = people.map(p => ({ p, s: statsFor(p, week) })).filter(x => x.s && x.s.score > 0)
+    .sort(byMetric("score")).slice(0, 3);
+  const meIn = people.some(p => p.uid === myUid);
+  const step = (x, place) => x ? `
+    <div class="podium-step p${place}" data-profile="${esc(x.p.uid)}" role="button">
+      <div class="podium-medal">${["🥇", "🥈", "🥉"][place - 1]}</div>
+      ${avatar(x.p, place === 1 ? 64 : 50)}
+      <div class="podium-name">${esc(x.p.uid === myUid ? t("Toi") : x.p.display_name || t("Utilisateur"))}</div>
+      ${gradeBadgeHtml(x.p.xp)}
+      <div class="podium-score">${x.s.score} pts</div>
+      <div class="podium-block">${place}</div>
+    </div>` : `<div class="podium-step p${place} empty"><div class="podium-block">${place}</div></div>`;
+  return `
+    <div class="card podium-card">
+      <div class="podium-title">🏆 ${dow === 0 ? t("Podium de la semaine") : t("Podium final de la semaine dernière")}</div>
+      <div class="muted" style="font-size:12px; text-align:center; margin-bottom:10px;">${dow === 0 ? t("Classement provisoire : tout se joue jusqu'à ce soir minuit !") : t("Bravo aux champions ! Une nouvelle semaine commence.")}</div>
+      ${ranked.length ? `<div class="podium">${step(ranked[1], 2)}${step(ranked[0], 1)}${step(ranked[2], 3)}</div>`
+        : `<p class="muted" style="text-align:center;">${t("Personne sur le podium pour l'instant : une séance suffit pour y monter !")}</p>`}
+      <button class="btn btn-secondary btn-sm" id="podium-go" style="margin-top:10px;">${meIn ? t("Voir le classement complet") : t("Participer au classement")}</button>
+    </div>`;
 }
