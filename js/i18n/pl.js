@@ -1458,5 +1458,10 @@ export default {
   "Platine": "Platyna",
   "Diamant": "Diament",
   "Mythique": "Mityczny",
-  "Légendaire": "Legendarny"
+  "Légendaire": "Legendarny",
+  "Bande-son indisponible : Spotify refuse l'accès à ton compte depuis l'app partagée. Réglages → Spotify pour régler ça en quelques minutes.": "Ścieżka dźwiękowa niedostępna: Spotify odmawia dostępu do twojego konta przez wspólną aplikację. Ustawienia → Spotify, by to naprawić w kilka minut.",
+  "L'app Spotify partagée est en mode développement : Spotify n'y autorise que quelques comptes ajoutés à la main. Crée ta propre app ci-dessous (5 minutes), ou envoie l'e-mail de ton compte Spotify à l'administrateur pour qu'il t'ajoute.": "Wspólna aplikacja Spotify działa w trybie deweloperskim: Spotify dopuszcza tylko kilka ręcznie dodanych kont. Utwórz własną aplikację poniżej (5 minut) albo wyślij administratorowi e-mail swojego konta Spotify, aby cię dodał.",
+  "Les morceaux écoutés seront joints à tes séances.": "Słuchane utwory będą dołączane do twoich treningów.",
+  "Spotify refuse l'accès à ton compte.": "Spotify odmawia dostępu do twojego konta.",
+  "Vérifie que ton compte Spotify est ajouté dans ton app (Dashboard → User Management) et qu'il est Premium.": "Sprawdź, czy twoje konto Spotify jest dodane w aplikacji (Dashboard → User Management) i czy ma Premium."
 };

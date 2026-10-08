@@ -28,6 +28,7 @@ export function workoutMusicHtml(w) {
         ${playlist ? `<span class="song-link" data-playlist-url="${esc(playlist.url)}" data-playlist-title="${t("Playlist de la séance")}">${providerIcon(playlist)} ${t("Playlist de la séance")}</span>` : ""}
         ${nbTracks ? `<span class="muted">🎶 ${tn(nbTracks, "{n} morceau écouté", "{n} morceaux écoutés")}</span>` : ""}
       </div>` : ""}
+      ${nbTracks ? `<div class="feed-tracks">${w.soundtrack.tracks.filter(tr => parseMusicLink(tr.url)).slice(0, 3).map(tr => `<span>${songHtml({ url: tr.url, source: "spotify" })}</span>`).join("")}${nbTracks > 3 ? `<span class="muted">${tn(nbTracks - 3, "+{n} autre", "+{n} autres")}</span>` : ""}</div>` : ""}
     </div>`;
 }
 

@@ -1448,5 +1448,10 @@ export default {
   "Platine": "Platinn",
   "Diamant": "Dyaman",
   "Mythique": "Mitik",
-  "Légendaire": "Lezander"
+  "Légendaire": "Lezander",
+  "Bande-son indisponible : Spotify refuse l'accès à ton compte depuis l'app partagée. Réglages → Spotify pour régler ça en quelques minutes.": "Band-son pa disponib : Spotify refiz akse to kont depi app partaze-la. Reglaz → Spotify pou ranz sa dan enn de-trwa minit.",
+  "L'app Spotify partagée est en mode développement : Spotify n'y autorise que quelques comptes ajoutés à la main. Crée ta propre app ci-dessous (5 minutes), ou envoie l'e-mail de ton compte Spotify à l'administrateur pour qu'il t'ajoute.": "App Spotify partaze-la an mod devlopman : Spotify zis otoriz enn de-trwa kont azoute alamin. Kree to prop app anba (5 minit), ouswa avoy imel to kont Spotify ar administrater pou li azout twa.",
+  "Les morceaux écoutés seront joints à tes séances.": "Bann morso ki to ekoute pou azoute dan to bann seans.",
+  "Spotify refuse l'accès à ton compte.": "Spotify refiz akse to kont.",
+  "Vérifie que ton compte Spotify est ajouté dans ton app (Dashboard → User Management) et qu'il est Premium.": "Verifye ki to kont Spotify azoute dan to app (Dashboard → User Management) ek ki li Premium."
 };

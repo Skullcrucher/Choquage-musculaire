@@ -169,13 +169,39 @@ async function refreshAccess(retry = true) {
   }
 }
 
+// Compte refusé par Spotify (403) : l'app Spotify partagée est en « mode
+// développement », où Spotify n'autorise que les comptes ajoutés à la main
+// par son propriétaire. La connexion semble réussir mais toute lecture est
+// refusée : on le détecte pour l'expliquer au lieu d'échouer en silence.
+let accessDenied = false;
+export const spotifyAccessDenied = () => accessDenied;
+
 async function api(path) {
   const token = await getAccessToken();
   if (!token) return null;
   const res = await fetch(`https://api.spotify.com/v1${path}`, { headers: { Authorization: `Bearer ${token}` } });
-  if (res.status === 204) return null;
+  if (res.status === 204) { accessDenied = false; return null; }
+  if (res.status === 403) {
+    accessDenied = true;
+    db.setPrivateData({ spotify_denied_at: new Date().toISOString() }).catch(() => null);
+    throw new Error("Spotify 403");
+  }
   if (!res.ok) throw new Error(`Spotify ${res.status}`);
+  accessDenied = false;
   return res.json();
+}
+
+// Vérifie que Spotify accepte de lire l'historique d'écoute de ce compte.
+// Renvoie "ok", "denied" (compte non autorisé sur l'app), "disconnected"
+// ou "error" (réseau, Spotify indisponible).
+export async function checkSpotifyAccess() {
+  try {
+    const data = await api("/me/player/recently-played?limit=1");
+    if (data === null && !(await getAccessToken())) return "disconnected";
+    return "ok";
+  } catch (e) {
+    return accessDenied ? "denied" : "error";
+  }
 }
 
 function toSong(track) {

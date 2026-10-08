@@ -1489,3 +1489,8 @@ html.desktop .mw-pls { display: grid; grid-template-columns: 1fr 1fr; }
 .ch-reminder-box { text-align: left; background: var(--surface-raised); border-radius: var(--radius); padding: 10px 12px; margin-top: 8px; }
 .ch-reminder-k { font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-dim); }
 .ch-reminder-v { font-weight: 700; font-size: 15px; margin-top: 2px; }
+
+/* Bande-son d'une séance : titres (lisibles partout, même sans lecteur intégré). */
+.soundtrack-list { margin: 6px 0 0; padding-left: 22px; display: grid; gap: 6px; font-size: 14px; }
+.soundtrack-list li { padding-left: 2px; }
+.feed-tracks { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; font-size: 13px; }

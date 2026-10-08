@@ -1449,5 +1449,10 @@ export default {
   "Platine": "Platinum",
   "Diamant": "Diamond",
   "Mythique": "Mythic",
-  "Légendaire": "Legendary"
+  "Légendaire": "Legendary",
+  "Bande-son indisponible : Spotify refuse l'accès à ton compte depuis l'app partagée. Réglages → Spotify pour régler ça en quelques minutes.": "Soundtrack unavailable: Spotify denies access to your account through the shared app. Settings → Spotify to fix it in a few minutes.",
+  "L'app Spotify partagée est en mode développement : Spotify n'y autorise que quelques comptes ajoutés à la main. Crée ta propre app ci-dessous (5 minutes), ou envoie l'e-mail de ton compte Spotify à l'administrateur pour qu'il t'ajoute.": "The shared Spotify app is in development mode: Spotify only allows a few manually added accounts. Create your own app below (5 minutes), or send your Spotify account email to the administrator so they can add you.",
+  "Les morceaux écoutés seront joints à tes séances.": "Tracks you listen to will be attached to your workouts.",
+  "Spotify refuse l'accès à ton compte.": "Spotify denies access to your account.",
+  "Vérifie que ton compte Spotify est ajouté dans ton app (Dashboard → User Management) et qu'il est Premium.": "Check that your Spotify account is added in your app (Dashboard → User Management) and that it is Premium."
 };
