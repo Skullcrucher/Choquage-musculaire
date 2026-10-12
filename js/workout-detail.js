@@ -132,9 +132,9 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
       ${Object.entries(byExercise).map(([name, exSets]) => `
         <div style="margin-bottom:12px;">
           <div class="wd-ex-name" data-wd-ex="${esc(name)}" role="button" tabindex="0">${esc(name)} <span class="ex-trend" data-wd-trend="${esc(name)}"></span><span class="wd-ex-go">›</span></div>
-          ${exSets.sort((a, b) => a.set_index - b.set_index).map(s => `
+          ${exSets.sort((a, b) => a.set_index - b.set_index).map((s, i) => `
             <div class="muted" style="display:flex; justify-content:space-between; padding:3px 0;">
-              <span>${t("Série {n}", { n: esc(s.set_index) })} ${s.set_type !== "normal" ? "· " + esc(setTypeLabel(s.set_type)) : ""}${s.rpe ? ` · RPE ${esc(String(s.rpe).replace(".", ","))}` : ""}</span>
+              <span>${t("Série {n}", { n: i + 1 })} ${s.set_type !== "normal" ? "· " + esc(setTypeLabel(s.set_type)) : ""}${s.rpe ? ` · RPE ${esc(String(s.rpe).replace(".", ","))}` : ""}</span>
               <span>${esc(s.weight_kg ?? "—")} kg × ${esc(s.reps ?? "—")}${s.unilateral ? ` ${t("/côté")}` : ""}${s.weight_kg && s.reps ? ` (1RM ${estimate1RM(s.weight_kg, s.reps)} kg)` : ""}</span>
             </div>
           `).join("")}

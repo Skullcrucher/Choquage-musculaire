@@ -1485,5 +1485,21 @@ export default {
   "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} imported sets aren't counted (Settings: stats on Skullcrusher workouts only).",
   "Historique importé ou non, début de semaine": "Imported history or not, week start",
   "Statistiques et calendrier": "Statistics and calendar",
-  "Calculé le {date}.": "Calculated on {date}."
+  "Calculé le {date}.": "Calculated on {date}.",
+  "Aucune charge dans ce fichier : la colonne des poids est vide. Les séances sont importées, mais sans kilos (tonnage et 1RM à zéro).": "No load in this file: the weight column is empty. Workouts are imported without kilos (tonnage and 1RM at zero).",
+  "Aucune colonne de charge (weight_kg ou weight_lbs) dans ce fichier : les séances sont importées sans kilos (tonnage et 1RM à zéro).": "No load column (weight_kg or weight_lbs) in this file: workouts are imported without kilos (tonnage and 1RM at zero).",
+  "Ces séances importées sont des copies de séances faites dans l'app au même moment : les originales sont conservées.": "These imported workouts are copies of workouts done in the app at the same time: the originals are kept.",
+  "Supprimer les doublons importés ?": "Delete imported duplicates?",
+  "Supprimer les doublons importés": "Delete imported duplicates",
+  "Supprimer les doublons": "Delete duplicates",
+  "Séance introuvable": "Workout not found",
+  "Séances avec cet exercice": "Workouts with this exercise",
+  "doublon": "duplicate",
+  "importée": "imported",
+  "meilleure : {kg} kg × {reps}": "best: {kg} kg × {reps}",
+  "sans charges": "no loads",
+  "{n} doublon supprimé": "{n} duplicate deleted",
+  "{n} doublons supprimés": "{n} duplicates deleted",
+  "{n} séance importée en double d'une séance faite dans l'app.": "{n} imported workout duplicates a workout done in the app.",
+  "{n} séances importées en double de séances faites dans l'app.": "{n} imported workouts duplicate workouts done in the app."
 };

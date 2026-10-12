@@ -1484,5 +1484,21 @@ export default {
   "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} seri importe pa konte (Reglaz : stat lor seans Skullcrusher selman).",
   "Historique importé ou non, début de semaine": "Listorik importe ou non, konmansman semenn",
   "Statistiques et calendrier": "Statistik ek kalandrie",
-  "Calculé le {date}.": "Kalkile le {date}."
+  "Calculé le {date}.": "Kalkile le {date}.",
+  "Aucune charge dans ce fichier : la colonne des poids est vide. Les séances sont importées, mais sans kilos (tonnage et 1RM à zéro).": "Pena sarz dan sa fisie-la : kolonn pwa vid. Bann seans importe san kilo (tonaz ek 1RM a zero).",
+  "Aucune colonne de charge (weight_kg ou weight_lbs) dans ce fichier : les séances sont importées sans kilos (tonnage et 1RM à zéro).": "Pena kolonn sarz (weight_kg ou weight_lbs) dan sa fisie-la : bann seans importe san kilo (tonaz ek 1RM a zero).",
+  "Ces séances importées sont des copies de séances faites dans l'app au même moment : les originales sont conservées.": "Sa bann seans importe-la se kopi bann seans fer dan app mem ler : bann orizinal res garde.",
+  "Supprimer les doublons importés ?": "Efas bann doub importe ?",
+  "Supprimer les doublons importés": "Efas bann doub importe",
+  "Supprimer les doublons": "Efas bann doub",
+  "Séance introuvable": "Seans pa trouve",
+  "Séances avec cet exercice": "Seans avek sa lexersis-la",
+  "doublon": "doub",
+  "importée": "importe",
+  "meilleure : {kg} kg × {reps}": "meyer : {kg} kg × {reps}",
+  "sans charges": "san sarz",
+  "{n} doublon supprimé": "{n} doub efase",
+  "{n} doublons supprimés": "{n} doub efase",
+  "{n} séance importée en double d'une séance faite dans l'app.": "{n} seans importe an doub enn seans fer dan app.",
+  "{n} séances importées en double de séances faites dans l'app.": "{n} seans importe an doub bann seans fer dan app."
 };

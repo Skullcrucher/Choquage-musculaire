@@ -1494,5 +1494,21 @@ export default {
   "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} zaimportowanych serii nie jest liczonych (Ustawienia: statystyki tylko z treningów Skullcrusher).",
   "Historique importé ou non, début de semaine": "Historia z importem lub bez, początek tygodnia",
   "Statistiques et calendrier": "Statystyki i kalendarz",
-  "Calculé le {date}.": "Obliczono {date}."
+  "Calculé le {date}.": "Obliczono {date}.",
+  "Aucune charge dans ce fichier : la colonne des poids est vide. Les séances sont importées, mais sans kilos (tonnage et 1RM à zéro).": "Brak obciążeń w pliku: kolumna ciężaru jest pusta. Treningi zaimportowano bez kilogramów (tonaż i 1RM równe zero).",
+  "Aucune colonne de charge (weight_kg ou weight_lbs) dans ce fichier : les séances sont importées sans kilos (tonnage et 1RM à zéro).": "Brak kolumny obciążenia (weight_kg lub weight_lbs) w pliku: treningi zaimportowano bez kilogramów (tonaż i 1RM równe zero).",
+  "Ces séances importées sont des copies de séances faites dans l'app au même moment : les originales sont conservées.": "Te zaimportowane treningi to kopie treningów wykonanych w aplikacji w tym samym czasie: oryginały zostają zachowane.",
+  "Supprimer les doublons importés ?": "Usunąć zaimportowane duplikaty?",
+  "Supprimer les doublons importés": "Usuń zaimportowane duplikaty",
+  "Supprimer les doublons": "Usuń duplikaty",
+  "Séance introuvable": "Nie znaleziono treningu",
+  "Séances avec cet exercice": "Treningi z tym ćwiczeniem",
+  "doublon": "duplikat",
+  "importée": "zaimportowany",
+  "meilleure : {kg} kg × {reps}": "najlepsza: {kg} kg × {reps}",
+  "sans charges": "bez obciążeń",
+  "{n} doublon supprimé": "Usunięto {n} duplikat",
+  "{n} doublons supprimés": "Usunięto {n} duplikatów",
+  "{n} séance importée en double d'une séance faite dans l'app.": "{n} zaimportowany trening dubluje trening z aplikacji.",
+  "{n} séances importées en double de séances faites dans l'app.": "{n} zaimportowanych treningów dubluje treningi z aplikacji."
 };

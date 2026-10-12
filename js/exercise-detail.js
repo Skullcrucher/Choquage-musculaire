@@ -1,8 +1,8 @@
 // ============================================================
 // FICHE D'EXERCICE — muscles, conseils, vidéo, historique
 // ============================================================
-import { openModal, closeModal, estimate1RM, isoWeek, fmtDateTime, esc, healthNoteHtml, statsAppOnly } from "./utils.js";
-import { getSetsForExercise } from "./cache.js";
+import { openModal, closeModal, estimate1RM, isoWeek, fmtDateTime, esc, healthNoteHtml, statsAppOnly, toast } from "./utils.js";
+import { getSetsForExercise, getWorkouts } from "./cache.js";
 import { EXERCISE_GUIDES } from "./exercise-guides.js";
 import { t, tn, getLang } from "./i18n.js";
 import { exerciseTrend, trendBadgeHtml, trendDetail } from "./trend.js";
@@ -17,6 +17,19 @@ let detailChart = null;
 // i18n-keys: "À la poulie : garde une tension constante sur le muscle, évite de relâcher en fin de mouvement."
 
 // onClose : appelé à la fermeture (ex. rouvrir la séance d'où l'on vient).
+// Séries regroupées par séance (la plus récente d'abord), avec la
+// meilleure série (1RM estimée) de chacune.
+function sessionsOf(sets) {
+  const by = new Map();
+  sets.forEach(s => {
+    const id = s.workout_id || s.workout_start_time;
+    if (!by.has(id)) by.set(id, { id, start: s.workout_start_time, sets: [] });
+    by.get(id).sets.push(s);
+  });
+  return [...by.values()].map(x => ({ ...x, best: x.sets.reduce((b, s) => estimate1RM(s.weight_kg, s.reps) > estimate1RM(b.weight_kg, b.reps) ? s : b) }))
+    .sort((a, b) => String(b.start).localeCompare(String(a.start)));
+}
+
 export async function openExerciseDetail(exerciseName, muscleGroupFallback = "", { onClose = null } = {}) {
   const guide = EXERCISE_GUIDES[exerciseName];
   const [rawSets, allSets] = await Promise.all([getSetsForExercise(exerciseName), getSetsForExercise(exerciseName, { raw: true })]);
@@ -75,11 +88,13 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "",
         </div>
         <canvas id="detail-chart" height="160"></canvas>
         ${healthNoteHtml()}
-        <div style="margin-top:10px;">
-          ${sets.slice(0, 6).map(s => `
-            <div class="list-row" style="cursor:default;">
-              <div class="list-row-sub">${fmtDateTime(s.workout_start_time)}</div>
-              <div class="list-row-meta">${s.weight_kg} kg × ${s.reps}</div>
+        <div class="muted" style="margin:14px 0 4px;">${t("Séances avec cet exercice")}</div>
+        <div id="ex-sessions">
+          ${sessionsOf(sets).slice(0, 12).map(x => `
+            <div class="list-row" data-ex-w="${esc(x.id)}" role="button" style="cursor:pointer;">
+              <div><div class="list-row-title" data-ex-wtitle="${esc(x.id)}">${fmtDateTime(x.start)}</div>
+                <div class="list-row-sub">${tn(x.sets.length, "{n} série", "{n} séries")} · ${t("meilleure : {kg} kg × {reps}", { kg: esc(x.best.weight_kg), reps: esc(x.best.reps) })}${x.best.unilateral ? ` ${t("/côté")}` : ""}</div></div>
+              <div class="list-row-meta">${estimate1RM(x.best.weight_kg, x.best.reps)} kg ›</div>
             </div>
           `).join("")}
         </div>
@@ -95,6 +110,20 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "",
     const shareBtn = modalEl.querySelector("#detail-share");
     if (shareBtn) shareBtn.onclick = async () => { closeModal(); (await import("./share-card.js")).openShareCard({ kind: "exercise", exercise: exerciseName }); };
     if (sets.length) renderDetailChart(modalEl, sets);
+    // Séances : titre, puis ouverture du détail au toucher.
+    getWorkouts().then(ws => {
+      const byId = new Map(ws.map(w => [w.id, w]));
+      modalEl.querySelectorAll("[data-ex-wtitle]").forEach(el => {
+        const w = byId.get(el.dataset.exWtitle);
+        if (w) el.textContent = `${w.title || t("Séance")} · ${fmtDateTime(w.start_time)}`;
+      });
+      modalEl.querySelectorAll("[data-ex-w]").forEach(row => row.onclick = async () => {
+        const w = byId.get(row.dataset.exW);
+        if (!w) { toast(t("Séance introuvable")); return; }
+        closeModal();
+        (await import("./workout-detail.js")).openWorkoutDetail(w, () => {});
+      });
+    }).catch(() => null);
   });
 }
 

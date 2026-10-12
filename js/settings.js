@@ -557,6 +557,9 @@ export async function renderReglages(container) {
             ${t("{n} doublon(s) ignoré(s)", { n: stats.setsSkippedDuplicate })}
             ${stats.errors ? ` · ${t("{n} erreur(s)", { n: stats.errors })}` : ""}
           </p>
+          ${stats.rowsTotal && !stats.rowsWithWeight ? `<p style="color:var(--red)">⚠️ ${stats.weightColumn
+            ? t("Aucune charge dans ce fichier : la colonne des poids est vide. Les séances sont importées, mais sans kilos (tonnage et 1RM à zéro).")
+            : t("Aucune colonne de charge (weight_kg ou weight_lbs) dans ce fichier : les séances sont importées sans kilos (tonnage et 1RM à zéro).")}</p>` : ""}
           ${stats.errors ? `<p style="color:var(--red)">${t("Une partie de l'import a échoué{detail}. Relance l'import : ce qui est déjà enregistré sera ignoré.", { detail: stats.lastError ? ` (${esc(stats.lastError)})` : "" })}</p>` : ""}
           <p class="muted">${t("Tes séances importées sont privées. Ouvre une séance dans l'Historique pour la partager sur le feed.")}</p>
         `;

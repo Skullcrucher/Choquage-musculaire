@@ -1499,3 +1499,9 @@ html.desktop .mw-pls { display: grid; grid-template-columns: 1fr 1fr; }
 .wd-ex-name { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; margin-bottom: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
 .wd-ex-name:active { opacity: 0.6; }
 .wd-ex-go { margin-left: auto; color: var(--amber); font-weight: 700; }
+/* Historique : séances importées et doublons */
+.hist-tag { font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: var(--surface-raised); color: var(--text-dim); vertical-align: 2px; white-space: nowrap; }
+.hist-tag.dup { color: var(--orange); background: rgba(240,162,59,0.14); }
+.list-row.hist-dup { opacity: 0.7; }
+.hist-dups { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; margin-bottom: 8px; border-radius: var(--radius); border: 1px solid var(--orange); background: rgba(240,162,59,0.08); font-size: 13px; }
+.hist-dups .btn { align-self: flex-start; }

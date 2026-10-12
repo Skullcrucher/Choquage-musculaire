@@ -109,9 +109,11 @@ export function parseCsvText(csvText) {
     lastExKey = exKey;
     lastSetIndex = setIndex;
 
-    const lbs = num(r.weight_lbs);
+    // Charge : colonnes Hevy (weight_kg / weight_lbs) ou variantes courantes.
+    const kgCell = r.weight_kg ?? r["weight (kg)"] ?? r.weight ?? r.poids ?? r.charge ?? r["poids (kg)"];
+    const lbs = num(r.weight_lbs ?? r["weight (lbs)"]);
     const miles = num(r.distance_miles);
-    const weightKg = num(r.weight_kg) ?? (lbs != null ? Math.round(lbs * LBS_TO_KG * 100) / 100 : null);
+    const weightKg = num(kgCell) ?? (lbs != null ? Math.round(lbs * LBS_TO_KG * 100) / 100 : null);
     const distanceKm = num(r.distance_km) ?? (miles != null ? Math.round(miles * MILES_TO_KM * 1000) / 1000 : null);
     const reps = num(r.reps);
     const duration = num(r.duration_seconds);
@@ -153,5 +155,11 @@ export async function importCsvFile(file, onProgress) {
     }
     throw new Error(t("Aucune ligne exploitable trouvée dans ce fichier."));
   }
-  return await importRows(rows, onProgress);
+  const stats = await importRows(rows, onProgress);
+  // Fichier sans aucune charge (colonne absente ou vide) : on le signale,
+  // sinon les stats de ces séances restent à zéro sans explication.
+  stats.rowsWithWeight = rows.filter(r => r.weight_kg != null).length;
+  stats.rowsTotal = rows.length;
+  stats.weightColumn = headers.some(h => /^(weight|poids|charge)/i.test(h));
+  return stats;
 }

@@ -2,11 +2,13 @@
 // ONGLET HISTORIQUE — calendrier + liste des séances passées
 // (routines, plans et suivi du plan : onglet Séance)
 // ============================================================
-import { fmtDateTime, fmtDuration, esc, weekDows, weekStartsSunday, startOfWeek } from "./utils.js";
+import { fmtDateTime, fmtDuration, esc, weekDows, weekStartsSunday, startOfWeek, confirmDanger, toast } from "./utils.js";
+import * as db from "./db.js";
+import { sessionsBetween } from "./week-sessions.js";
 import { getBody, workoutCalories } from "./calories.js";
-import { getWorkouts, getRoutines } from "./cache.js";
+import { getWorkouts, getRoutines, invalidate } from "./cache.js";
 import { openWorkoutDetail } from "./workout-detail.js";
-import { t, locale } from "./i18n.js";
+import { t, tn, locale } from "./i18n.js";
 
 let viewMonth = new Date();
 let workoutsCache = [];
@@ -131,19 +133,49 @@ function renderList(container) {
   }
   const wrap = container.querySelector("#workout-list");
   const plannedName = selectedDay ? plannedDays(year, month).get(selectedDay) : null;
+  // Doublons : même séance enregistrée deux fois au même moment (souvent
+  // une copie importée d'une autre app, parfois sans charges). Une seule
+  // compte dans les stats ; on les signale et on propose de supprimer les
+  // copies importées.
+  const from = new Date(year, month, 1), to = new Date(year, month + 1, 1);
+  const dupOf = new Map(sessionsBetween(workoutsCache, from, to).duplicates.map(d => [d.w.id, d.twin]));
+  const importedDups = list.filter(w => dupOf.has(w.id) && w.imported_at);
   wrap.innerHTML = plannedName && !list.length
     ? `<div class="list-row cal-planned-row" style="cursor:default;"><div><div class="list-row-title">📅 ${esc(plannedName)}</div><div class="list-row-sub">${t("Séance prévue par ton plan")}</div></div></div>`
     : list.length === 0
     ? `<div class="empty-state muted" style="padding:20px;">${t("Aucune séance.")}</div>`
-    : list.map(w => `
-      <div class="list-row" data-w="${w.id}">
+    : (importedDups.length ? `<div class="hist-dups">⧉ ${tn(importedDups.length, "{n} séance importée en double d'une séance faite dans l'app.", "{n} séances importées en double de séances faites dans l'app.")}
+        <button class="btn btn-secondary btn-sm" id="del-dups">${t("Supprimer les doublons importés")}</button></div>` : "") +
+      list.map(w => `
+      <div class="list-row ${dupOf.has(w.id) ? "hist-dup" : ""}" data-w="${w.id}">
         <div>
-          <div class="list-row-title">${esc(w.title)}</div>
-          <div class="list-row-sub">${fmtDateTime(w.start_time)}${(w.partners || []).length ? " · 🤝" : ""}</div>
+          <div class="list-row-title">${esc(w.title)}${w.imported_at ? ` <span class="hist-tag">📥 ${t("importée")}</span>` : ""}${dupOf.has(w.id) ? ` <span class="hist-tag dup">⧉ ${t("doublon")}</span>` : ""}</div>
+          <div class="list-row-sub">${fmtDateTime(w.start_time)}${(w.partners || []).length ? " · 🤝" : ""}${w.total_sets ? ` · ${tn(w.total_sets, "{n} série", "{n} séries")}` : ""}${w.total_tonnage ? ` · ${Math.round(w.total_tonnage).toLocaleString(locale())} kg` : w.total_sets ? ` · ${t("sans charges")}` : ""}</div>
         </div>
         <div class="list-row-meta">${fmtDuration(w.start_time, w.end_time)}<div class="kcal-meta" data-kcal="${w.id}" style="font-size:11px;"></div></div>
       </div>
     `).join("");
+  const delDups = wrap.querySelector("#del-dups");
+  if (delDups) delDups.onclick = async () => {
+    const ok = await confirmDanger({
+      title: t("Supprimer les doublons importés ?"),
+      message: t("Ces séances importées sont des copies de séances faites dans l'app au même moment : les originales sont conservées."),
+      items: importedDups.map(w => `${esc(w.title)} · ${esc(fmtDateTime(w.start_time))}`),
+      confirmLabel: t("Supprimer les doublons"), cancelLabel: t("Annuler")
+    });
+    if (!ok) return;
+    delDups.disabled = true;
+    try {
+      for (const w of importedDups) await db.deleteWorkout(w.id);
+      invalidate("workouts", "sets");
+      toast(tn(importedDups.length, "{n} doublon supprimé", "{n} doublons supprimés"));
+      renderHistorique(histContainer?.isConnected ? histContainer : document.getElementById("view"), { embedded: histEmbedded && histContainer?.isConnected });
+    } catch (e) {
+      console.error("[Skullcrusher] Suppression des doublons", e);
+      toast(t("Suppression impossible, réessaie"));
+      delDups.disabled = false;
+    }
+  };
   // Calories (estimation ou montre), une fois les données corporelles lues.
   getBody().then(body => wrap.querySelectorAll("[data-kcal]").forEach(el => {
     const c = workoutCalories(list.find(w => w.id === el.dataset.kcal) || {}, body);
