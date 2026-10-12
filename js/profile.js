@@ -8,7 +8,7 @@
 // par un, chiffres globaux derrière une case à cocher.
 // ============================================================
 import * as db from "./db.js";
-import { openModal, closeModal, toast, esc, safeImageUrl, attachAutocomplete, estimate1RM } from "./utils.js";
+import { openModal, closeModal, toast, esc, safeImageUrl, attachAutocomplete, estimate1RM, statsWorkouts } from "./utils.js";
 import { getExercises, getWorkouts, getSetsForExercise, getSetsForPeriod } from "./cache.js";
 import { allTrends, trendBadgeHtml, trendDetail, TREND_DAYS } from "./trend.js";
 import { gradeBadgeHtml } from "./xp.js";
@@ -83,7 +83,7 @@ async function computeHighlight(exerciseName) {
 
 async function computePublicStats() {
   const { allSessions } = await import("./week-sessions.js");
-  const workouts = allSessions(await getWorkouts()); // terminées, sans doublon ni date future
+  const workouts = allSessions(statsWorkouts(await getWorkouts())); // terminées, sans doublon ni date future
   const since = new Date(Date.now() - 12 * WEEK_MS).toISOString().slice(0, 10);
   const recent = workouts.filter(w => (w.start_time || "") >= since).length;
   return {
@@ -117,7 +117,8 @@ export function profileModules(p) {
 //    régression et les plus fortes évolutions.
 // full : liste complète des tendances (affichée au propriétaire seulement).
 export async function computeShowcase() {
-  const [workouts, sets] = await Promise.all([getWorkouts(), getSetsForPeriod(13).catch(() => [])]);
+  const [allWorkouts, sets] = await Promise.all([getWorkouts(), getSetsForPeriod(13).catch(() => [])]);
+  const workouts = statsWorkouts(allWorkouts);
   const best = new Map();
   const consider = (exercise, kg, reps, date) => {
     if (!exercise || !(kg > 0) || !(reps > 0) || reps > 15) return;

@@ -1483,5 +1483,13 @@ export default {
   "{k}e séance de la semaine": "{k}. trening tygodnia",
   "{n} muscle reposé": "{n} wypoczęty mięsień",
   "{n} muscles reposés": "{n} wypoczętych mięśni",
-  "Retour à la séance": "Wróć do treningu"
+  "Retour à la séance": "Wróć do treningu",
+  "Les séances faites dans Skullcrusher uniquement": "Tylko treningi wykonane w Skullcrusher",
+  "Statistiques calculées sur": "Statystyki liczone na podstawie",
+  "Stats : séances Skullcrusher uniquement": "Statystyki: tylko treningi Skullcrusher",
+  "Stats : tout l'historique": "Statystyki: cała historia",
+  "Stats, graphiques, 1RM, tendances, records et profil. L'historique et le calendrier montrent toujours toutes tes séances.": "Statystyki, wykresy, 1RM, trendy, rekordy i profil. Historia i kalendarz zawsze pokazują wszystkie treningi.",
+  "Tout l'historique (imports compris)": "Cała historia (z importami)",
+  "{n} série importée n'est pas comptée (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} zaimportowana seria nie jest liczona (Ustawienia: statystyki tylko z treningów Skullcrusher).",
+  "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} zaimportowanych serii nie jest liczonych (Ustawienia: statystyki tylko z treningów Skullcrusher)."
 };

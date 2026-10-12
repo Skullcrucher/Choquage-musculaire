@@ -10,7 +10,7 @@
 // Aucun envoi à un serveur : l'image est fabriquée sur l'appareil.
 // ============================================================
 import * as db from "./db.js";
-import { openModal, closeModal, toast, esc, estimate1RM, isoWeek, safeImageUrl } from "./utils.js";
+import { openModal, closeModal, toast, esc, estimate1RM, isoWeek, safeImageUrl, statsWorkouts } from "./utils.js";
 import { getWorkouts, getSetsForPeriod, getSetsForExercise, getExercises } from "./cache.js";
 import { t, locale } from "./i18n.js";
 import { sessionsBetween, sessionMinutes } from "./week-sessions.js";
@@ -302,7 +302,7 @@ async function periodData(days) {
   const since = days ? Date.now() - days * 86400000 : 0;
   // Mêmes règles que le compteur de la semaine : terminées, pas dans le
   // futur, doublons comptés une fois.
-  const workouts = sessionsBetween(await getWorkouts(), new Date(since), new Date()).counted;
+  const workouts = sessionsBetween(statsWorkouts(await getWorkouts()), new Date(since), new Date()).counted;
   const sets = (await getSetsForPeriod(days ? Math.ceil(days / 7) + 1 : null))
     .filter(s => Date.parse(s.workout_start_time || 0) >= since && (s.weight_kg != null || s.reps != null));
   const library = await getExercises();

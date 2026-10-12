@@ -4,6 +4,7 @@
 // si elle est explicitement invalidée après une mutation.
 // ============================================================
 import * as db from "./db.js";
+import { statsAppOnly } from "./utils.js";
 
 const store = { exercises: null, routines: null, workouts: null, sets: null };
 const inflight = {}; // évite les doubles requêtes si deux onglets demandent en même temps
@@ -39,10 +40,12 @@ const getAllSetsRaw = (max = 50000) => cached("sets", () => db.listAllSets(max, 
 export function isImportedSet(s) {
   return s?.imported === true || (String(s?.id || "").startsWith("s_") && !s.logged_at);
 }
-export function reliableSets(list) {
+export function reliableSets(list, { ignoreScope = false } = {}) {
   const memo = new Map();
   const uni = (n) => { if (!memo.has(n)) memo.set(n, db.isUnilateral(n)); return memo.get(n); };
-  return (list || []).filter(s => !(isImportedSet(s) && !s.unilateral && uni(s.exercise_title)));
+  // Réglage « séances Skullcrusher uniquement » : aucune série importée.
+  const appOnly = !ignoreScope && statsAppOnly();
+  return (list || []).filter(s => !(isImportedSet(s) && (appOnly || (!s.unilateral && uni(s.exercise_title)))));
 }
 export const getAllSets = async (max = 50000, { raw = false } = {}) => {
   const list = await getAllSetsRaw(max);
@@ -84,9 +87,11 @@ async function getSetsForPeriodRaw(weeks) {
 // Séries d'un seul exercice : depuis l'historique complet s'il est déjà en
 // mémoire, sinon en ne téléchargeant que cet exercice — charger tout
 // l'historique (~10 000 séries) prend une quinzaine de secondes.
+// opts.ignoreScope : tout l'historique quel que soit le réglage des
+// statistiques (pré-remplissage des séries).
 export async function getSetsForExercise(exerciseName, opts = {}) {
   const list = await getSetsForExerciseRaw(exerciseName);
-  return opts.raw ? list : reliableSets(list);
+  return opts.raw ? list : reliableSets(list, opts);
 }
 async function getSetsForExerciseRaw(exerciseName) {
   if (store.sets) return store.sets.filter(s => s.exercise_title === exerciseName);
