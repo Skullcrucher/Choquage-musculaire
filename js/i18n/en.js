@@ -1454,5 +1454,15 @@ export default {
   "L'app Spotify partagée est en mode développement : Spotify n'y autorise que quelques comptes ajoutés à la main. Crée ta propre app ci-dessous (5 minutes), ou envoie l'e-mail de ton compte Spotify à l'administrateur pour qu'il t'ajoute.": "The shared Spotify app is in development mode: Spotify only allows a few manually added accounts. Create your own app below (5 minutes), or send your Spotify account email to the administrator so they can add you.",
   "Les morceaux écoutés seront joints à tes séances.": "Tracks you listen to will be attached to your workouts.",
   "Spotify refuse l'accès à ton compte.": "Spotify denies access to your account.",
-  "Vérifie que ton compte Spotify est ajouté dans ton app (Dashboard → User Management) et qu'il est Premium.": "Check that your Spotify account is added in your app (Dashboard → User Management) and that it is Premium."
+  "Vérifie que ton compte Spotify est ajouté dans ton app (Dashboard → User Management) et qu'il est Premium.": "Check that your Spotify account is added in your app (Dashboard → User Management) and that it is Premium.",
+  "Comment étaient notées les reps de « {name} » jusqu'ici ?": "How were the reps for \"{name}\" logged so far?",
+  "Déjà par côté → garder tel quel": "Already per side → keep as is",
+  "Je ne sais pas → ne rien changer": "I don't know → change nothing",
+  "Pour les inclure, active G|D en séance et indique comment elles étaient notées.": "To include them, turn on L|R during a workout and say how they were logged.",
+  "Si tu ne sais pas, les séries importées de cet exercice restent hors de tes statistiques.": "If you don't know, this exercise's imported sets stay out of your stats.",
+  "Total des deux côtés → diviser par 2": "Total of both sides → halve",
+  "{n} série gardée par côté": "{n} set kept per side",
+  "{n} séries gardées par côté": "{n} sets kept per side",
+  "{n} série importée n'est pas comptée : exercice unilatéral, on ne sait pas si elle était notée par côté ou au total.": "{n} imported set isn't counted: unilateral exercise, we can't tell if it was logged per side or in total.",
+  "{n} séries importées ne sont pas comptées : exercice unilatéral, on ne sait pas si elles étaient notées par côté ou au total.": "{n} imported sets aren't counted: unilateral exercise, we can't tell if they were logged per side or in total."
 };

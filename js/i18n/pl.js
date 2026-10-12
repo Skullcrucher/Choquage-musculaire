@@ -1463,5 +1463,15 @@ export default {
   "L'app Spotify partagée est en mode développement : Spotify n'y autorise que quelques comptes ajoutés à la main. Crée ta propre app ci-dessous (5 minutes), ou envoie l'e-mail de ton compte Spotify à l'administrateur pour qu'il t'ajoute.": "Wspólna aplikacja Spotify działa w trybie deweloperskim: Spotify dopuszcza tylko kilka ręcznie dodanych kont. Utwórz własną aplikację poniżej (5 minut) albo wyślij administratorowi e-mail swojego konta Spotify, aby cię dodał.",
   "Les morceaux écoutés seront joints à tes séances.": "Słuchane utwory będą dołączane do twoich treningów.",
   "Spotify refuse l'accès à ton compte.": "Spotify odmawia dostępu do twojego konta.",
-  "Vérifie que ton compte Spotify est ajouté dans ton app (Dashboard → User Management) et qu'il est Premium.": "Sprawdź, czy twoje konto Spotify jest dodane w aplikacji (Dashboard → User Management) i czy ma Premium."
+  "Vérifie que ton compte Spotify est ajouté dans ton app (Dashboard → User Management) et qu'il est Premium.": "Sprawdź, czy twoje konto Spotify jest dodane w aplikacji (Dashboard → User Management) i czy ma Premium.",
+  "Comment étaient notées les reps de « {name} » jusqu'ici ?": "Jak dotąd zapisywano powtórzenia dla „{name}”?",
+  "Déjà par côté → garder tel quel": "Już na stronę → zostaw bez zmian",
+  "Je ne sais pas → ne rien changer": "Nie wiem → nic nie zmieniaj",
+  "Pour les inclure, active G|D en séance et indique comment elles étaient notées.": "Aby je uwzględnić, włącz L|P podczas treningu i wskaż, jak były zapisywane.",
+  "Si tu ne sais pas, les séries importées de cet exercice restent hors de tes statistiques.": "Jeśli nie wiesz, zaimportowane serie tego ćwiczenia pozostaną poza statystykami.",
+  "Total des deux côtés → diviser par 2": "Suma obu stron → podziel przez 2",
+  "{n} série gardée par côté": "{n} seria zachowana na stronę",
+  "{n} séries gardées par côté": "{n} serii zachowanych na stronę",
+  "{n} série importée n'est pas comptée : exercice unilatéral, on ne sait pas si elle était notée par côté ou au total.": "{n} zaimportowana seria nie jest liczona: ćwiczenie jednostronne, nie wiadomo, czy zapisano ją na stronę, czy łącznie.",
+  "{n} séries importées ne sont pas comptées : exercice unilatéral, on ne sait pas si elles étaient notées par côté ou au total.": "{n} zaimportowanych serii nie jest liczonych: ćwiczenie jednostronne, nie wiadomo, czy zapisano je na stronę, czy łącznie."
 };

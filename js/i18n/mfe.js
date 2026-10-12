@@ -1453,5 +1453,15 @@ export default {
   "L'app Spotify partagée est en mode développement : Spotify n'y autorise que quelques comptes ajoutés à la main. Crée ta propre app ci-dessous (5 minutes), ou envoie l'e-mail de ton compte Spotify à l'administrateur pour qu'il t'ajoute.": "App Spotify partaze-la an mod devlopman : Spotify zis otoriz enn de-trwa kont azoute alamin. Kree to prop app anba (5 minit), ouswa avoy imel to kont Spotify ar administrater pou li azout twa.",
   "Les morceaux écoutés seront joints à tes séances.": "Bann morso ki to ekoute pou azoute dan to bann seans.",
   "Spotify refuse l'accès à ton compte.": "Spotify refiz akse to kont.",
-  "Vérifie que ton compte Spotify est ajouté dans ton app (Dashboard → User Management) et qu'il est Premium.": "Verifye ki to kont Spotify azoute dan to app (Dashboard → User Management) ek ki li Premium."
+  "Vérifie que ton compte Spotify est ajouté dans ton app (Dashboard → User Management) et qu'il est Premium.": "Verifye ki to kont Spotify azoute dan to app (Dashboard → User Management) ek ki li Premium.",
+  "Comment étaient notées les reps de « {name} » jusqu'ici ?": "Kouma ti pe note bann rep « {name} » ziska prezan ?",
+  "Déjà par côté → garder tel quel": "Deza par kote → gard parey",
+  "Je ne sais pas → ne rien changer": "Mo pa kone → pa sanz nanye",
+  "Pour les inclure, active G|D en séance et indique comment elles étaient notées.": "Pou inkli zot, aktiv G|D dan seans ek dir kouma zot ti note.",
+  "Si tu ne sais pas, les séries importées de cet exercice restent hors de tes statistiques.": "Si to pa kone, bann seri importe sa lexersis-la res deor to statistik.",
+  "Total des deux côtés → diviser par 2": "Total de kote → divize par 2",
+  "{n} série gardée par côté": "{n} seri garde par kote",
+  "{n} séries gardées par côté": "{n} seri garde par kote",
+  "{n} série importée n'est pas comptée : exercice unilatéral, on ne sait pas si elle était notée par côté ou au total.": "{n} seri importe pa konte : lexersis inilateral, nou pa kone si li ti note par kote ou an total.",
+  "{n} séries importées ne sont pas comptées : exercice unilatéral, on ne sait pas si elles étaient notées par côté ou au total.": "{n} seri importe pa konte : lexersis inilateral, nou pa kone si zot ti note par kote ou an total."
 };

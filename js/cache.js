@@ -29,7 +29,25 @@ export const getWorkouts = (max = 5000) => cached("workouts", () => db.listWorko
 // si l'utilisateur demande "Tout" dans les Stats.
 let allSetsProgress = () => {};
 export function onAllSetsProgress(fn) { allSetsProgress = fn || (() => {}); }
-export const getAllSets = (max = 50000) => cached("sets", () => db.listAllSets(max, (n) => allSetsProgress(n)));
+const getAllSetsRaw = (max = 50000) => cached("sets", () => db.listAllSets(max, (n) => allSetsProgress(n)));
+
+// Séries importées (Hevy…) d'un exercice UNILATÉRAL : on ne sait pas si
+// les reps et la charge y étaient notées par côté ou au total. Elles sont
+// gardées dans l'historique mais exclues des statistiques (graphiques, 1RM,
+// tendances, records, pré-remplissage), sauf si l'utilisateur les a
+// converties en « par côté » (unilateral: true).
+export function isImportedSet(s) {
+  return s?.imported === true || (String(s?.id || "").startsWith("s_") && !s.logged_at);
+}
+export function reliableSets(list) {
+  const memo = new Map();
+  const uni = (n) => { if (!memo.has(n)) memo.set(n, db.isUnilateral(n)); return memo.get(n); };
+  return (list || []).filter(s => !(isImportedSet(s) && !s.unilateral && uni(s.exercise_title)));
+}
+export const getAllSets = async (max = 50000, { raw = false } = {}) => {
+  const list = await getAllSetsRaw(max);
+  return raw ? list : reliableSets(list);
+};
 
 // Séries par période (Stats) et par exercice (fiche, pré-remplissage),
 // gardées en mémoire jusqu'à la prochaine invalidation de "sets". Si
@@ -44,8 +62,12 @@ function sinceIso(weeks) {
   return d.toISOString().slice(0, 10);
 }
 
-export async function getSetsForPeriod(weeks) {
-  if (!weeks) return getAllSets();
+export async function getSetsForPeriod(weeks, opts = {}) {
+  const list = await getSetsForPeriodRaw(weeks);
+  return opts.raw ? list : reliableSets(list);
+}
+async function getSetsForPeriodRaw(weeks) {
+  if (!weeks) return getAllSetsRaw();
   const since = sinceIso(weeks);
   if (store.sets) return store.sets.filter(s => (s.workout_start_time || "") >= since);
   // Une période plus longue déjà chargée contient celle-ci.
@@ -62,12 +84,16 @@ export async function getSetsForPeriod(weeks) {
 // Séries d'un seul exercice : depuis l'historique complet s'il est déjà en
 // mémoire, sinon en ne téléchargeant que cet exercice — charger tout
 // l'historique (~10 000 séries) prend une quinzaine de secondes.
-export async function getSetsForExercise(exerciseName) {
+export async function getSetsForExercise(exerciseName, opts = {}) {
+  const list = await getSetsForExerciseRaw(exerciseName);
+  return opts.raw ? list : reliableSets(list);
+}
+async function getSetsForExerciseRaw(exerciseName) {
   if (store.sets) return store.sets.filter(s => s.exercise_title === exerciseName);
   if (!exerciseSets.has(exerciseName)) {
     const promise = db.listSetsForExercise(exerciseName).catch(async (e) => {
       console.warn("[Skullcrusher] Requête par exercice impossible, repli sur l'historique complet :", e);
-      return (await getAllSets()).filter(s => s.exercise_title === exerciseName);
+      return (await getAllSetsRaw()).filter(s => s.exercise_title === exerciseName);
     });
     exerciseSets.set(exerciseName, promise);
   }

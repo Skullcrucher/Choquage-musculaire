@@ -47,7 +47,7 @@ export async function openDuplicatesTool(onDone = () => {}) {
   try {
     invalidate("exercises"); // bibliothèque à jour
     onAllSetsProgress((n) => { const el = document.getElementById("dup-loading"); if (el) el.textContent = t("Lecture de tes séries… {n}", { n }); });
-    const [lib, sets] = await Promise.all([getExercises(), getAllSets()]);
+    const [lib, sets] = await Promise.all([getExercises(), getAllSets(50000, { raw: true })]);
     library = lib;
     counts = new Map();
     sets.forEach(s => counts.set(s.exercise_title, (counts.get(s.exercise_title) || 0) + 1));

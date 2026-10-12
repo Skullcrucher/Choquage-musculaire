@@ -209,7 +209,7 @@ export async function loadRestPrefs() {
 // (unilateral_prefs : { "nom en minuscules": true|false }) ; à défaut,
 // deviné d'après le nom.
 const LS_UNI_PREFS = "skullcrusher_unilateral_prefs";
-const UNI_GUESS = /(un bras|une jambe|unilat|single[- ]?(arm|leg)|one[- ]?arm|altern|concentration|bulgare|bulgarian)/i;
+const UNI_GUESS = /(un bras|une jambe|unilat|single[- ]?(arm|leg)|one[- ]?arm|altern|concentr|bulgare|bulgarian)/i;
 let uniPrefs = null;
 function readLocalUniPrefs() {
   try { return JSON.parse(localStorage.getItem(LS_UNI_PREFS) || "{}") || {}; } catch (_) { return {}; }
@@ -234,6 +234,17 @@ export async function convertHistoryToPerSide(exerciseName) {
   for (let i = 0; i < sets.length; i += 400) {
     const batch = writeBatch(dbase);
     sets.slice(i, i + 400).forEach(s => batch.update(doc(dbase, "workouts", s.workout_id, "sets", s.id), { reps: Math.ceil(s.reps / 2), unilateral: true }));
+    await batch.commit();
+  }
+  return sets.length;
+}
+// Historique déjà noté par côté : marqué tel quel (reps inchangées), ce
+// qui réintègre aussi les séries importées dans les statistiques.
+export async function markHistoryPerSide(exerciseName) {
+  const sets = (await listSetsForExercise(exerciseName)).filter(s => !s.unilateral && s.reps > 0);
+  for (let i = 0; i < sets.length; i += 400) {
+    const batch = writeBatch(dbase);
+    sets.slice(i, i + 400).forEach(s => batch.update(doc(dbase, "workouts", s.workout_id, "sets", s.id), { unilateral: true }));
     await batch.commit();
   }
   return sets.length;
@@ -1065,6 +1076,7 @@ export async function importRows(rows, onProgress = () => {}) {
         distance_km: row.distance_km || null,
         duration_seconds: row.duration_seconds || null,
         rpe: row.rpe || null,
+        imported: true, // saisie d'une autre app (voir cache.js : reliableSets)
         owner_uid: uid,
         workout_start_time: row.start_time_iso
       } });
