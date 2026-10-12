@@ -147,9 +147,41 @@ export function parseCsvText(csvText) {
   return { rows, unparsedDates: [...unparsedDates], headers: parsed.meta.fields || [], skippedFuture: skippedFuture.size };
 }
 
+// Exercice qui se fait toujours avec une charge (barre, haltères, machine…).
+const LOADED = /(barre|haltère|haltere|machine|poulie|presse|kettlebell|smith|barbell|dumbbell|cable|\bez\b|leg press|hack)/i;
+const PLAN_HEADERS = /^(routine|exercice|series|séries|semaines|jours|bloc|plan|consigne)$/i;
+
+// Séances « programme » : un exercice à charge sans aucun poids noté dans
+// toute la séance. Un vrai historique a toujours des kilos sur ces
+// exercices ; un programme (prévu, pas réalisé) n'en a pas.
+export function splitProgrammeWorkouts(rows) {
+  const byWorkout = new Map();
+  rows.forEach(r => {
+    const k = `${r.title}|${r.start_time_iso}`;
+    if (!byWorkout.has(k)) byWorkout.set(k, []);
+    byWorkout.get(k).push(r);
+  });
+  const keep = [], programme = new Set();
+  byWorkout.forEach((list, k) => {
+    const loaded = list.filter(r => LOADED.test(r.exercise_title));
+    const isProgramme = loaded.length > 0 && !list.some(r => r.weight_kg > 0);
+    if (isProgramme) programme.add(k); else keep.push(...list);
+  });
+  return { keep, programme: programme.size };
+}
+
 export async function importCsvFile(file, onProgress) {
   const text = await file.text();
-  const { rows, unparsedDates, headers, skippedFuture } = parseCsvText(text);
+  const parsedCsv = parseCsvText(text);
+  const { unparsedDates, headers, skippedFuture } = parsedCsv;
+  // Fichier de plan (modèle Skullcrusher) envoyé dans l'import d'historique.
+  if (headers.filter(h => PLAN_HEADERS.test(String(h).trim())).length >= 2 && !headers.includes("start_time")) {
+    throw new Error(t("Ce fichier est un plan d'entraînement, pas un historique de séances : importe-le dans Biblio → Mes plans → Importer un plan."));
+  }
+  const { keep: rows, programme } = splitProgrammeWorkouts(parsedCsv.rows);
+  if (rows.length === 0 && programme) {
+    throw new Error(t("Ce fichier ressemble à un programme (aucune charge notée sur des exercices à barre, haltères ou machine) : ce n'est pas un historique. Pour un programme, utilise Biblio → Mes plans → Importer un plan."));
+  }
   if (rows.length === 0) {
     if (!headers.includes("exercise_title") || !headers.includes("start_time")) {
       throw new Error(t("Ce fichier ne ressemble pas à un export Hevy (colonnes exercise_title / start_time introuvables). Dans Hevy : Profil → Réglages → Exporter les données → Exporter les séances."));
@@ -167,5 +199,6 @@ export async function importCsvFile(file, onProgress) {
   stats.rowsTotal = rows.length;
   stats.weightColumn = headers.some(h => /^(weight|poids|charge)/i.test(h));
   stats.skippedFuture = skippedFuture;
+  stats.skippedProgramme = programme;
   return stats;
 }

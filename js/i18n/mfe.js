@@ -1515,5 +1515,8 @@ export default {
   "{n} séances fantômes supprimées": "{n} seans fantom efase",
   "Elles faussent ton calendrier, tes stats et ton plan. Décoche celles à garder (ex. une vraie séance au poids du corps importée) : elles ne seront plus signalées. Les séances supprimées ne reviendront pas, même en réimportant le même fichier.": "Zot fos to kalandrie, to stat ek to plan. Dekoche sa bann pou garde (egz. enn vre seans pwa lekor importe) : zot pa pou siyale ankor. Bann seans efase pa pou revini, mem si to reimport mem fisie.",
   "Valider": "Valide",
-  "{n} séance(s) que tu avais supprimée(s) ignorée(s).": "{n} seans ki to ti efase inyore."
+  "{n} séance(s) que tu avais supprimée(s) ignorée(s).": "{n} seans ki to ti efase inyore.",
+  "Ce fichier est un plan d'entraînement, pas un historique de séances : importe-le dans Biblio → Mes plans → Importer un plan.": "Sa fisie-la se enn plan antrennman, pa enn listorik seans : import li dan Biblio → Mo bann plan → Import enn plan.",
+  "Ce fichier ressemble à un programme (aucune charge notée sur des exercices à barre, haltères ou machine) : ce n'est pas un historique. Pour un programme, utilise Biblio → Mes plans → Importer un plan.": "Sa fisie-la res enn program (okenn sarz lor lexersis bar, altèr ou masinn) : se pa enn listorik. Pou enn program, servi Biblio → Mo bann plan → Import enn plan.",
+  "{n} séance(s) sans aucune charge sur des exercices à barre, haltères ou machine ignorée(s) : elles ressemblent à un programme, pas à des séances réalisées.": "{n} seans san okenn sarz lor lexersis bar, altèr ou masinn inyore : zot res enn program, pa bann seans fer."
 };

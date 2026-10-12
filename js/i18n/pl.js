@@ -1525,5 +1525,8 @@ export default {
   "{n} séances fantômes supprimées": "Usunięto {n} treningów-widm",
   "Elles faussent ton calendrier, tes stats et ton plan. Décoche celles à garder (ex. une vraie séance au poids du corps importée) : elles ne seront plus signalées. Les séances supprimées ne reviendront pas, même en réimportant le même fichier.": "Zaburzają kalendarz, statystyki i plan. Odznacz te do zachowania (np. prawdziwy zaimportowany trening z masą ciała): nie będą już zgłaszane. Usunięte treningi nie wrócą, nawet po ponownym imporcie tego samego pliku.",
   "Valider": "Zatwierdź",
-  "{n} séance(s) que tu avais supprimée(s) ignorée(s).": "Pominięto {n} usuniętych wcześniej treningów."
+  "{n} séance(s) que tu avais supprimée(s) ignorée(s).": "Pominięto {n} usuniętych wcześniej treningów.",
+  "Ce fichier est un plan d'entraînement, pas un historique de séances : importe-le dans Biblio → Mes plans → Importer un plan.": "Ten plik to plan treningowy, a nie historia treningów: zaimportuj go w Biblioteka → Moje plany → Importuj plan.",
+  "Ce fichier ressemble à un programme (aucune charge notée sur des exercices à barre, haltères ou machine) : ce n'est pas un historique. Pour un programme, utilise Biblio → Mes plans → Importer un plan.": "Ten plik wygląda na program (brak obciążeń przy ćwiczeniach ze sztangą, hantlami lub na maszynie): to nie jest historia. Dla programu użyj Biblioteka → Moje plany → Importuj plan.",
+  "{n} séance(s) sans aucune charge sur des exercices à barre, haltères ou machine ignorée(s) : elles ressemblent à un programme, pas à des séances réalisées.": "Pominięto {n} trening(ów) bez obciążeń przy ćwiczeniach ze sztangą, hantlami lub na maszynie: wyglądają na program, nie na wykonane treningi."
 };

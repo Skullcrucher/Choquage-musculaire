@@ -1516,5 +1516,8 @@ export default {
   "{n} séances fantômes supprimées": "{n} ghost workouts deleted",
   "Elles faussent ton calendrier, tes stats et ton plan. Décoche celles à garder (ex. une vraie séance au poids du corps importée) : elles ne seront plus signalées. Les séances supprimées ne reviendront pas, même en réimportant le même fichier.": "They distort your calendar, stats and plan. Untick those to keep (e.g. a real imported bodyweight workout): they won't be flagged again. Deleted workouts won't come back, even if you re-import the same file.",
   "Valider": "Confirm",
-  "{n} séance(s) que tu avais supprimée(s) ignorée(s).": "{n} workout(s) you had deleted skipped."
+  "{n} séance(s) que tu avais supprimée(s) ignorée(s).": "{n} workout(s) you had deleted skipped.",
+  "Ce fichier est un plan d'entraînement, pas un historique de séances : importe-le dans Biblio → Mes plans → Importer un plan.": "This file is a training plan, not a workout history: import it in Library → My plans → Import a plan.",
+  "Ce fichier ressemble à un programme (aucune charge notée sur des exercices à barre, haltères ou machine) : ce n'est pas un historique. Pour un programme, utilise Biblio → Mes plans → Importer un plan.": "This file looks like a program (no load logged on barbell, dumbbell or machine exercises): it isn't a history. For a program, use Library → My plans → Import a plan.",
+  "{n} séance(s) sans aucune charge sur des exercices à barre, haltères ou machine ignorée(s) : elles ressemblent à un programme, pas à des séances réalisées.": "{n} workout(s) with no load on barbell, dumbbell or machine exercises skipped: they look like a program, not completed workouts."
 };
