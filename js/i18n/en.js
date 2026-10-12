@@ -1482,5 +1482,7 @@ export default {
   "Stats, graphiques, 1RM, tendances, records et profil. L'historique et le calendrier montrent toujours toutes tes séances.": "Stats, charts, 1RM, trends, records and profile. History and calendar always show all your workouts.",
   "Tout l'historique (imports compris)": "Full history (imports included)",
   "{n} série importée n'est pas comptée (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} imported set isn't counted (Settings: stats on Skullcrusher workouts only).",
-  "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} imported sets aren't counted (Settings: stats on Skullcrusher workouts only)."
+  "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} imported sets aren't counted (Settings: stats on Skullcrusher workouts only).",
+  "Historique importé ou non, début de semaine": "Imported history or not, week start",
+  "Statistiques et calendrier": "Statistics and calendar"
 };

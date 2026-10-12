@@ -168,6 +168,22 @@ export async function renderReglages(container) {
       </details>
     </div>
 
+    <div class="card" data-icon="general" data-sub="${esc(t("Historique importé ou non, début de semaine"))}">
+      <div class="card-title">${t("Statistiques et calendrier")}</div>
+      <label style="margin-top:0;">📊 ${t("Statistiques calculées sur")}</label>
+      <select id="stats-scope">
+        <option value="all" ${statsAppOnly() ? "" : "selected"}>${t("Tout l'historique (imports compris)")}</option>
+        <option value="app" ${statsAppOnly() ? "selected" : ""}>${t("Les séances faites dans Skullcrusher uniquement")}</option>
+      </select>
+      <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Stats, graphiques, 1RM, tendances, records et profil. L'historique et le calendrier montrent toujours toutes tes séances.")}</p>
+      <label>📅 ${t("La semaine commence le")}</label>
+      <select id="week-start">
+        <option value="mon" ${weekStartsSunday() ? "" : "selected"}>${t("Lundi")}</option>
+        <option value="sun" ${weekStartsSunday() ? "selected" : ""}>${t("Dimanche")}</option>
+      </select>
+      <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Compteur « Cette semaine », semaines du plan et calendrier. Le défi de la semaine reste du lundi au dimanche pour tout le monde.")}</p>
+    </div>
+
     <div class="card" data-icon="timer" data-sub="${esc(t("Notifications, RPE, rappel, type de série"))}">
       <div class="card-title">${t("Minuteur de repos")}</div>
       <p class="muted" style="margin-top:0;">${t("Reçois une notification à la fin du repos, même si tu es passé sur une autre app (Spotify...) ou que l'écran est verrouillé. Sur iPhone, il faut utiliser l'app ajoutée à l'écran d'accueil. La durée par défaut se règle par exercice, dans la bibliothèque ci-dessous.")}</p>
@@ -232,18 +248,6 @@ export async function renderReglages(container) {
         <option value="failure" ${defaultSetType() === "failure" ? "selected" : ""}>💀 ${t("Échec")}</option>
         <option value="normal" ${defaultSetType() === "normal" ? "selected" : ""}>${t("Normale")}</option>
       </select>
-      <label>📊 ${t("Statistiques calculées sur")}</label>
-      <select id="stats-scope">
-        <option value="all" ${statsAppOnly() ? "" : "selected"}>${t("Tout l'historique (imports compris)")}</option>
-        <option value="app" ${statsAppOnly() ? "selected" : ""}>${t("Les séances faites dans Skullcrusher uniquement")}</option>
-      </select>
-      <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Stats, graphiques, 1RM, tendances, records et profil. L'historique et le calendrier montrent toujours toutes tes séances.")}</p>
-      <label>📅 ${t("La semaine commence le")}</label>
-      <select id="week-start">
-        <option value="mon" ${weekStartsSunday() ? "" : "selected"}>${t("Lundi")}</option>
-        <option value="sun" ${weekStartsSunday() ? "selected" : ""}>${t("Dimanche")}</option>
-      </select>
-      <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Compteur « Cette semaine », semaines du plan et calendrier. Le défi de la semaine reste du lundi au dimanche pour tout le monde.")}</p>
     </div>
 
     <div class="card" data-icon="reset" data-sub="${esc(t("Supprimer toutes mes séances"))}">
