@@ -1495,3 +1495,7 @@ html.desktop .mw-pls { display: grid; grid-template-columns: 1fr 1fr; }
 .soundtrack-list li { padding-left: 2px; }
 .feed-tracks { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; font-size: 13px; }
 .xp-part-total { background: transparent; border-top: 1px solid var(--border); border-radius: 0; font-weight: 800; margin-top: 2px; }
+/* Détail d'une séance : nom d'exercice cliquable (fiche) + tendance. */
+.wd-ex-name { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; margin-bottom: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.wd-ex-name:active { opacity: 0.6; }
+.wd-ex-go { margin-left: auto; color: var(--amber); font-weight: 700; }
