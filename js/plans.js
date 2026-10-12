@@ -151,7 +151,9 @@ export async function todayPlanCard({ compact = false } = {}) {
   let body;
   let routine = null;
   if (pos.status === "upcoming") body = `<p class="muted" style="margin:0;">${t("Le plan commence dans {n} jour(s).", { n: pos.startsIn })}</p>`;
-  else if (pos.status === "done") body = `<p class="muted" style="margin:0;">🎉 ${t("Plan terminé ! Crée le suivant dans Biblio → Mes plans.")}</p>`;
+  else if (pos.status === "done") body = `<p class="muted" style="margin:0;">🎉 ${t("Plan terminé ! Crée le suivant dans Biblio → Mes plans.")}</p>
+    <button class="btn btn-primary" id="plan-max" style="margin-top:10px;">📏 ${t("Mettre à jour mes max")}</button>
+    <p class="muted" style="font-size:12px; margin:6px 0 0;">${t("Teste tes max exercice par exercice, sur une ou plusieurs séances : chacun est enregistré dès que tu le saisis.")}</p>`;
   else {
     // Séance du jour : la prochaine de la file (ordre du plan, en tenant
     // compte de celles déjà faites), ou une séance en retard à rattraper.
@@ -184,6 +186,8 @@ export async function todayPlanCard({ compact = false } = {}) {
       const yes = container.querySelector("#plan-shift-yes");
       const no = container.querySelector("#plan-shift-no");
       if (yes) yes.onclick = async () => { yes.disabled = true; await shiftPlan(plan.id, 1); toast(t("Plan décalé d'une semaine")); refresh(); };
+      const maxBtn = container.querySelector("#plan-max");
+      if (maxBtn) maxBtn.onclick = async () => (await import("./max-lifts.js")).openMaxLifts({ plan });
       if (no) no.onclick = async () => { no.disabled = true; await declineShift(plan.id, pos.week); refresh(); };
     }
   };
@@ -484,7 +488,8 @@ export async function renderPlanTracking(content, { onOpenWorkout } = {}) {
         <div class="stat-box"><span class="num">${st.minutes >= 60 ? Math.floor(st.minutes / 60) + " h" : nf(st.minutes) + " min"}</span><span class="lbl">${t("d'entraînement")}</span></div>
       </div>
       <p class="muted" style="font-size:12px; margin:8px 0 0;">${t("Assiduité = séances faites / séances prévues jusqu'à aujourd'hui.")}</p>
-      <button class="btn btn-primary share-btn" id="share-plan" style="margin-top:12px;">📸 ${t("Partager l'état de mon plan")}</button>
+      <button class="btn ${pos.status === "done" || (pos.status === "running" && pos.week === pos.total) ? "btn-primary" : "btn-secondary"}" id="plan-max-track" style="margin-top:12px;">📏 ${pos.status === "done" ? t("Plan terminé : mettre à jour mes max") : t("Mes max")}</button>
+      <button class="btn btn-primary share-btn" id="share-plan" style="margin-top:8px;">📸 ${t("Partager l'état de mon plan")}</button>
     </div>
     <div class="card">
       <div class="card-title">${t("Semaine par semaine")}</div>
@@ -507,6 +512,7 @@ export async function renderPlanTracking(content, { onOpenWorkout } = {}) {
         </div>`).join("")}` : ""}
   `;
   content.querySelectorAll("[data-track]").forEach(c => c.onclick = () => { trackedPlanId = c.dataset.track; renderPlanTracking(content, { onOpenWorkout }); });
+  content.querySelector("#plan-max-track").onclick = async () => (await import("./max-lifts.js")).openMaxLifts({ plan });
   content.querySelector("#share-plan").onclick = async () => (await import("./share-card.js")).openShareCard({ kind: "plan", planId: plan.id });
   content.querySelectorAll("[data-plan-w]").forEach(r => r.onclick = () => onOpenWorkout?.(st.workouts.find(w => w.id === r.dataset.planW)));
   content.querySelectorAll("[data-slot]").forEach(d => d.onclick = () => {

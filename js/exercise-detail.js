@@ -1,7 +1,7 @@
 // ============================================================
 // FICHE D'EXERCICE — muscles, conseils, vidéo, historique
 // ============================================================
-import { openModal, closeModal, estimate1RM, isoWeek, fmtDateTime, esc, healthNoteHtml, statsAppOnly, toast } from "./utils.js";
+import { openModal, closeModal, estimate1RM, isoWeek, fmtDateTime, fmtDate, esc, healthNoteHtml, statsAppOnly, toast } from "./utils.js";
 import { getSetsForExercise, getWorkouts } from "./cache.js";
 import { EXERCISE_GUIDES } from "./exercise-guides.js";
 import { t, tn, getLang } from "./i18n.js";
@@ -107,6 +107,7 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "",
       ` : `<p class="muted">${t("Pas encore de série enregistrée pour cet exercice.")}</p>`}
     </div>
 
+    <div class="max-line" id="detail-max"></div>
     ${sets.length ? `<button class="btn btn-primary share-btn" id="detail-share" style="margin-top:16px;">📸 ${t("Partager ma progression")}</button>` : ""}
     <button class="btn btn-secondary" id="detail-close" style="margin-top:10px;">${t("Fermer")}</button>
   `, (modalEl) => {
@@ -116,6 +117,15 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "",
     const shareBtn = modalEl.querySelector("#detail-share");
     if (shareBtn) shareBtn.onclick = async () => { closeModal(); (await import("./share-card.js")).openShareCard({ kind: "exercise", exercise: exerciseName }); };
     if (sets.length) renderDetailChart(modalEl, sets);
+    // Max déclaré (test de 1RM…) et bouton pour le mettre à jour.
+    import("./max-lifts.js").then(async mx => {
+      const m = await mx.maxFor(exerciseName);
+      const el = modalEl.querySelector("#detail-max");
+      if (!el) return;
+      el.innerHTML = `<span>📏 ${m ? t("Mon max : {kg} kg × {reps} (1RM ≈ {rm} kg) · {date}", { kg: esc(m.kg), reps: esc(m.reps), rm: esc(m.one_rm), date: esc(fmtDate(m.date + "T12:00")) }) : t("Pas encore de max déclaré")}</span>
+        <button class="btn btn-secondary btn-sm" id="detail-max-edit" style="width:auto;">${m ? t("Mettre à jour") : t("Renseigner")}</button>`;
+      el.querySelector("#detail-max-edit").onclick = () => { closeModal(); mx.openMaxLifts({ only: exerciseName, onClose: () => openExerciseDetail(exerciseName, muscleGroupFallback, { onClose }) }); };
+    }).catch(() => null);
     // Séances : titre, puis ouverture du détail au toucher.
     getWorkouts().then(ws => {
       const byId = new Map(ws.map(w => [w.id, w]));
