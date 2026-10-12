@@ -1491,5 +1491,7 @@ export default {
   "Stats, graphiques, 1RM, tendances, records et profil. L'historique et le calendrier montrent toujours toutes tes séances.": "Statystyki, wykresy, 1RM, trendy, rekordy i profil. Historia i kalendarz zawsze pokazują wszystkie treningi.",
   "Tout l'historique (imports compris)": "Cała historia (z importami)",
   "{n} série importée n'est pas comptée (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} zaimportowana seria nie jest liczona (Ustawienia: statystyki tylko z treningów Skullcrusher).",
-  "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} zaimportowanych serii nie jest liczonych (Ustawienia: statystyki tylko z treningów Skullcrusher)."
+  "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} zaimportowanych serii nie jest liczonych (Ustawienia: statystyki tylko z treningów Skullcrusher).",
+  "Historique importé ou non, début de semaine": "Historia z importem lub bez, początek tygodnia",
+  "Statistiques et calendrier": "Statystyki i kalendarz"
 };
