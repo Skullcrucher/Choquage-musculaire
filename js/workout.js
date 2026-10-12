@@ -739,16 +739,35 @@ async function toggleUnilateral(ex, listEl) {
   const current = ex.sets.filter(s => s.reps > 0);
   const past = await db.countTotalRepsHistory(ex.exercise_title, currentWorkout.id).catch(() => 0);
   if (!current.length && !past) return;
-  const ok = await confirmDanger({
-    title: t("Reps par côté"),
-    message: t("Les reps déjà notées pour « {name} » sont-elles le total des deux côtés ? Elles seront divisées par 2 (ex. 20 → 10 par côté).", { name: esc(ex.exercise_title) }),
-    items: [
-      ...(current.length ? [tn(current.length, "{n} série de cette séance", "{n} séries de cette séance")] : []),
-      ...(past ? [tn(past, "{n} série de ton historique", "{n} séries de ton historique")] : [])
-    ],
-    confirmLabel: t("Diviser par 2"), cancelLabel: t("Non, c'est déjà par côté")
+  // Trois réponses : total des deux côtés (÷ 2), déjà par côté (gardé tel
+  // quel), ou « je ne sais pas » (rien ne change ; les séries importées
+  // restent hors statistiques).
+  const choice = await new Promise(resolve => {
+    let done = false;
+    const finish = (v) => { if (done) return; done = true; closeModal(); resolve(v); };
+    openModal(`
+      <h3>${t("Reps par côté")}</h3>
+      <p>${t("Comment étaient notées les reps de « {name} » jusqu'ici ?", { name: esc(ex.exercise_title) })}</p>
+      <ul class="muted" style="font-size:13px;">
+        ${current.length ? `<li>${tn(current.length, "{n} série de cette séance", "{n} séries de cette séance")}</li>` : ""}
+        ${past ? `<li>${tn(past, "{n} série de ton historique", "{n} séries de ton historique")}</li>` : ""}
+      </ul>
+      <button class="btn btn-primary" data-uc="total">${t("Total des deux côtés → diviser par 2")}</button>
+      <button class="btn btn-secondary" data-uc="side" style="margin-top:8px;">${t("Déjà par côté → garder tel quel")}</button>
+      <button class="btn btn-secondary" data-uc="unknown" style="margin-top:8px;">${t("Je ne sais pas → ne rien changer")}</button>
+      <p class="muted" style="font-size:12px; margin:8px 0 0;">${t("Si tu ne sais pas, les séries importées de cet exercice restent hors de tes statistiques.")}</p>
+    `, (m) => m.querySelectorAll("[data-uc]").forEach(b => b.onclick = () => finish(b.dataset.uc)), { onDismiss: () => finish("unknown") });
   });
-  if (!ok) return;
+  if (choice === "unknown") return;
+  if (choice === "side") {
+    try {
+      await Promise.all(ex.sets.filter(s => s.id).map(s => db.updateSet(currentWorkout.id, s.id, { unilateral: true })));
+      const n = past ? await db.markHistoryPerSide(ex.exercise_title) : 0;
+      invalidate("sets");
+      if (n) toast(tn(n, "{n} série gardée par côté", "{n} séries gardées par côté"));
+    } catch (e) { console.warn("[Skullcrusher] Historique par côté", e); }
+    return;
+  }
   current.forEach(s => { s.reps = Math.ceil(s.reps / 2); });
   saveLocalState();
   renderExerciseList(listEl);
@@ -1077,7 +1096,9 @@ async function finishWorkout() {
   if (!extra) return null; // retour à la séance
   // XP avant la séance (pour afficher le gain et un éventuel nouveau niveau).
   const xpMod = await import("./xp.js").catch(() => null);
-  const xpBefore = xpMod ? xpMod.computeXp(await getWorkouts().catch(() => [])) : null;
+  // (sans cette séance, même si le cache en contient une ancienne version)
+  const finishingId = currentWorkout.id;
+  const xpBefore = xpMod ? xpMod.computeXp((await getWorkouts().catch(() => [])).filter(w => w.id !== finishingId)) : null;
   await db.updateWorkout(currentWorkout.id, {
     end_time: new Date().toISOString(),
     muscle_summary: muscleSummary,

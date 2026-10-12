@@ -18,7 +18,7 @@
 // ============================================================
 import { allSessions } from "./week-sessions.js";
 import { startOfWeek } from "./utils.js";
-import { t } from "./i18n.js";
+import { t, tn } from "./i18n.js";
 
 const DAY = 24 * 3600 * 1000;
 
@@ -125,12 +125,14 @@ export function computeXp(workouts, now = new Date()) {
 
     // Séance : base + volume (dégressif au-delà de la 4e séance de la semaine).
     const base = sets >= 3 ? 40 + 3 * Math.min(sets, 25) : 15;
-    add("session", t("Séance"), base * factor * rookie);
-    if (rookie > 1) parts.push({ key: "rookie", label: t("Premiers pas ×1,5"), xp: 0 });
+    // Libellés avec le calcul, pour qu'on comprenne d'où vient chaque XP.
+    const sessionCalc = sets >= 3 ? t("40 + 3 × {n} séries", { n: Math.min(sets, 25) }) : t("moins de 3 séries");
+    const extra = [factor < 1 ? `× ${String(factor).replace(".", ",")} (${t("{k}e séance de la semaine", { k: wk.n })})` : "", rookie > 1 ? `× 1,5 (${t("premiers pas")})` : ""].filter(Boolean).join(" ");
+    add("session", `${t("Séance")} (${sessionCalc}${extra ? " " + extra : ""})`, base * factor * rookie);
     // Alternance : muscles reposés (pas travaillés depuis 3 jours).
     const recentGroups = new Set(recent.filter(r => at - r.at < 3 * DAY).flatMap(r => r.groups));
     const fresh = groups.filter(g => !recentGroups.has(g)).length;
-    if (recent.length) add("variety", t("Alternance des muscles"), Math.min(32, fresh * 8));
+    if (recent.length) add("variety", `${t("Alternance des muscles")} (${tn(fresh, "{n} muscle reposé", "{n} muscles reposés")} × 8)`, Math.min(32, fresh * 8));
     // Full body : pousser + tirer + jambes dans la même séance.
     if (["push", "pull", "legs"].every(f => families.has(f))) add("fullbody", t("Full body"), 30);
     // Records battus.
@@ -141,8 +143,11 @@ export function computeXp(workouts, now = new Date()) {
     // Paliers de la semaine, multipliés par la série de semaines régulières.
     const mult = 1 + Math.min(10, streak) * 0.1;
     const step = (weekStep(wk.n) - weekStep(wk.n - 1)) * mult;
-    add("week", wk.n === 1 ? t("Première séance de la semaine") : t("Palier : {n} séances cette semaine", { n: wk.n }), step);
-    if (streak >= 1 && step > 0) parts.push({ key: "streak", label: t("Série de {n} semaines régulières ×{m}", { n: streak, m: String(mult.toFixed(1)).replace(".", ",") }), xp: 0 });
+    const stepBase = weekStep(wk.n) - weekStep(wk.n - 1);
+    const stepLabel = wk.n === 1 ? t("Première séance de la semaine") : t("Palier : {n} séances cette semaine", { n: wk.n });
+    add("week", streak >= 1
+      ? `${stepLabel} (${stepBase} × ${String(mult.toFixed(1)).replace(".", ",")} : ${t("série de {n} semaines régulières", { n: streak })})`
+      : `${stepLabel} (${stepBase})`, step);
     // Semaine « corps complet » (les 4 familles) et équilibrée (6 groupes).
     groups.forEach(g => wk.groups.add(g));
     families.forEach(f => wk.families.add(f));

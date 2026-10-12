@@ -1494,3 +1494,4 @@ html.desktop .mw-pls { display: grid; grid-template-columns: 1fr 1fr; }
 .soundtrack-list { margin: 6px 0 0; padding-left: 22px; display: grid; gap: 6px; font-size: 14px; }
 .soundtrack-list li { padding-left: 2px; }
 .feed-tracks { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; font-size: 13px; }
+.xp-part-total { background: transparent; border-top: 1px solid var(--border); border-radius: 0; font-weight: 800; margin-top: 2px; }

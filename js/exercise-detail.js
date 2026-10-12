@@ -18,7 +18,9 @@ let detailChart = null;
 
 export async function openExerciseDetail(exerciseName, muscleGroupFallback = "") {
   const guide = EXERCISE_GUIDES[exerciseName];
-  const rawSets = await getSetsForExercise(exerciseName);
+  const [rawSets, allSets] = await Promise.all([getSetsForExercise(exerciseName), getSetsForExercise(exerciseName, { raw: true })]);
+  // Exercice unilatéral : séries importées hors statistiques (saisie inconnue).
+  const excluded = allSets.length - rawSets.length;
   const trend = exerciseTrend(rawSets);
   const sets = rawSets
     .filter(s => s.weight_kg != null && s.reps != null)
@@ -60,6 +62,7 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "")
 
     <div style="margin-top:18px;">
       <div class="muted" style="margin-bottom:5px;">${t("Historique")}</div>
+      ${excluded > 0 ? `<p class="muted" style="font-size:12px; margin:0 0 8px;">↔ ${tn(excluded, "{n} série importée n'est pas comptée : exercice unilatéral, on ne sait pas si elle était notée par côté ou au total.", "{n} séries importées ne sont pas comptées : exercice unilatéral, on ne sait pas si elles étaient notées par côté ou au total.")} ${t("Pour les inclure, active G|D en séance et indique comment elles étaient notées.")}</p>` : ""}
       ${trend ? `<div class="trend-line trend-line-${trend.status}">${trendBadgeHtml(trend, { label: true })}<span>${esc(trendDetail(trend))} · ${tn(trend.sessions, "{n} séance ce mois-ci", "{n} séances ce mois-ci")}</span></div>`
         : sets.length ? `<p class="muted" style="font-size:13px; margin:0 0 8px;">${t("Tendance sur 30 jours : pas assez de séances récentes.")}</p>` : ""}
       ${sets.length ? `
