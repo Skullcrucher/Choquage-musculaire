@@ -1512,5 +1512,8 @@ export default {
   "{n} séances fantômes : datées dans le futur ou importées sans aucune charge.": "{n} seans fantom : dat dan lavenir ou importe san okenn sarz.",
   "{n} séance fantôme supprimée": "{n} seans fantom efase",
   "{n} séance(s) datée(s) dans le futur ignorée(s) : un historique ne contient que des séances déjà faites (pour un programme, utilise Biblio → Importer un plan).": "{n} seans dat dan lavenir inyore : enn listorik ena zis seans ki deza fer (pou enn program, servi Biblio → Import enn plan).",
-  "{n} séances fantômes supprimées": "{n} seans fantom efase"
+  "{n} séances fantômes supprimées": "{n} seans fantom efase",
+  "Elles faussent ton calendrier, tes stats et ton plan. Décoche celles à garder (ex. une vraie séance au poids du corps importée) : elles ne seront plus signalées. Les séances supprimées ne reviendront pas, même en réimportant le même fichier.": "Zot fos to kalandrie, to stat ek to plan. Dekoche sa bann pou garde (egz. enn vre seans pwa lekor importe) : zot pa pou siyale ankor. Bann seans efase pa pou revini, mem si to reimport mem fisie.",
+  "Valider": "Valide",
+  "{n} séance(s) que tu avais supprimée(s) ignorée(s).": "{n} seans ki to ti efase inyore."
 };

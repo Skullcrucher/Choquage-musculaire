@@ -1522,5 +1522,8 @@ export default {
   "{n} séances fantômes : datées dans le futur ou importées sans aucune charge.": "{n} treningów-widm: z przyszłą datą lub zaimportowanych bez obciążeń.",
   "{n} séance fantôme supprimée": "Usunięto {n} trening-widmo",
   "{n} séance(s) datée(s) dans le futur ignorée(s) : un historique ne contient que des séances déjà faites (pour un programme, utilise Biblio → Importer un plan).": "Pominięto {n} trening(ów) z przyszłą datą: historia zawiera tylko wykonane treningi (dla programu użyj Biblioteka → Importuj plan).",
-  "{n} séances fantômes supprimées": "Usunięto {n} treningów-widm"
+  "{n} séances fantômes supprimées": "Usunięto {n} treningów-widm",
+  "Elles faussent ton calendrier, tes stats et ton plan. Décoche celles à garder (ex. une vraie séance au poids du corps importée) : elles ne seront plus signalées. Les séances supprimées ne reviendront pas, même en réimportant le même fichier.": "Zaburzają kalendarz, statystyki i plan. Odznacz te do zachowania (np. prawdziwy zaimportowany trening z masą ciała): nie będą już zgłaszane. Usunięte treningi nie wrócą, nawet po ponownym imporcie tego samego pliku.",
+  "Valider": "Zatwierdź",
+  "{n} séance(s) que tu avais supprimée(s) ignorée(s).": "Pominięto {n} usuniętych wcześniej treningów."
 };

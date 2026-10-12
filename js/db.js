@@ -802,6 +802,13 @@ export async function deleteWorkout(id) {
   setsSnap.docs.forEach(d => batch.delete(d.ref));
   batch.delete(doc(dbase, "workouts", id));
   await batch.commit();
+  // Séance importée (identifiant fixe « w_… ») : mémorisée pour qu'un
+  // nouvel import du même fichier ne la recrée jamais.
+  if (String(id).startsWith("w_")) await setPrivateData({ deleted_import_ids: arrayUnion(id) }).catch(() => null);
+}
+// Séances fantômes que l'utilisateur a choisi de garder (plus signalées).
+export async function keepGhostWorkouts(ids) {
+  if (ids.length) await setPrivateData({ ghost_kept_ids: arrayUnion(...ids) });
 }
 
 export async function listWorkouts(max = 200) {
@@ -1021,10 +1028,14 @@ export async function importRows(rows, onProgress = () => {}) {
 
   const ops = []; // { ref, data, kind, merge }
   let wDone = 0;
+  // Séances importées supprimées par l'utilisateur : jamais recréées.
+  const deletedImports = new Set((await getPrivateData().catch(() => null))?.deleted_import_ids || []);
+  stats.workoutsSkippedDeleted = 0;
   for (const [key, groupRows] of byWorkout) {
     const r = groupRows[0];
     const legacyId = "w_" + (await sha1(key));
     const workoutId = myWorkoutIds.has(legacyId) ? legacyId : "w_" + (await sha1(`${uid}|${key}`));
+    if (deletedImports.has(workoutId) || deletedImports.has(legacyId)) { stats.workoutsSkippedDeleted++; wDone++; continue; }
     const exists = myWorkoutIds.has(workoutId);
 
     let existingSetIds = new Set();

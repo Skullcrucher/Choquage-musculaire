@@ -557,6 +557,7 @@ export async function renderReglages(container) {
             ${t("{n} doublon(s) ignoré(s)", { n: stats.setsSkippedDuplicate })}
             ${stats.errors ? ` · ${t("{n} erreur(s)", { n: stats.errors })}` : ""}
           </p>
+          ${stats.workoutsSkippedDeleted ? `<p class="muted">🗑️ ${t("{n} séance(s) que tu avais supprimée(s) ignorée(s).", { n: stats.workoutsSkippedDeleted })}</p>` : ""}
           ${stats.skippedFuture ? `<p style="color:var(--orange)">📅 ${t("{n} séance(s) datée(s) dans le futur ignorée(s) : un historique ne contient que des séances déjà faites (pour un programme, utilise Biblio → Importer un plan).", { n: stats.skippedFuture })}</p>` : ""}
           ${stats.rowsTotal && !stats.rowsWithWeight ? `<p style="color:var(--red)">⚠️ ${stats.weightColumn
             ? t("Aucune charge dans ce fichier : la colonne des poids est vide. Les séances sont importées, mais sans kilos (tonnage et 1RM à zéro).")

@@ -49,7 +49,8 @@ function plannedDays(year, month) {
 let histContainer = null, histEmbedded = false;
 export async function renderHistorique(container, { embedded = false } = {}) {
   histContainer = container; histEmbedded = embedded;
-  [workoutsCache] = await Promise.all([getWorkouts(), loadPlanCtx()]);
+  [workoutsCache] = await Promise.all([getWorkouts(), loadPlanCtx(),
+    db.getPrivateData().then(p => { keptGhosts = new Set(p?.ghost_kept_ids || []); }).catch(() => {})]);
   container.innerHTML = `
     ${embedded ? "" : `<h1 class="section-title">${t("Historique")}</h1>`}
     <div id="hist-content"></div>
@@ -66,10 +67,13 @@ function ghostReason(w, now = Date.now()) {
   if (w.imported_at && !(w.total_tonnage > 0) && (w.total_sets || 0) > 0) return "noload";
   return null;
 }
+let keptGhosts = new Set(); // séances gardées lors d'un nettoyage : plus jamais signalées
 function renderGhosts(content) {
   const el = content.querySelector("#ghosts");
   if (!el) return;
-  const ghosts = workoutsCache.map(w => ({ w, why: ghostReason(w) })).filter(x => x.why);
+  // Le bandeau n'apparaît que s'il reste des fantômes non traités : une fois
+  // le nettoyage fait (supprimées ou gardées), il disparaît pour de bon.
+  const ghosts = workoutsCache.filter(w => !keptGhosts.has(w.id)).map(w => ({ w, why: ghostReason(w) })).filter(x => x.why);
   if (!ghosts.length) { el.innerHTML = ""; return; }
   el.innerHTML = `<div class="hist-dups">👻 ${tn(ghosts.length, "{n} séance fantôme : datée dans le futur ou importée sans aucune charge.", "{n} séances fantômes : datées dans le futur ou importées sans aucune charge.")}
     <button class="btn btn-secondary btn-sm" id="ghost-clean">${t("Voir et nettoyer")}</button></div>`;
@@ -77,7 +81,7 @@ function renderGhosts(content) {
     const fmt = (w) => new Date(w.start_time).toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short", year: "numeric" });
     openModal(`
       <h3>👻 ${t("Séances fantômes")}</h3>
-      <p class="muted" style="margin-top:-6px;">${t("Elles faussent ton calendrier, tes stats et ton plan. Décoche celles à garder (ex. une vraie séance au poids du corps importée).")}</p>
+      <p class="muted" style="margin-top:-6px;">${t("Elles faussent ton calendrier, tes stats et ton plan. Décoche celles à garder (ex. une vraie séance au poids du corps importée) : elles ne seront plus signalées. Les séances supprimées ne reviendront pas, même en réimportant le même fichier.")}</p>
       <div class="ghost-list">${ghosts.sort((a, b) => String(a.w.start_time).localeCompare(String(b.w.start_time))).map((x, i) => `
         <label class="list-row" style="cursor:pointer;">
           <span><span class="list-row-title">${esc(x.w.title || t("Séance"))}</span>
@@ -86,20 +90,21 @@ function renderGhosts(content) {
         </label>`).join("")}</div>
       <div class="btn-row" style="margin-top:12px;">
         <button class="btn btn-secondary" id="gh-cancel">${t("Annuler")}</button>
-        <button class="btn btn-danger" id="gh-go">${t("Supprimer la sélection")}</button>
+        <button class="btn btn-danger" id="gh-go">${t("Valider")}</button>
       </div>
     `, (m) => {
       const sorted = ghosts;
       m.querySelector("#gh-cancel").onclick = closeModal;
       m.querySelector("#gh-go").onclick = async (e) => {
         const chosen = [...m.querySelectorAll("[data-ghost]:checked")].map(c => sorted[+c.dataset.ghost].w);
-        if (!chosen.length) { closeModal(); return; }
+        const kept = [...m.querySelectorAll("[data-ghost]:not(:checked)")].map(c => sorted[+c.dataset.ghost].w.id);
         e.target.disabled = true;
         try {
+          if (kept.length) { await db.keepGhostWorkouts(kept); kept.forEach(id => keptGhosts.add(id)); }
           for (const w of chosen) await db.deleteWorkout(w.id);
           invalidate("workouts", "sets");
           closeModal();
-          toast(tn(chosen.length, "{n} séance fantôme supprimée", "{n} séances fantômes supprimées"));
+          if (chosen.length) toast(tn(chosen.length, "{n} séance fantôme supprimée", "{n} séances fantômes supprimées"));
           renderHistorique(histContainer?.isConnected ? histContainer : document.getElementById("view"), { embedded: histEmbedded && histContainer?.isConnected });
         } catch (err) {
           console.error("[Skullcrusher] Nettoyage des séances fantômes", err);

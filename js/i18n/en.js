@@ -1513,5 +1513,8 @@ export default {
   "{n} séances fantômes : datées dans le futur ou importées sans aucune charge.": "{n} ghost workouts: dated in the future or imported without any load.",
   "{n} séance fantôme supprimée": "{n} ghost workout deleted",
   "{n} séance(s) datée(s) dans le futur ignorée(s) : un historique ne contient que des séances déjà faites (pour un programme, utilise Biblio → Importer un plan).": "{n} future-dated workout(s) skipped: a history only contains workouts already done (for a program, use Library → Import a plan).",
-  "{n} séances fantômes supprimées": "{n} ghost workouts deleted"
+  "{n} séances fantômes supprimées": "{n} ghost workouts deleted",
+  "Elles faussent ton calendrier, tes stats et ton plan. Décoche celles à garder (ex. une vraie séance au poids du corps importée) : elles ne seront plus signalées. Les séances supprimées ne reviendront pas, même en réimportant le même fichier.": "They distort your calendar, stats and plan. Untick those to keep (e.g. a real imported bodyweight workout): they won't be flagged again. Deleted workouts won't come back, even if you re-import the same file.",
+  "Valider": "Confirm",
+  "{n} séance(s) que tu avais supprimée(s) ignorée(s).": "{n} workout(s) you had deleted skipped."
 };
