@@ -1463,5 +1463,14 @@ export default {
   "{n} série gardée par côté": "{n} seri garde par kote",
   "{n} séries gardées par côté": "{n} seri garde par kote",
   "{n} série importée n'est pas comptée : exercice unilatéral, on ne sait pas si elle était notée par côté ou au total.": "{n} seri importe pa konte : lexersis inilateral, nou pa kone si li ti note par kote ou an total.",
-  "{n} séries importées ne sont pas comptées : exercice unilatéral, on ne sait pas si elles étaient notées par côté ou au total.": "{n} seri importe pa konte : lexersis inilateral, nou pa kone si zot ti note par kote ou an total."
+  "{n} séries importées ne sont pas comptées : exercice unilatéral, on ne sait pas si elles étaient notées par côté ou au total.": "{n} seri importe pa konte : lexersis inilateral, nou pa kone si zot ti note par kote ou an total.",
+  "40 + 3 × {n} séries": "40 + 3 × {n} seri",
+  "Cette séance chevauche une autre séance déjà enregistrée au même moment : elle est comptée comme un doublon, sans XP en plus. Vérifie Progrès → Historique et supprime la séance en double si besoin.": "Sa seans-la tonb lor enn lot seans ki deza anrezistre mem ler : li konte kouma enn doub, san XP an plis. Get Progre → Listorik ek efas doub-la si bizin.",
+  "Total": "Total",
+  "moins de 3 séries": "mwins ki 3 seri",
+  "premiers pas": "premie pa",
+  "série de {n} semaines régulières": "seri {n} semenn regilie",
+  "{k}e séance de la semaine": "{k}em seans lasemenn",
+  "{n} muscle reposé": "{n} mis repoze",
+  "{n} muscles reposés": "{n} mis repoze"
 };

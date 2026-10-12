@@ -77,9 +77,20 @@ export async function renderXpCard(el) {
 // Après une séance : XP gagnée (détail) et, s'il y a lieu, nouveau niveau
 // ou nouveau grade, avec une animation à la hauteur.
 export function showXpGain(before, after, sessionId) {
-  const s = after.sessions.find(x => x.id === sessionId) || after.sessions[after.sessions.length - 1];
-  if (!s) return;
-  const gained = after.total - before.total;
+  const s = after.sessions.find(x => x.id === sessionId);
+  // Séance non comptée : elle chevauche une autre séance déjà enregistrée au
+  // même moment (doublon : même séance importée, relancée ou ajoutée deux fois).
+  if (!s) {
+    openModal(`
+      <div class="xp-gain">
+        <div class="xp-gain-kicker">${t("Expérience gagnée")}</div>
+        <div class="xp-gain-num">+0 XP</div>
+        <p class="muted" style="margin:0;">${t("Cette séance chevauche une autre séance déjà enregistrée au même moment : elle est comptée comme un doublon, sans XP en plus. Vérifie Progrès → Historique et supprime la séance en double si besoin.")}</p>
+        <button class="btn btn-primary" id="xp-ok" style="margin-top:14px;">${t("Continuer")}</button>
+      </div>`, (m) => { m.querySelector("#xp-ok").onclick = closeModal; });
+    return;
+  }
+  const gained = s.xp;
   const levelUp = after.level > before.level;
   const newGrade = after.grade.name !== before.grade.name;
   const g = after.grade;
@@ -89,7 +100,8 @@ export function showXpGain(before, after, sessionId) {
         : levelUp ? `<div class="xp-burst">⬆️</div><div class="xp-gain-kicker">${t("Niveau supérieur !")}</div><div class="xp-gain-title">${t("Niveau {n}", { n: after.level })}</div>`
         : `<div class="xp-gain-kicker">${t("Expérience gagnée")}</div>`}
       <div class="xp-gain-num">+${nf(gained)} XP</div>
-      <div class="xp-gain-parts">${s.parts.map(p => `<div class="xp-part"><span>${esc(p.label)}</span><b>${p.xp ? "+" + nf(p.xp) : "✓"}</b></div>`).join("")}</div>
+      <div class="xp-gain-parts">${s.parts.filter(p => p.xp > 0).map(p => `<div class="xp-part"><span>${esc(p.label)}</span><b>+${nf(p.xp)}</b></div>`).join("")}
+        <div class="xp-part xp-part-total"><span>${t("Total")}</span><b>+${nf(gained)} XP</b></div></div>
       <div class="xp-bar xp-bar-lg"><div style="width:${after.progress.pct}%"></div></div>
       <div class="xp-hero-sub">${g.icon} ${esc(t(g.name))} · ${t("Niveau {n}", { n: after.level })} · ${t("encore {n} XP", { n: nf(after.progress.needed - after.progress.into) })}</div>
       <button class="btn btn-primary" id="xp-ok" style="margin-top:14px;">${levelUp ? t("Trop fort 🤘") : t("Continuer")}</button>

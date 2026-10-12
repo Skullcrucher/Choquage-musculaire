@@ -1473,5 +1473,14 @@ export default {
   "{n} série gardée par côté": "{n} seria zachowana na stronę",
   "{n} séries gardées par côté": "{n} serii zachowanych na stronę",
   "{n} série importée n'est pas comptée : exercice unilatéral, on ne sait pas si elle était notée par côté ou au total.": "{n} zaimportowana seria nie jest liczona: ćwiczenie jednostronne, nie wiadomo, czy zapisano ją na stronę, czy łącznie.",
-  "{n} séries importées ne sont pas comptées : exercice unilatéral, on ne sait pas si elles étaient notées par côté ou au total.": "{n} zaimportowanych serii nie jest liczonych: ćwiczenie jednostronne, nie wiadomo, czy zapisano je na stronę, czy łącznie."
+  "{n} séries importées ne sont pas comptées : exercice unilatéral, on ne sait pas si elles étaient notées par côté ou au total.": "{n} zaimportowanych serii nie jest liczonych: ćwiczenie jednostronne, nie wiadomo, czy zapisano je na stronę, czy łącznie.",
+  "40 + 3 × {n} séries": "40 + 3 × {n} serii",
+  "Cette séance chevauche une autre séance déjà enregistrée au même moment : elle est comptée comme un doublon, sans XP en plus. Vérifie Progrès → Historique et supprime la séance en double si besoin.": "Ten trening pokrywa się z innym zapisanym w tym samym czasie: liczy się jako duplikat, bez dodatkowego XP. Sprawdź Postępy → Historia i usuń duplikat w razie potrzeby.",
+  "Total": "Razem",
+  "moins de 3 séries": "mniej niż 3 serie",
+  "premiers pas": "pierwsze kroki",
+  "série de {n} semaines régulières": "seria {n} regularnych tygodni",
+  "{k}e séance de la semaine": "{k}. trening tygodnia",
+  "{n} muscle reposé": "{n} wypoczęty mięsień",
+  "{n} muscles reposés": "{n} wypoczętych mięśni"
 };

@@ -1096,7 +1096,9 @@ async function finishWorkout() {
   if (!extra) return null; // retour à la séance
   // XP avant la séance (pour afficher le gain et un éventuel nouveau niveau).
   const xpMod = await import("./xp.js").catch(() => null);
-  const xpBefore = xpMod ? xpMod.computeXp(await getWorkouts().catch(() => [])) : null;
+  // (sans cette séance, même si le cache en contient une ancienne version)
+  const finishingId = currentWorkout.id;
+  const xpBefore = xpMod ? xpMod.computeXp((await getWorkouts().catch(() => [])).filter(w => w.id !== finishingId)) : null;
   await db.updateWorkout(currentWorkout.id, {
     end_time: new Date().toISOString(),
     muscle_summary: muscleSummary,

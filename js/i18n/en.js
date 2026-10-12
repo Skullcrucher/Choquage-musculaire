@@ -1464,5 +1464,14 @@ export default {
   "{n} série gardée par côté": "{n} set kept per side",
   "{n} séries gardées par côté": "{n} sets kept per side",
   "{n} série importée n'est pas comptée : exercice unilatéral, on ne sait pas si elle était notée par côté ou au total.": "{n} imported set isn't counted: unilateral exercise, we can't tell if it was logged per side or in total.",
-  "{n} séries importées ne sont pas comptées : exercice unilatéral, on ne sait pas si elles étaient notées par côté ou au total.": "{n} imported sets aren't counted: unilateral exercise, we can't tell if they were logged per side or in total."
+  "{n} séries importées ne sont pas comptées : exercice unilatéral, on ne sait pas si elles étaient notées par côté ou au total.": "{n} imported sets aren't counted: unilateral exercise, we can't tell if they were logged per side or in total.",
+  "40 + 3 × {n} séries": "40 + 3 × {n} sets",
+  "Cette séance chevauche une autre séance déjà enregistrée au même moment : elle est comptée comme un doublon, sans XP en plus. Vérifie Progrès → Historique et supprime la séance en double si besoin.": "This workout overlaps another workout already logged at the same time: it counts as a duplicate, with no extra XP. Check Progress → History and delete the duplicate if needed.",
+  "Total": "Total",
+  "moins de 3 séries": "fewer than 3 sets",
+  "premiers pas": "first steps",
+  "série de {n} semaines régulières": "{n}-week streak",
+  "{k}e séance de la semaine": "workout #{k} of the week",
+  "{n} muscle reposé": "{n} rested muscle",
+  "{n} muscles reposés": "{n} rested muscles"
 };
