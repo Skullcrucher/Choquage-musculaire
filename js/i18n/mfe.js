@@ -1472,5 +1472,6 @@ export default {
   "série de {n} semaines régulières": "seri {n} semenn regilie",
   "{k}e séance de la semaine": "{k}em seans lasemenn",
   "{n} muscle reposé": "{n} mis repoze",
-  "{n} muscles reposés": "{n} mis repoze"
+  "{n} muscles reposés": "{n} mis repoze",
+  "Retour à la séance": "Retourn lor seans"
 };

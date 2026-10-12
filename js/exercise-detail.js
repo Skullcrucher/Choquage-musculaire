@@ -16,7 +16,8 @@ let detailChart = null;
 // i18n-keys: "Mouvement polyarticulaire : privilégie une technique stricte et une surcharge progressive plutôt que le poids maximal.", "À la barre : verrouille le gainage avant chaque répétition."
 // i18n-keys: "À la poulie : garde une tension constante sur le muscle, évite de relâcher en fin de mouvement."
 
-export async function openExerciseDetail(exerciseName, muscleGroupFallback = "") {
+// onClose : appelé à la fermeture (ex. rouvrir la séance d'où l'on vient).
+export async function openExerciseDetail(exerciseName, muscleGroupFallback = "", { onClose = null } = {}) {
   const guide = EXERCISE_GUIDES[exerciseName];
   const [rawSets, allSets] = await Promise.all([getSetsForExercise(exerciseName), getSetsForExercise(exerciseName, { raw: true })]);
   // Exercice unilatéral : séries importées hors statistiques (saisie inconnue).
@@ -33,6 +34,7 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "")
   const videoUrl = `https://www.youtube.com/results?search_query=${videoQuery}`;
 
   const modal = openModal(`
+    ${onClose ? `<button class="btn btn-secondary btn-sm" id="detail-back" style="margin-bottom:8px; width:auto;">← ${t("Retour à la séance")}</button>` : ""}
     <h3 style="margin-bottom:2px;">${esc(exerciseName)}</h3>
     <div class="chip-row" style="margin-top:6px;">
       ${guide ? `<div class="chip" style="pointer-events:none;">${t(guide.equipment)}</div>` : (muscleGroupFallback ? `<div class="chip" style="pointer-events:none;">${esc(t(muscleGroupFallback))}</div>` : "")}
@@ -86,7 +88,9 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "")
     ${sets.length ? `<button class="btn btn-primary share-btn" id="detail-share" style="margin-top:16px;">📸 ${t("Partager ma progression")}</button>` : ""}
     <button class="btn btn-secondary" id="detail-close" style="margin-top:10px;">${t("Fermer")}</button>
   `, (modalEl) => {
-    modalEl.querySelector("#detail-close").onclick = closeModal;
+    modalEl.querySelector("#detail-close").onclick = () => { closeModal(); if (onClose) onClose(); };
+    const back = modalEl.querySelector("#detail-back");
+    if (back) back.onclick = () => { closeModal(); onClose(); };
     const shareBtn = modalEl.querySelector("#detail-share");
     if (shareBtn) shareBtn.onclick = async () => { closeModal(); (await import("./share-card.js")).openShareCard({ kind: "exercise", exercise: exerciseName }); };
     if (sets.length) renderDetailChart(modalEl, sets);

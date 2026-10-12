@@ -1473,5 +1473,6 @@ export default {
   "série de {n} semaines régulières": "{n}-week streak",
   "{k}e séance de la semaine": "workout #{k} of the week",
   "{n} muscle reposé": "{n} rested muscle",
-  "{n} muscles reposés": "{n} rested muscles"
+  "{n} muscles reposés": "{n} rested muscles",
+  "Retour à la séance": "Back to the workout"
 };

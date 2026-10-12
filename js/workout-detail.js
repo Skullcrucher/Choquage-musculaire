@@ -20,7 +20,11 @@ function setTypeLabel(type) {
 function recordsHtml(w) {
   const records = Array.isArray(w.records) ? w.records : [];
   if (!records.length) return "";
-  return `<div class="finish-records" style="margin:0 0 12px;">${records.map(r => `<div>🏆 <b>${esc(r.exercise)}</b> — ${esc(r.kg)} kg × ${esc(r.reps)} <span class="muted">(1RM ${esc(r.one_rm)} kg, +${esc(Math.round((r.one_rm - r.prev_one_rm) * 10) / 10)} kg)</span></div>`).join("")}</div>`;
+  return `<div class="finish-records" style="margin:0 0 12px;">${records.map(r => {
+    const one = Number(r.one_rm) || (r.kg > 0 && r.reps > 0 ? estimate1RM(+r.kg, +r.reps) : null);
+    const gain = one != null && Number.isFinite(Number(r.prev_one_rm)) ? Math.round((one - r.prev_one_rm) * 10) / 10 : null;
+    return `<div>🏆 <b>${esc(r.exercise)}</b> — ${esc(r.kg)} kg × ${esc(r.reps)}${one != null ? ` <span class="muted">(1RM ${esc(one)} kg${gain != null ? `, +${esc(gain)} kg` : ""})</span>` : ""}</div>`;
+  }).join("")}</div>`;
 }
 
 const hasMusic = (w) => !!(w.record_song || w.soundtrack?.playlist_url || (w.soundtrack?.tracks || []).length);
@@ -70,6 +74,21 @@ async function myWorkoutSameDay(workout) {
 // anciennes séances), puis numéro de série.
 const bySetOrder = (a, b) => (a.exercise_index ?? 999) - (b.exercise_index ?? 999) || a.set_index - b.set_index;
 
+// Tendance sur le mois de chaque exercice, telle qu'elle était à la date
+// de la séance (séries jusqu'à ce jour-là compris).
+async function fillSessionTrends(root, workout) {
+  const [{ getSetsForExercise }, { exerciseTrend, trendBadgeHtml }] = await Promise.all([import("./cache.js"), import("./trend.js")]);
+  const end = new Date(workout.start_time); end.setHours(23, 59, 59, 999);
+  const endKey = end.toISOString();
+  for (const el of root.querySelectorAll("[data-wd-trend]")) {
+    try {
+      const sets = (await getSetsForExercise(el.dataset.wdTrend)).filter(s => String(s.workout_start_time || "") <= endKey || s.workout_id === workout.id);
+      const tr = exerciseTrend(sets, { now: end.getTime() });
+      if (el.isConnected) el.innerHTML = trendBadgeHtml(tr);
+    } catch (e) { console.warn("[Skullcrusher] Tendance", e); }
+  }
+}
+
 export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") {
   const myUid = getUser()?.uid;
   const isOwner = !workout.owner_uid || workout.owner_uid === myUid;
@@ -112,7 +131,7 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
       ${recordsHtml(workout)}
       ${Object.entries(byExercise).map(([name, exSets]) => `
         <div style="margin-bottom:12px;">
-          <div style="font-family:'Barlow Condensed',sans-serif; font-size:17px; margin-bottom:4px;">${esc(name)}</div>
+          <div class="wd-ex-name" data-wd-ex="${esc(name)}" role="button" tabindex="0">${esc(name)} <span class="ex-trend" data-wd-trend="${esc(name)}"></span><span class="wd-ex-go">›</span></div>
           ${exSets.sort((a, b) => a.set_index - b.set_index).map(s => `
             <div class="muted" style="display:flex; justify-content:space-between; padding:3px 0;">
               <span>${t("Série {n}", { n: esc(s.set_index) })} ${s.set_type !== "normal" ? "· " + esc(setTypeLabel(s.set_type)) : ""}${s.rpe ? ` · RPE ${esc(String(s.rpe).replace(".", ","))}` : ""}</span>
@@ -189,6 +208,15 @@ export async function openWorkoutDetail(workout, onDeleted, initialTab = "gym") 
     });
     bindProfiles();
     bindSongLinks(modalEl);
+    // Chaque exercice : fiche (historique, 1RM, graphique) au toucher, et
+    // pour ses propres séances la tendance au moment de la séance.
+    modalEl.querySelectorAll("[data-wd-ex]").forEach(el => el.onclick = async () => {
+      const name = el.dataset.wdEx;
+      const group = guessMuscleGroup(name);
+      closeModal();
+      (await import("./exercise-detail.js")).openExerciseDetail(name, group, { onClose: () => openWorkoutDetail(workout, onDeleted, "gym") });
+    });
+    if (isOwner) fillSessionTrends(modalEl, workout);
 
     const shareWorkoutBtn = modalEl.querySelector("#share-workout");
     if (shareWorkoutBtn) shareWorkoutBtn.onclick = async () => {

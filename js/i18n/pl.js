@@ -1482,5 +1482,6 @@ export default {
   "série de {n} semaines régulières": "seria {n} regularnych tygodni",
   "{k}e séance de la semaine": "{k}. trening tygodnia",
   "{n} muscle reposé": "{n} wypoczęty mięsień",
-  "{n} muscles reposés": "{n} wypoczętych mięśni"
+  "{n} muscles reposés": "{n} wypoczętych mięśni",
+  "Retour à la séance": "Wróć do treningu"
 };
