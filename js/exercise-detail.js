@@ -34,7 +34,10 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "",
   const guide = EXERCISE_GUIDES[exerciseName];
   const [rawSets, allSets] = await Promise.all([getSetsForExercise(exerciseName), getSetsForExercise(exerciseName, { raw: true })]);
   // Exercice unilatéral : séries importées hors statistiques (saisie inconnue).
-  const excluded = allSets.length - rawSets.length;
+  // Charges aberrantes (faute de frappe) : hors stats, signalées pour correction.
+  const { isAbsurdKg } = await import("./sanity.js");
+  const absurdSets = allSets.filter(s => isAbsurdKg(exerciseName, s.weight_kg));
+  const excluded = allSets.length - rawSets.length - absurdSets.length;
   const trend = exerciseTrend(rawSets);
   const sets = rawSets
     .filter(s => s.weight_kg != null && s.reps != null)
@@ -77,6 +80,9 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "",
 
     <div style="margin-top:18px;">
       <div class="muted" style="margin-bottom:5px;">${t("Historique")}</div>
+      ${absurdSets.length ? `<div class="kg-absurd">⚠️ ${tn(absurdSets.length, "{n} série avec une charge incohérente est ignorée :", "{n} séries avec une charge incohérente sont ignorées :", {})}
+        ${absurdSets.slice(0, 5).map(s => `<button type="button" class="chip chip-sm" data-ex-w="${esc(s.workout_id)}">${esc(String(s.weight_kg).replace(".", ","))} kg × ${esc(s.reps ?? "—")} · ${esc(fmtDateTime(s.workout_start_time))} ✏️</button>`).join("")}
+        <span class="muted" style="font-size:12px;">${t("Touche pour ouvrir la séance, puis « Modifier la séance » pour corriger.")}</span></div>` : ""}
       ${excluded > 0 && statsAppOnly() ? `<p class="muted" style="font-size:12px; margin:0 0 8px;">📥 ${tn(excluded, "{n} série importée n'est pas comptée (Réglages : statistiques sur les séances Skullcrusher uniquement).", "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).")}</p>` : ""}
       ${excluded > 0 && !statsAppOnly() ? `<p class="muted" style="font-size:12px; margin:0 0 8px;">↔ ${tn(excluded, "{n} série importée n'est pas comptée : exercice unilatéral, on ne sait pas si elle était notée par côté ou au total.", "{n} séries importées ne sont pas comptées : exercice unilatéral, on ne sait pas si elles étaient notées par côté ou au total.")} ${t("Pour les inclure, active G|D en séance et indique comment elles étaient notées.")}</p>` : ""}
       ${trend ? `<div class="trend-line trend-line-${trend.status}">${trendBadgeHtml(trend, { label: true })}<span>${esc(trendDetail(trend))} · ${tn(trend.sessions, "{n} séance ce mois-ci", "{n} séances ce mois-ci")}</span></div>`

@@ -1505,3 +1505,4 @@ html.desktop .mw-pls { display: grid; grid-template-columns: 1fr 1fr; }
 .list-row.hist-dup { opacity: 0.7; }
 .hist-dups { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; margin-bottom: 8px; border-radius: var(--radius); border: 1px solid var(--orange); background: rgba(240,162,59,0.08); font-size: 13px; }
 .hist-dups .btn { align-self: flex-start; }
+.kg-absurd { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px; margin: 0 0 10px; border-radius: var(--radius); border: 1px solid var(--red); background: rgba(255,92,92,0.08); font-size: 13px; }

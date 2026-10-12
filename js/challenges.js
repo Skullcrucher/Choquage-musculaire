@@ -14,6 +14,7 @@ import { normalizePlaylistUrl, spotifyEmbed } from "./music.js";
 import { openProfile } from "./profile.js";
 import { t, locale } from "./i18n.js";
 import { gradeBadgeHtml } from "./xp.js";
+import { sessionTonnage } from "./sanity.js";
 
 const METRICS = {
   // i18n-keys: "Score", "Tonnage", "Séances", "Séries"
@@ -60,11 +61,11 @@ function totalsFor(workouts, refDate) {
   // Moyenne de tonnage des 4 semaines précédentes où il y a eu entraînement.
   const past = [1, 2, 3, 4]
     .map(k => weekOf(new Date(refDate.getTime() - k * 7 * DAY)))
-    .map(wk => workouts.filter(w => inWeek(w, wk)).reduce((a, w) => a + (w.total_tonnage || 0), 0))
+    .map(wk => workouts.filter(w => inWeek(w, wk)).reduce((a, w) => a + sessionTonnage(w), 0))
     .filter(v => v > 0);
   const totals = {
     week,
-    tonnage: ws.reduce((a, w) => a + (w.total_tonnage || 0), 0),
+    tonnage: ws.reduce((a, w) => a + sessionTonnage(w), 0),
     sets: ws.reduce((a, w) => a + (w.total_sets || 0), 0),
     workouts: ws.length,
     valid_workouts: ws.filter(w => (w.total_sets ?? MIN_SETS) >= MIN_SETS).length,

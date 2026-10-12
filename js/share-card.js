@@ -14,6 +14,7 @@ import { openModal, closeModal, toast, esc, estimate1RM, isoWeek, safeImageUrl, 
 import { getWorkouts, getSetsForPeriod, getSetsForExercise, getExercises } from "./cache.js";
 import { t, locale } from "./i18n.js";
 import { sessionsBetween, sessionMinutes } from "./week-sessions.js";
+import { sessionTonnage } from "./sanity.js";
 
 // ---------- Palette et polices de l'app ----------
 const C = {
@@ -320,7 +321,7 @@ async function periodData(days) {
   return {
     days, since, workouts,
     count: workouts.length,
-    tonnage: workouts.reduce((a, w) => a + (w.total_tonnage || 0), 0),
+    tonnage: workouts.reduce((a, w) => a + sessionTonnage(w), 0),
     sets: workouts.reduce((a, w) => a + (w.total_sets || 0), 0),
     minutes: workouts.reduce((a, w) => a + workoutMinutes(w), 0),
     activeDays: dayKeys,

@@ -1519,5 +1519,16 @@ export default {
   "{n} séance(s) que tu avais supprimée(s) ignorée(s).": "{n} workout(s) you had deleted skipped.",
   "Ce fichier est un plan d'entraînement, pas un historique de séances : importe-le dans Biblio → Mes plans → Importer un plan.": "This file is a training plan, not a workout history: import it in Library → My plans → Import a plan.",
   "Ce fichier ressemble à un programme (aucune charge notée sur des exercices à barre, haltères ou machine) : ce n'est pas un historique. Pour un programme, utilise Biblio → Mes plans → Importer un plan.": "This file looks like a program (no load logged on barbell, dumbbell or machine exercises): it isn't a history. For a program, use Library → My plans → Import a plan.",
-  "{n} séance(s) sans aucune charge sur des exercices à barre, haltères ou machine ignorée(s) : elles ressemblent à un programme, pas à des séances réalisées.": "{n} workout(s) with no load on barbell, dumbbell or machine exercises skipped: they look like a program, not completed workouts."
+  "{n} séance(s) sans aucune charge sur des exercices à barre, haltères ou machine ignorée(s) : elles ressemblent à un programme, pas à des séances réalisées.": "{n} workout(s) with no load on barbell, dumbbell or machine exercises skipped: they look like a program, not completed workouts.",
+  "C'est bien ça": "That's right",
+  "Charge incohérente à corriger : {list}": "Inconsistent load to fix: {list}",
+  "Charge incohérente à corriger avant de terminer : {list}": "Inconsistent load to fix before finishing: {list}",
+  "Charge incohérente": "Inconsistent load",
+  "Corriger la charge": "Fix the load",
+  "Touche pour ouvrir la séance, puis « Modifier la séance » pour corriger.": "Tap to open the workout, then \"Edit workout\" to fix it.",
+  "{kg} kg sur « {name} » : plus du double de ton record ({best} kg). Faute de frappe ?": "{kg} kg on \"{name}\": more than double your record ({best} kg). Typo?",
+  "{kg} kg sur « {name} », ce n'est pas possible : sûrement une faute de frappe. La charge a été effacée, saisis la bonne.": "{kg} kg on \"{name}\" isn't possible: surely a typo. The load was cleared, enter the right one.",
+  "{n} charge(s) incohérente(s) (ex. plusieurs milliers de kg) non importée(s) : les séries sont gardées sans le poids.": "{n} inconsistent load(s) (e.g. several thousand kg) not imported: the sets are kept without the weight.",
+  "{n} série avec une charge incohérente est ignorée :": "{n} set with an inconsistent load is ignored:",
+  "{n} séries avec une charge incohérente sont ignorées :": "{n} sets with an inconsistent load are ignored:"
 };

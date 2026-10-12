@@ -438,6 +438,32 @@ function fillTrends(el) {
   });
 }
 
+// Garde-fou des charges : aberrante (ex. 6659 kg) → effacée, à corriger ;
+// plus du double du record → confirmation (faute de frappe probable).
+async function checkKgInput(ex, set, input) {
+  const kg = set.weight_kg;
+  if (!(kg > 0) || set.kg_ok === kg) return;
+  const { kgWarning } = await import("./sanity.js");
+  const history = await getSetsForExercise(ex.exercise_title, { ignoreScope: true }).catch(() => []);
+  const best = Math.max(0, ...history.filter(s => s.workout_id !== currentWorkout?.id).map(s => Number(s.weight_kg) || 0));
+  const warn = kgWarning(ex.exercise_title, kg, best);
+  if (!warn) return;
+  const clear = () => { input.value = ""; input.dispatchEvent(new Event("input")); setTimeout(() => input.focus(), 50); };
+  if (warn === "absurd") clear();
+  openModal(`
+    <h3>⚠️ ${t("Charge incohérente")}</h3>
+    <p>${warn === "absurd"
+      ? t("{kg} kg sur « {name} », ce n'est pas possible : sûrement une faute de frappe. La charge a été effacée, saisis la bonne.", { kg: esc(String(kg).replace(".", ",")), name: esc(ex.exercise_title) })
+      : t("{kg} kg sur « {name} » : plus du double de ton record ({best} kg). Faute de frappe ?", { kg: esc(String(kg).replace(".", ",")), name: esc(ex.exercise_title), best: esc(String(best).replace(".", ",")) })}</p>
+    <button class="btn btn-primary" id="kg-fix">${t("Corriger la charge")}</button>
+    ${warn === "jump" ? `<button class="btn btn-secondary" id="kg-ok" style="margin-top:8px;">${t("C'est bien ça")}</button>` : ""}
+  `, (m) => {
+    m.querySelector("#kg-fix").onclick = () => { closeModal(); if (warn === "jump") clear(); else setTimeout(() => input.focus(), 50); };
+    const ok = m.querySelector("#kg-ok");
+    if (ok) ok.onclick = () => { set.kg_ok = kg; closeModal(); };
+  });
+}
+
 function drawExerciseList(el) {
   const count = currentWorkout.exercises.length;
   el.innerHTML = currentWorkout.exercises.map((ex, exIdx) => `
@@ -562,6 +588,8 @@ function drawExerciseList(el) {
       persist();
       if (sIdx === 0) propagateFirstKg(el, exIdx, ex);
     };
+    // Charge incohérente (faute de frappe) : vérifiée à la fin de la saisie.
+    kgInput.addEventListener("change", () => checkKgInput(ex, set, kgInput));
     repsInput.oninput = () => { set.reps = repsInput.value ? parseInt(repsInput.value, 10) : null; set.touched = true; persist(); };
 
     // Type de série : choix direct (normale, échauffement, dégressive, échec).
@@ -1059,6 +1087,13 @@ function realSetCount(w) {
 async function finishWorkout() {
   // Rien de fait : la séance n'est pas gardée (sinon elle compterait comme
   // « bouclée » sans aucune série).
+  // Charges aberrantes restantes : jamais enregistrées.
+  const { isAbsurdKg } = await import("./sanity.js");
+  const absurd = currentWorkout.exercises.flatMap(ex => ex.sets.filter(st => isAbsurdKg(ex.exercise_title, st.weight_kg)).map(st => `${ex.exercise_title} : ${st.weight_kg} kg`));
+  if (absurd.length) {
+    toast(t("Charge incohérente à corriger avant de terminer : {list}", { list: absurd.join(", ") }), 5000);
+    return null;
+  }
   if (!realSetCount(currentWorkout)) {
     const ok = await confirmDanger({
       title: t("Séance vide"),

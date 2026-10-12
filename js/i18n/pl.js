@@ -1528,5 +1528,16 @@ export default {
   "{n} séance(s) que tu avais supprimée(s) ignorée(s).": "Pominięto {n} usuniętych wcześniej treningów.",
   "Ce fichier est un plan d'entraînement, pas un historique de séances : importe-le dans Biblio → Mes plans → Importer un plan.": "Ten plik to plan treningowy, a nie historia treningów: zaimportuj go w Biblioteka → Moje plany → Importuj plan.",
   "Ce fichier ressemble à un programme (aucune charge notée sur des exercices à barre, haltères ou machine) : ce n'est pas un historique. Pour un programme, utilise Biblio → Mes plans → Importer un plan.": "Ten plik wygląda na program (brak obciążeń przy ćwiczeniach ze sztangą, hantlami lub na maszynie): to nie jest historia. Dla programu użyj Biblioteka → Moje plany → Importuj plan.",
-  "{n} séance(s) sans aucune charge sur des exercices à barre, haltères ou machine ignorée(s) : elles ressemblent à un programme, pas à des séances réalisées.": "Pominięto {n} trening(ów) bez obciążeń przy ćwiczeniach ze sztangą, hantlami lub na maszynie: wyglądają na program, nie na wykonane treningi."
+  "{n} séance(s) sans aucune charge sur des exercices à barre, haltères ou machine ignorée(s) : elles ressemblent à un programme, pas à des séances réalisées.": "Pominięto {n} trening(ów) bez obciążeń przy ćwiczeniach ze sztangą, hantlami lub na maszynie: wyglądają na program, nie na wykonane treningi.",
+  "C'est bien ça": "Tak, zgadza się",
+  "Charge incohérente à corriger : {list}": "Niespójne obciążenie do poprawy: {list}",
+  "Charge incohérente à corriger avant de terminer : {list}": "Popraw niespójne obciążenie przed zakończeniem: {list}",
+  "Charge incohérente": "Niespójne obciążenie",
+  "Corriger la charge": "Popraw obciążenie",
+  "Touche pour ouvrir la séance, puis « Modifier la séance » pour corriger.": "Dotknij, by otworzyć trening, potem „Edytuj trening”, by poprawić.",
+  "{kg} kg sur « {name} » : plus du double de ton record ({best} kg). Faute de frappe ?": "{kg} kg na „{name}”: ponad dwa razy więcej niż twój rekord ({best} kg). Literówka?",
+  "{kg} kg sur « {name} », ce n'est pas possible : sûrement une faute de frappe. La charge a été effacée, saisis la bonne.": "{kg} kg na „{name}” to niemożliwe: na pewno literówka. Obciążenie wyczyszczono, wpisz właściwe.",
+  "{n} charge(s) incohérente(s) (ex. plusieurs milliers de kg) non importée(s) : les séries sont gardées sans le poids.": "Nie zaimportowano {n} niespójnych obciążeń (np. kilka tysięcy kg): serie zachowano bez ciężaru.",
+  "{n} série avec une charge incohérente est ignorée :": "{n} seria z niespójnym obciążeniem jest pomijana:",
+  "{n} séries avec une charge incohérente sont ignorées :": "{n} serii z niespójnym obciążeniem jest pomijanych:"
 };

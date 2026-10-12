@@ -15,6 +15,7 @@ import { getRoutines, getWorkouts, invalidate } from "./cache.js";
 import { t, tn, locale } from "./i18n.js";
 import { sessionsBetween, sessionMinutes } from "./week-sessions.js";
 import { guessMuscleGroup } from "./muscles.js";
+import { sessionTonnage } from "./sanity.js";
 
 export const MAX_PLANS = 20;
 const DAY_MS = 86400000;
@@ -416,7 +417,7 @@ function planStats(plan, routines, workouts) {
   return {
     weeks, due, done, planned, streak,
     adherence: due ? Math.round(done / due * 100) : null,
-    tonnage: list.reduce((n, w) => n + (w.total_tonnage || 0), 0),
+    tonnage: list.reduce((n, w) => n + sessionTonnage(w), 0),
     sets: list.reduce((n, w) => n + (w.total_sets || 0), 0),
     minutes: list.reduce((n, w) => n + sessionMinutes(w), 0),
     workouts: list.sort((a, b) => String(b.start_time).localeCompare(String(a.start_time)))

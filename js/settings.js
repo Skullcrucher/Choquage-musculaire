@@ -558,6 +558,7 @@ export async function renderReglages(container) {
             ${stats.errors ? ` · ${t("{n} erreur(s)", { n: stats.errors })}` : ""}
           </p>
           ${stats.workoutsSkippedDeleted ? `<p class="muted">🗑️ ${t("{n} séance(s) que tu avais supprimée(s) ignorée(s).", { n: stats.workoutsSkippedDeleted })}</p>` : ""}
+          ${stats.absurdWeights ? `<p style="color:var(--orange)">⚠️ ${t("{n} charge(s) incohérente(s) (ex. plusieurs milliers de kg) non importée(s) : les séries sont gardées sans le poids.", { n: stats.absurdWeights })}</p>` : ""}
           ${stats.skippedProgramme ? `<p style="color:var(--orange)">📋 ${t("{n} séance(s) sans aucune charge sur des exercices à barre, haltères ou machine ignorée(s) : elles ressemblent à un programme, pas à des séances réalisées.", { n: stats.skippedProgramme })}</p>` : ""}
           ${stats.skippedFuture ? `<p style="color:var(--orange)">📅 ${t("{n} séance(s) datée(s) dans le futur ignorée(s) : un historique ne contient que des séances déjà faites (pour un programme, utilise Biblio → Importer un plan).", { n: stats.skippedFuture })}</p>` : ""}
           ${stats.rowsTotal && !stats.rowsWithWeight ? `<p style="color:var(--red)">⚠️ ${stats.weightColumn

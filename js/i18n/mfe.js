@@ -1518,5 +1518,16 @@ export default {
   "{n} séance(s) que tu avais supprimée(s) ignorée(s).": "{n} seans ki to ti efase inyore.",
   "Ce fichier est un plan d'entraînement, pas un historique de séances : importe-le dans Biblio → Mes plans → Importer un plan.": "Sa fisie-la se enn plan antrennman, pa enn listorik seans : import li dan Biblio → Mo bann plan → Import enn plan.",
   "Ce fichier ressemble à un programme (aucune charge notée sur des exercices à barre, haltères ou machine) : ce n'est pas un historique. Pour un programme, utilise Biblio → Mes plans → Importer un plan.": "Sa fisie-la res enn program (okenn sarz lor lexersis bar, altèr ou masinn) : se pa enn listorik. Pou enn program, servi Biblio → Mo bann plan → Import enn plan.",
-  "{n} séance(s) sans aucune charge sur des exercices à barre, haltères ou machine ignorée(s) : elles ressemblent à un programme, pas à des séances réalisées.": "{n} seans san okenn sarz lor lexersis bar, altèr ou masinn inyore : zot res enn program, pa bann seans fer."
+  "{n} séance(s) sans aucune charge sur des exercices à barre, haltères ou machine ignorée(s) : elles ressemblent à un programme, pas à des séances réalisées.": "{n} seans san okenn sarz lor lexersis bar, altèr ou masinn inyore : zot res enn program, pa bann seans fer.",
+  "C'est bien ça": "Se bien sa",
+  "Charge incohérente à corriger : {list}": "Sarz pa koeran pou koriz : {list}",
+  "Charge incohérente à corriger avant de terminer : {list}": "Sarz pa koeran pou koriz avan fini : {list}",
+  "Charge incohérente": "Sarz pa koeran",
+  "Corriger la charge": "Koriz sarz-la",
+  "Touche pour ouvrir la séance, puis « Modifier la séance » pour corriger.": "Tous pou ouver seans-la, apre « Modifie seans » pou koriz.",
+  "{kg} kg sur « {name} » : plus du double de ton record ({best} kg). Faute de frappe ?": "{kg} kg lor « {name} » : plis ki de fwa to rekor ({best} kg). Erer tape ?",
+  "{kg} kg sur « {name} », ce n'est pas possible : sûrement une faute de frappe. La charge a été effacée, saisis la bonne.": "{kg} kg lor « {name} », pa posib : sirman enn erer tape. Sarz-la finn efase, tap bon sarz.",
+  "{n} charge(s) incohérente(s) (ex. plusieurs milliers de kg) non importée(s) : les séries sont gardées sans le poids.": "{n} sarz pa koeran (egz. plizier mil kg) pa importe : bann seri garde san pwa.",
+  "{n} série avec une charge incohérente est ignorée :": "{n} seri avek enn sarz pa koeran inyore :",
+  "{n} séries avec une charge incohérente sont ignorées :": "{n} seri avek enn sarz pa koeran inyore :"
 };

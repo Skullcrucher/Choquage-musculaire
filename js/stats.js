@@ -15,6 +15,7 @@ import { openExerciseDetail } from "./exercise-detail.js";
 import { icon, segHtml } from "./icons.js";
 import { t, locale } from "./i18n.js";
 import { getBody, workoutCalories } from "./calories.js";
+import { sessionTonnage } from "./sanity.js";
 
 let chartMuscle = null;
 let chartExercise = null;
@@ -127,7 +128,7 @@ async function renderGeneralStats(container) {
   // doublons — même séance importée ou ajoutée deux fois — comptés une fois).
   const counted = allSessions(statsWorkouts(workouts));
   const totalSets = counted.reduce((acc, w) => acc + (w.total_sets || 0), 0);
-  const totalTonnage = counted.reduce((acc, w) => acc + (w.total_tonnage || 0), 0);
+  const totalTonnage = counted.reduce((acc, w) => acc + sessionTonnage(w), 0);
 
   if (!container.isConnected) return;
   container.innerHTML = `

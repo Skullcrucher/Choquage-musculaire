@@ -14,6 +14,7 @@ import { allTrends, trendBadgeHtml, trendDetail, TREND_DAYS } from "./trend.js";
 import { gradeBadgeHtml } from "./xp.js";
 import { songHtml, bindSongLinks, parseMusicLink, musicEmbed, PROVIDERS, providerIcon, providerName, shortLinkHint, getMyProvider, setMyProvider, openOnMyService, searchArtists } from "./music.js";
 import { t, tn, locale } from "./i18n.js";
+import { sessionTonnage } from "./sanity.js";
 
 const MAX_HIGHLIGHTS = 3;
 const WEEK_MS = 7 * 24 * 3600 * 1000;
@@ -88,7 +89,7 @@ async function computePublicStats() {
   const recent = workouts.filter(w => (w.start_time || "") >= since).length;
   return {
     workouts: workouts.length,
-    tonnes: Math.round(workouts.reduce((a, w) => a + (w.total_tonnage || 0), 0) / 1000),
+    tonnes: Math.round(workouts.reduce((a, w) => a + sessionTonnage(w), 0) / 1000),
     per_week: Math.round((recent / 12) * 10) / 10
   };
 }
