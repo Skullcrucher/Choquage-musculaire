@@ -1483,5 +1483,6 @@ export default {
   "{n} série importée n'est pas comptée (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} seri importe pa konte (Reglaz : stat lor seans Skullcrusher selman).",
   "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} seri importe pa konte (Reglaz : stat lor seans Skullcrusher selman).",
   "Historique importé ou non, début de semaine": "Listorik importe ou non, konmansman semenn",
-  "Statistiques et calendrier": "Statistik ek kalandrie"
+  "Statistiques et calendrier": "Statistik ek kalandrie",
+  "Calculé le {date}.": "Kalkile le {date}."
 };

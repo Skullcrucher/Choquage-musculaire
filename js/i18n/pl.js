@@ -1493,5 +1493,6 @@ export default {
   "{n} série importée n'est pas comptée (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} zaimportowana seria nie jest liczona (Ustawienia: statystyki tylko z treningów Skullcrusher).",
   "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} zaimportowanych serii nie jest liczonych (Ustawienia: statystyki tylko z treningów Skullcrusher).",
   "Historique importé ou non, début de semaine": "Historia z importem lub bez, początek tygodnia",
-  "Statistiques et calendrier": "Statystyki i kalendarz"
+  "Statistiques et calendrier": "Statystyki i kalendarz",
+  "Calculé le {date}.": "Obliczono {date}."
 };

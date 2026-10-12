@@ -1484,5 +1484,6 @@ export default {
   "{n} série importée n'est pas comptée (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} imported set isn't counted (Settings: stats on Skullcrusher workouts only).",
   "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} imported sets aren't counted (Settings: stats on Skullcrusher workouts only).",
   "Historique importé ou non, début de semaine": "Imported history or not, week start",
-  "Statistiques et calendrier": "Statistics and calendar"
+  "Statistiques et calendrier": "Statistics and calendar",
+  "Calculé le {date}.": "Calculated on {date}."
 };

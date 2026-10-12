@@ -239,6 +239,17 @@ initAuth((user) => {
         .then(() => new Promise(r => setTimeout(r, 2500)))
         .then(() => import("./challenge-reminder.js")).then(m => m.maybeShowChallengeReminder())
         .catch(e => console.warn("[Skullcrusher] Rappel des défis :", e));
+      // Préférences synchronisées (temps de repos, exercices unilatéraux),
+      // puis, une fois par jour, vitrine et progression du profil public
+      // recalculées : les visiteurs voient des chiffres à jour.
+      import("./db.js").then(m => m.loadRestPrefs()).catch(() => null).then(() => {
+        const key = "skullcrusher_profile_refresh_day", today = new Date().toDateString();
+        let last = null; try { last = localStorage.getItem(key); } catch (_) {}
+        if (last === today) return;
+        setTimeout(() => import("./profile.js").then(m => m.refreshMyProfileHighlights())
+          .then(() => { try { localStorage.setItem(key, today); } catch (_) {} })
+          .catch(e => console.warn("[Skullcrusher] Profil public non mis à jour :", e)), 8000);
+      });
       // Retour de la page de connexion Spotify (?code=...), s'il y en a un.
       if (/[?&](code|error)=/.test(location.search)) {
         import("./spotify-connect.js")
