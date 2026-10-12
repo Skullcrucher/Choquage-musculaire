@@ -789,7 +789,7 @@ async function toggleUnilateral(ex, listEl) {
 }
 
 async function getLastSetsForExercise(exerciseName) {
-  let relevant = await getSetsForExercise(exerciseName);
+  let relevant = await getSetsForExercise(exerciseName, { ignoreScope: true });
   relevant = relevant.filter(s => s.workout_start_time);
   if (!relevant.length) return [];
   const latestTime = relevant.reduce((max, s) => (s.workout_start_time > max ? s.workout_start_time : max), relevant[0].workout_start_time);

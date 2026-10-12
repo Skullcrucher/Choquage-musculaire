@@ -1473,5 +1473,13 @@ export default {
   "{k}e séance de la semaine": "{k}em seans lasemenn",
   "{n} muscle reposé": "{n} mis repoze",
   "{n} muscles reposés": "{n} mis repoze",
-  "Retour à la séance": "Retourn lor seans"
+  "Retour à la séance": "Retourn lor seans",
+  "Les séances faites dans Skullcrusher uniquement": "Zis bann seans fer dan Skullcrusher",
+  "Statistiques calculées sur": "Statistik kalkile lor",
+  "Stats : séances Skullcrusher uniquement": "Stat : zis seans Skullcrusher",
+  "Stats : tout l'historique": "Stat : tou listorik",
+  "Stats, graphiques, 1RM, tendances, records et profil. L'historique et le calendrier montrent toujours toutes tes séances.": "Stat, graf, 1RM, tandans, rekor ek profil. Listorik ek kalandrie touzour montre tou to bann seans.",
+  "Tout l'historique (imports compris)": "Tou listorik (avek bann import)",
+  "{n} série importée n'est pas comptée (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} seri importe pa konte (Reglaz : stat lor seans Skullcrusher selman).",
+  "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} seri importe pa konte (Reglaz : stat lor seans Skullcrusher selman)."
 };

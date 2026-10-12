@@ -4,7 +4,7 @@
 import * as db from "./db.js";
 import { icon } from "./icons.js";
 import { importCsvFile } from "./import.js";
-import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl, APP_VERSION, healthNoteHtml, forceUpdate, defaultSetType, setDefaultSetType, weekStartsSunday, setWeekStartsSunday } from "./utils.js";
+import { toast, openModal, closeModal, restNotificationsEnabled, setRestNotificationsEnabled, resizeImageFile, esc, safeImageUrl, APP_VERSION, healthNoteHtml, forceUpdate, defaultSetType, setDefaultSetType, weekStartsSunday, setWeekStartsSunday, statsAppOnly, setStatsAppOnly } from "./utils.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { invalidateStatsCache } from "./stats.js";
 import { getExercises, invalidate } from "./cache.js";
@@ -232,6 +232,12 @@ export async function renderReglages(container) {
         <option value="failure" ${defaultSetType() === "failure" ? "selected" : ""}>💀 ${t("Échec")}</option>
         <option value="normal" ${defaultSetType() === "normal" ? "selected" : ""}>${t("Normale")}</option>
       </select>
+      <label>📊 ${t("Statistiques calculées sur")}</label>
+      <select id="stats-scope">
+        <option value="all" ${statsAppOnly() ? "" : "selected"}>${t("Tout l'historique (imports compris)")}</option>
+        <option value="app" ${statsAppOnly() ? "selected" : ""}>${t("Les séances faites dans Skullcrusher uniquement")}</option>
+      </select>
+      <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Stats, graphiques, 1RM, tendances, records et profil. L'historique et le calendrier montrent toujours toutes tes séances.")}</p>
       <label>📅 ${t("La semaine commence le")}</label>
       <select id="week-start">
         <option value="mon" ${weekStartsSunday() ? "" : "selected"}>${t("Lundi")}</option>
@@ -365,6 +371,13 @@ export async function renderReglages(container) {
       toast(sel.value === "0" ? t("Rappel désactivé") : t("Rappel enregistré"));
     };
   }).catch(() => null);
+  container.querySelector("#stats-scope").onchange = (e) => {
+    setStatsAppOnly(e.target.value === "app");
+    db.updatePublicProfile({ stats_scope: e.target.value }).catch(() => null); // suit sur tes autres appareils
+    invalidateStatsCache();
+    import("./profile.js").then(m => m.refreshMyProfileHighlights()).catch(() => null);
+    toast(e.target.value === "app" ? t("Stats : séances Skullcrusher uniquement") : t("Stats : tout l'historique"));
+  };
   container.querySelector("#week-start").onchange = (e) => {
     setWeekStartsSunday(e.target.value === "sun");
     db.updatePublicProfile({ week_start: e.target.value }).catch(() => null); // suit sur tes autres appareils

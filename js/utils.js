@@ -12,8 +12,8 @@ import { t, locale } from "./i18n.js";
 //     worker (CACHE_NAME dans service-worker.js doit valoir
 //     skullcrusher-cache-v<APP_BUILD>).
 // Puis : node tools/stamp-version.mjs
-export const APP_VERSION = "0.94.04";
-export const APP_BUILD = 109;
+export const APP_VERSION = "0.95.00";
+export const APP_BUILD = 110;
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
@@ -187,6 +187,20 @@ export function weekStartsSunday() {
 export function setWeekStartsSunday(on) {
   try { localStorage.setItem(LS_WEEK_START, on ? "sun" : "mon"); } catch (_) {}
 }
+// Statistiques : tout l'historique (imports Hevy… compris, par défaut) ou
+// seulement les séances faites dans Skullcrusher.
+const LS_STATS_SCOPE = "skullcrusher_stats_scope";
+export function statsAppOnly() {
+  try { return localStorage.getItem(LS_STATS_SCOPE) === "app"; } catch (_) { return false; }
+}
+export function setStatsAppOnly(on) {
+  try { localStorage.setItem(LS_STATS_SCOPE, on ? "app" : "all"); } catch (_) {}
+}
+// Séances retenues pour les statistiques selon ce réglage.
+export function statsWorkouts(workouts) {
+  return statsAppOnly() ? (workouts || []).filter(w => !w.imported_at) : (workouts || []);
+}
+
 // Premier jour (minuit) de la semaine contenant `date`.
 export function startOfWeek(date = new Date(), { iso = false } = {}) {
   const d = new Date(date);

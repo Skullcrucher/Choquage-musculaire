@@ -38,6 +38,10 @@ export async function refreshTopAvatar() {
     if (!u) { topAvatar.hidden = true; return; }
     const prof = await db.getProfile(u.uid).catch(() => null);
     // Début de semaine choisi sur un autre appareil.
+    if (prof?.stats_scope === "app" || prof?.stats_scope === "all") {
+      const { setStatsAppOnly } = await import("./utils.js");
+      setStatsAppOnly(prof.stats_scope === "app");
+    }
     if (prof?.week_start === "sun" || prof?.week_start === "mon") {
       const { setWeekStartsSunday } = await import("./utils.js");
       setWeekStartsSunday(prof.week_start === "sun");

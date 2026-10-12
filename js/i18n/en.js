@@ -1474,5 +1474,13 @@ export default {
   "{k}e séance de la semaine": "workout #{k} of the week",
   "{n} muscle reposé": "{n} rested muscle",
   "{n} muscles reposés": "{n} rested muscles",
-  "Retour à la séance": "Back to the workout"
+  "Retour à la séance": "Back to the workout",
+  "Les séances faites dans Skullcrusher uniquement": "Only workouts done in Skullcrusher",
+  "Statistiques calculées sur": "Statistics based on",
+  "Stats : séances Skullcrusher uniquement": "Stats: Skullcrusher workouts only",
+  "Stats : tout l'historique": "Stats: full history",
+  "Stats, graphiques, 1RM, tendances, records et profil. L'historique et le calendrier montrent toujours toutes tes séances.": "Stats, charts, 1RM, trends, records and profile. History and calendar always show all your workouts.",
+  "Tout l'historique (imports compris)": "Full history (imports included)",
+  "{n} série importée n'est pas comptée (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} imported set isn't counted (Settings: stats on Skullcrusher workouts only).",
+  "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).": "{n} imported sets aren't counted (Settings: stats on Skullcrusher workouts only)."
 };

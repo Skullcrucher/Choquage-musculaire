@@ -9,7 +9,7 @@
 //   - la vue "par exercice" ne charge que l'exercice choisi.
 // "Tout" charge l'historique complet (plus long la première fois).
 // ============================================================
-import { isoWeek, estimate1RM, esc, healthNoteHtml } from "./utils.js";
+import { isoWeek, estimate1RM, esc, healthNoteHtml, statsWorkouts } from "./utils.js";
 import { getExercises, getWorkouts, getSetsForPeriod, getSetsForExercise, invalidate, onAllSetsProgress } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { icon, segHtml } from "./icons.js";
@@ -121,11 +121,11 @@ async function renderGeneralStats(container) {
   // maintenant (pas de date dans le futur), doublons comptés une fois.
   const { weekSessions, sessionsBetween, allSessions } = await import("./week-sessions.js");
   const kcalOf = (list) => Math.round(list.reduce((acc, w) => acc + (workoutCalories(w, body)?.kcal || 0), 0));
-  const kcal7 = kcalOf(weekSessions(workouts).counted);
-  const kcal30 = kcalOf(sessionsBetween(workouts, new Date(Date.now() - 30 * 86400000), new Date()).counted);
+  const kcal7 = kcalOf(weekSessions(statsWorkouts(workouts)).counted);
+  const kcal30 = kcalOf(sessionsBetween(statsWorkouts(workouts), new Date(Date.now() - 30 * 86400000), new Date()).counted);
   // Bilan : mêmes règles partout (séances terminées, pas de date future,
   // doublons — même séance importée ou ajoutée deux fois — comptés une fois).
-  const counted = allSessions(workouts);
+  const counted = allSessions(statsWorkouts(workouts));
   const totalSets = counted.reduce((acc, w) => acc + (w.total_sets || 0), 0);
   const totalTonnage = counted.reduce((acc, w) => acc + (w.total_tonnage || 0), 0);
 
