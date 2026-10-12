@@ -86,7 +86,7 @@ export function planPosition(plan, date = new Date()) {
 // Séance faite ce jour-là pour cette routine ?
 function doneOn(workouts, date, routine) {
   const key = dayStr(date);
-  return workouts.some(w => w.end_time && w.start_time && dayStr(new Date(w.start_time)) === key &&
+  return workouts.some(w => w.end_time && w.start_time && new Date(w.start_time) <= new Date() && dayStr(new Date(w.start_time)) === key &&
     (w.routine_id ? w.routine_id === routine?.id : routine && w.title === routine.name));
 }
 

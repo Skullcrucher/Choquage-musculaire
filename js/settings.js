@@ -557,6 +557,9 @@ export async function renderReglages(container) {
             ${t("{n} doublon(s) ignoré(s)", { n: stats.setsSkippedDuplicate })}
             ${stats.errors ? ` · ${t("{n} erreur(s)", { n: stats.errors })}` : ""}
           </p>
+          ${stats.workoutsSkippedDeleted ? `<p class="muted">🗑️ ${t("{n} séance(s) que tu avais supprimée(s) ignorée(s).", { n: stats.workoutsSkippedDeleted })}</p>` : ""}
+          ${stats.skippedProgramme ? `<p style="color:var(--orange)">📋 ${t("{n} séance(s) sans aucune charge sur des exercices à barre, haltères ou machine ignorée(s) : elles ressemblent à un programme, pas à des séances réalisées.", { n: stats.skippedProgramme })}</p>` : ""}
+          ${stats.skippedFuture ? `<p style="color:var(--orange)">📅 ${t("{n} séance(s) datée(s) dans le futur ignorée(s) : un historique ne contient que des séances déjà faites (pour un programme, utilise Biblio → Importer un plan).", { n: stats.skippedFuture })}</p>` : ""}
           ${stats.rowsTotal && !stats.rowsWithWeight ? `<p style="color:var(--red)">⚠️ ${stats.weightColumn
             ? t("Aucune charge dans ce fichier : la colonne des poids est vide. Les séances sont importées, mais sans kilos (tonnage et 1RM à zéro).")
             : t("Aucune colonne de charge (weight_kg ou weight_lbs) dans ce fichier : les séances sont importées sans kilos (tonnage et 1RM à zéro).")}</p>` : ""}
