@@ -13,7 +13,7 @@ import { getExercises, getWorkouts, getSetsForExercise, getSetsForPeriod } from 
 import { allTrends, trendBadgeHtml, trendDetail, TREND_DAYS } from "./trend.js";
 import { gradeBadgeHtml } from "./xp.js";
 import { songHtml, bindSongLinks, parseMusicLink, musicEmbed, PROVIDERS, providerIcon, providerName, shortLinkHint, getMyProvider, setMyProvider, openOnMyService, searchArtists } from "./music.js";
-import { t, tn } from "./i18n.js";
+import { t, tn, locale } from "./i18n.js";
 
 const MAX_HIGHLIGHTS = 3;
 const WEEK_MS = 7 * 24 * 3600 * 1000;
@@ -117,7 +117,11 @@ export function profileModules(p) {
 //    régression et les plus fortes évolutions.
 // full : liste complète des tendances (affichée au propriétaire seulement).
 export async function computeShowcase() {
-  const [allWorkouts, sets] = await Promise.all([getWorkouts(), getSetsForPeriod(13).catch(() => [])]);
+  // Préférences synchronisées (exercices unilatéraux) : même calcul sur
+  // tous les appareils. Un échec de chargement des séries interrompt le
+  // calcul : on n'enregistre jamais une progression vide par erreur.
+  await db.loadRestPrefs().catch(() => null);
+  const [allWorkouts, sets] = await Promise.all([getWorkouts(), getSetsForPeriod(13)]);
   const workouts = statsWorkouts(allWorkouts);
   const best = new Map();
   const consider = (exercise, kg, reps, date) => {
@@ -155,7 +159,7 @@ export async function computeShowcase() {
     bottom: full.filter(x => x.status === "down").reverse().slice(0, 5).map(slim)
   };
   return {
-    showcase: { best_lifts, session_music: topSong ? { ...topSong.song, count: topSong.count } : null, progress, updated: new Date().toISOString().slice(0, 10) },
+    showcase: { best_lifts, session_music: topSong ? { ...topSong.song, count: topSong.count } : null, progress, updated: new Date().toISOString().slice(0, 10), updated_at: new Date().toISOString() },
     full: full.map(slim)
   };
 }
@@ -242,7 +246,7 @@ function bannerExtraHtml(sc, mods) {
 
 // Module « Progression du mois » : compteurs, plus fortes progressions et
 // régressions ; pour soi, la liste complète de ses exercices.
-function progressHtml(pr, full, isMe) {
+function progressHtml(pr, full, isMe, updatedAt = null) {
   if (!pr || !(pr.up + pr.flat + pr.down)) {
     return isMe ? `<div class="profile-section-title">📈 ${t("Progression du mois")}</div><p class="muted" style="margin:0;">${t("Pas encore assez de séances ce mois-ci pour mesurer ta progression.")}</p>` : "";
   }
@@ -258,7 +262,7 @@ function progressHtml(pr, full, isMe) {
     ${pr.bottom?.length ? `<div class="pf-trend-h">⚠️ ${t("Plus fortes régressions")}</div>${pr.bottom.map(row).join("")}` : ""}
     ${isMe && full?.length ? `<button class="btn btn-secondary btn-sm" data-pf-all style="margin-top:8px;">${t("Voir tous mes exercices ({n})", { n: full.length })}</button>
       <div class="pf-trend-all" hidden>${full.map(row).join("")}</div>` : ""}
-    <p class="muted" style="font-size:12px; margin:6px 0 0;">${t("Sur {n} jours : meilleure 1RM estimée (ou reps sans charge) des dernières séances comparée au début du mois.", { n: TREND_DAYS })}</p>`;
+    <p class="muted" style="font-size:12px; margin:6px 0 0;">${t("Sur {n} jours : meilleure 1RM estimée (ou reps sans charge) des dernières séances comparée au début du mois.", { n: TREND_DAYS })}${updatedAt ? ` ${t("Calculé le {date}.", { date: new Date(updatedAt).toLocaleString(locale(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}` : ""}</p>`;
 }
 function bindProgressToggle(root) {
   const btn = root.querySelector("[data-pf-all]");
@@ -332,7 +336,7 @@ export async function openProfile(uid) {
       <div class="stat-box"><span class="num">${esc(st.per_week)}</span><span class="lbl">${t("séances / sem.")}</span></div>
     </div>` : ""}
 
-    ${mods.progress ? `<div id="pf-progress">${progressHtml(showcase.progress, null, isMe)}</div>` : ""}
+    ${mods.progress ? `<div id="pf-progress">${progressHtml(showcase.progress, null, isMe, showcase.updated_at || showcase.updated)}</div>` : ""}
 
     ${mods.highlights && highlights.length ? `<div class="profile-section-title">🏆 ${t("Exercices phares")}</div>${highlights.map(highlightCard).join("")}` : ""}
 
@@ -373,7 +377,7 @@ export async function openProfile(uid) {
         const extra = modalEl.querySelector("#pf-banner-extra");
         if (extra) { extra.innerHTML = bannerExtraHtml(fresh, mods); bindSongLinks(extra); }
         const prog = modalEl.querySelector("#pf-progress");
-        if (prog) { prog.innerHTML = progressHtml(fresh.progress, full, true); bindProgressToggle(prog); }
+        if (prog) { prog.innerHTML = progressHtml(fresh.progress, full, true, fresh.updated_at); bindProgressToggle(prog); }
         db.updatePublicProfile({ showcase: fresh }).catch(e => console.warn("[Skullcrusher] Vitrine non enregistrée", e));
       }).catch(e => console.warn("[Skullcrusher] Vitrine du profil", e));
       // Niveau à jour (et publié) à l'ouverture de son profil.
