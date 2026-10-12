@@ -87,6 +87,7 @@ export function parseCsvText(csvText) {
   }
   const rows = [];
   const unparsedDates = new Set();
+  const skippedFuture = new Set();
   // Hevy autorise le même exercice plusieurs fois dans une séance, avec
   // set_index qui repart de 0 : on numérote ces occurrences pour ne pas
   // confondre leurs séries avec des doublons.
@@ -97,6 +98,9 @@ export function parseCsvText(csvText) {
     if (!r.exercise_title || !r.start_time) continue;
     const startIso = parseHevyDate(r.start_time);
     if (!startIso) { unparsedDates.add(r.start_time); continue; }
+    // Séance datée dans le futur : jamais réalisée (programme importé comme
+    // un historique) — ignorée, sinon elle apparaît « faite » partout.
+    if (Date.parse(startIso) > Date.now() + 3600e3) { skippedFuture.add(`${r.title}|${startIso}`); continue; }
 
     const title = (r.title || "Séance").trim();
     const exerciseTitle = r.exercise_title.trim();
@@ -140,12 +144,12 @@ export function parseCsvText(csvText) {
   if (unparsedDates.size) {
     console.warn(`[Skullcrusher] ${unparsedDates.size} date(s) non reconnue(s), ex. :`, [...unparsedDates].slice(0, 3));
   }
-  return { rows, unparsedDates: [...unparsedDates], headers: parsed.meta.fields || [] };
+  return { rows, unparsedDates: [...unparsedDates], headers: parsed.meta.fields || [], skippedFuture: skippedFuture.size };
 }
 
 export async function importCsvFile(file, onProgress) {
   const text = await file.text();
-  const { rows, unparsedDates, headers } = parseCsvText(text);
+  const { rows, unparsedDates, headers, skippedFuture } = parseCsvText(text);
   if (rows.length === 0) {
     if (!headers.includes("exercise_title") || !headers.includes("start_time")) {
       throw new Error(t("Ce fichier ne ressemble pas à un export Hevy (colonnes exercise_title / start_time introuvables). Dans Hevy : Profil → Réglages → Exporter les données → Exporter les séances."));
@@ -153,6 +157,7 @@ export async function importCsvFile(file, onProgress) {
     if (unparsedDates.length) {
       throw new Error(t("Format de date non reconnu (ex. « {sample} »). Signale-le pour qu'on l'ajoute.", { sample: unparsedDates[0] }));
     }
+    if (skippedFuture) throw new Error(t("Ce fichier ne contient que des séances datées dans le futur : ce n'est pas un historique. Pour un programme, utilise Biblio → Importer un plan."));
     throw new Error(t("Aucune ligne exploitable trouvée dans ce fichier."));
   }
   const stats = await importRows(rows, onProgress);
@@ -161,5 +166,6 @@ export async function importCsvFile(file, onProgress) {
   stats.rowsWithWeight = rows.filter(r => r.weight_kg != null).length;
   stats.rowsTotal = rows.length;
   stats.weightColumn = headers.some(h => /^(weight|poids|charge)/i.test(h));
+  stats.skippedFuture = skippedFuture;
   return stats;
 }

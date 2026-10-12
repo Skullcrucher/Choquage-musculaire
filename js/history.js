@@ -2,7 +2,7 @@
 // ONGLET HISTORIQUE — calendrier + liste des séances passées
 // (routines, plans et suivi du plan : onglet Séance)
 // ============================================================
-import { fmtDateTime, fmtDuration, esc, weekDows, weekStartsSunday, startOfWeek, confirmDanger, toast } from "./utils.js";
+import { fmtDateTime, fmtDuration, esc, weekDows, weekStartsSunday, startOfWeek, confirmDanger, toast, openModal, closeModal } from "./utils.js";
 import * as db from "./db.js";
 import { sessionsBetween } from "./week-sessions.js";
 import { getBody, workoutCalories } from "./calories.js";
@@ -57,8 +57,63 @@ export async function renderHistorique(container, { embedded = false } = {}) {
   renderMine(container.querySelector("#hist-content"));
 }
 
+// ---------- Séances fantômes ----------
+// Séances datées dans le futur (impossible : jamais faites), ou importées
+// sans aucune charge (souvent un programme importé comme s'il avait été
+// réalisé). Proposées au nettoyage, cochées par défaut.
+function ghostReason(w, now = Date.now()) {
+  if (Date.parse(w.start_time) > now + 3600e3) return "future";
+  if (w.imported_at && !(w.total_tonnage > 0) && (w.total_sets || 0) > 0) return "noload";
+  return null;
+}
+function renderGhosts(content) {
+  const el = content.querySelector("#ghosts");
+  if (!el) return;
+  const ghosts = workoutsCache.map(w => ({ w, why: ghostReason(w) })).filter(x => x.why);
+  if (!ghosts.length) { el.innerHTML = ""; return; }
+  el.innerHTML = `<div class="hist-dups">👻 ${tn(ghosts.length, "{n} séance fantôme : datée dans le futur ou importée sans aucune charge.", "{n} séances fantômes : datées dans le futur ou importées sans aucune charge.")}
+    <button class="btn btn-secondary btn-sm" id="ghost-clean">${t("Voir et nettoyer")}</button></div>`;
+  el.querySelector("#ghost-clean").onclick = () => {
+    const fmt = (w) => new Date(w.start_time).toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    openModal(`
+      <h3>👻 ${t("Séances fantômes")}</h3>
+      <p class="muted" style="margin-top:-6px;">${t("Elles faussent ton calendrier, tes stats et ton plan. Décoche celles à garder (ex. une vraie séance au poids du corps importée).")}</p>
+      <div class="ghost-list">${ghosts.sort((a, b) => String(a.w.start_time).localeCompare(String(b.w.start_time))).map((x, i) => `
+        <label class="list-row" style="cursor:pointer;">
+          <span><span class="list-row-title">${esc(x.w.title || t("Séance"))}</span>
+            <span class="list-row-sub" style="display:block;">${esc(fmt(x.w))} · ${x.why === "future" ? `📅 ${t("datée dans le futur")}` : `📥 ${t("importée sans charges")}`}</span></span>
+          <input type="checkbox" data-ghost="${i}" checked style="width:auto;">
+        </label>`).join("")}</div>
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="btn btn-secondary" id="gh-cancel">${t("Annuler")}</button>
+        <button class="btn btn-danger" id="gh-go">${t("Supprimer la sélection")}</button>
+      </div>
+    `, (m) => {
+      const sorted = ghosts;
+      m.querySelector("#gh-cancel").onclick = closeModal;
+      m.querySelector("#gh-go").onclick = async (e) => {
+        const chosen = [...m.querySelectorAll("[data-ghost]:checked")].map(c => sorted[+c.dataset.ghost].w);
+        if (!chosen.length) { closeModal(); return; }
+        e.target.disabled = true;
+        try {
+          for (const w of chosen) await db.deleteWorkout(w.id);
+          invalidate("workouts", "sets");
+          closeModal();
+          toast(tn(chosen.length, "{n} séance fantôme supprimée", "{n} séances fantômes supprimées"));
+          renderHistorique(histContainer?.isConnected ? histContainer : document.getElementById("view"), { embedded: histEmbedded && histContainer?.isConnected });
+        } catch (err) {
+          console.error("[Skullcrusher] Nettoyage des séances fantômes", err);
+          toast(t("Suppression impossible, réessaie"));
+          e.target.disabled = false;
+        }
+      };
+    });
+  };
+}
+
 function renderMine(content) {
   content.innerHTML = `
+    <div id="ghosts"></div>
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <button class="btn btn-sm btn-secondary" id="prev-month">←</button>
@@ -75,6 +130,7 @@ function renderMine(content) {
   content.querySelector("#next-month").onclick = () => { viewMonth.setMonth(viewMonth.getMonth() + 1); selectedDay = null; renderCalendar(content); renderList(content); };
   renderCalendar(content);
   renderList(content);
+  renderGhosts(content);
 }
 
 function renderCalendar(container) {
@@ -87,17 +143,18 @@ function renderCalendar(container) {
   const firstDow = weekStartsSunday() ? first : (first + 6) % 7; // cases vides avant le 1er
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+  const now = new Date();
   const workoutDays = new Set(
     workoutsCache
       .filter(w => {
         const d = new Date(w.start_time);
-        return d.getFullYear() === year && d.getMonth() === month;
+        // Une date future n'est jamais « faite » (séance fantôme importée).
+        return d.getFullYear() === year && d.getMonth() === month && d <= now;
       })
       .map(w => new Date(w.start_time).getDate())
   );
 
   const planned = plannedDays(year, month);
-  const now = new Date();
   const isToday = (day) => now.getFullYear() === year && now.getMonth() === month && now.getDate() === day;
   let html = dowInitials().map(d => `<div class="cal-dow">${d}</div>`).join("");
   for (let i = 0; i < firstDow; i++) html += `<div class="cal-day empty"></div>`;

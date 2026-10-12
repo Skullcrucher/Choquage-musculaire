@@ -1501,5 +1501,17 @@ export default {
   "{n} doublon supprimé": "{n} duplicate deleted",
   "{n} doublons supprimés": "{n} duplicates deleted",
   "{n} séance importée en double d'une séance faite dans l'app.": "{n} imported workout duplicates a workout done in the app.",
-  "{n} séances importées en double de séances faites dans l'app.": "{n} imported workouts duplicate workouts done in the app."
+  "{n} séances importées en double de séances faites dans l'app.": "{n} imported workouts duplicate workouts done in the app.",
+  "Ce fichier ne contient que des séances datées dans le futur : ce n'est pas un historique. Pour un programme, utilise Biblio → Importer un plan.": "This file only contains workouts dated in the future: it isn't a history. For a program, use Library → Import a plan.",
+  "Elles faussent ton calendrier, tes stats et ton plan. Décoche celles à garder (ex. une vraie séance au poids du corps importée).": "They distort your calendar, stats and plan. Untick those to keep (e.g. a real imported bodyweight workout).",
+  "Supprimer la sélection": "Delete selection",
+  "Séances fantômes": "Ghost workouts",
+  "Voir et nettoyer": "Review and clean up",
+  "datée dans le futur": "dated in the future",
+  "importée sans charges": "imported without loads",
+  "{n} séance fantôme : datée dans le futur ou importée sans aucune charge.": "{n} ghost workout: dated in the future or imported without any load.",
+  "{n} séances fantômes : datées dans le futur ou importées sans aucune charge.": "{n} ghost workouts: dated in the future or imported without any load.",
+  "{n} séance fantôme supprimée": "{n} ghost workout deleted",
+  "{n} séance(s) datée(s) dans le futur ignorée(s) : un historique ne contient que des séances déjà faites (pour un programme, utilise Biblio → Importer un plan).": "{n} future-dated workout(s) skipped: a history only contains workouts already done (for a program, use Library → Import a plan).",
+  "{n} séances fantômes supprimées": "{n} ghost workouts deleted"
 };

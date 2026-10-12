@@ -1500,5 +1500,17 @@ export default {
   "{n} doublon supprimé": "{n} doub efase",
   "{n} doublons supprimés": "{n} doub efase",
   "{n} séance importée en double d'une séance faite dans l'app.": "{n} seans importe an doub enn seans fer dan app.",
-  "{n} séances importées en double de séances faites dans l'app.": "{n} seans importe an doub bann seans fer dan app."
+  "{n} séances importées en double de séances faites dans l'app.": "{n} seans importe an doub bann seans fer dan app.",
+  "Ce fichier ne contient que des séances datées dans le futur : ce n'est pas un historique. Pour un programme, utilise Biblio → Importer un plan.": "Sa fisie-la ena zis seans dat dan lavenir : se pa enn listorik. Pou enn program, servi Biblio → Import enn plan.",
+  "Elles faussent ton calendrier, tes stats et ton plan. Décoche celles à garder (ex. une vraie séance au poids du corps importée).": "Zot fos to kalandrie, to stat ek to plan. Dekoche sa bann pou garde (egz. enn vre seans pwa lekor importe).",
+  "Supprimer la sélection": "Efas seleksion",
+  "Séances fantômes": "Seans fantom",
+  "Voir et nettoyer": "Get ek netwaye",
+  "datée dans le futur": "dat dan lavenir",
+  "importée sans charges": "importe san sarz",
+  "{n} séance fantôme : datée dans le futur ou importée sans aucune charge.": "{n} seans fantom : dat dan lavenir ou importe san okenn sarz.",
+  "{n} séances fantômes : datées dans le futur ou importées sans aucune charge.": "{n} seans fantom : dat dan lavenir ou importe san okenn sarz.",
+  "{n} séance fantôme supprimée": "{n} seans fantom efase",
+  "{n} séance(s) datée(s) dans le futur ignorée(s) : un historique ne contient que des séances déjà faites (pour un programme, utilise Biblio → Importer un plan).": "{n} seans dat dan lavenir inyore : enn listorik ena zis seans ki deza fer (pou enn program, servi Biblio → Import enn plan).",
+  "{n} séances fantômes supprimées": "{n} seans fantom efase"
 };

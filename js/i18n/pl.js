@@ -1510,5 +1510,17 @@ export default {
   "{n} doublon supprimé": "Usunięto {n} duplikat",
   "{n} doublons supprimés": "Usunięto {n} duplikatów",
   "{n} séance importée en double d'une séance faite dans l'app.": "{n} zaimportowany trening dubluje trening z aplikacji.",
-  "{n} séances importées en double de séances faites dans l'app.": "{n} zaimportowanych treningów dubluje treningi z aplikacji."
+  "{n} séances importées en double de séances faites dans l'app.": "{n} zaimportowanych treningów dubluje treningi z aplikacji.",
+  "Ce fichier ne contient que des séances datées dans le futur : ce n'est pas un historique. Pour un programme, utilise Biblio → Importer un plan.": "Ten plik zawiera tylko treningi z przyszłą datą: to nie jest historia. Dla programu użyj Biblioteka → Importuj plan.",
+  "Elles faussent ton calendrier, tes stats et ton plan. Décoche celles à garder (ex. une vraie séance au poids du corps importée).": "Zaburzają kalendarz, statystyki i plan. Odznacz te do zachowania (np. prawdziwy zaimportowany trening z masą ciała).",
+  "Supprimer la sélection": "Usuń zaznaczone",
+  "Séances fantômes": "Treningi-widma",
+  "Voir et nettoyer": "Przejrzyj i wyczyść",
+  "datée dans le futur": "z przyszłą datą",
+  "importée sans charges": "zaimportowany bez obciążeń",
+  "{n} séance fantôme : datée dans le futur ou importée sans aucune charge.": "{n} trening-widmo: z przyszłą datą lub zaimportowany bez obciążeń.",
+  "{n} séances fantômes : datées dans le futur ou importées sans aucune charge.": "{n} treningów-widm: z przyszłą datą lub zaimportowanych bez obciążeń.",
+  "{n} séance fantôme supprimée": "Usunięto {n} trening-widmo",
+  "{n} séance(s) datée(s) dans le futur ignorée(s) : un historique ne contient que des séances déjà faites (pour un programme, utilise Biblio → Importer un plan).": "Pominięto {n} trening(ów) z przyszłą datą: historia zawiera tylko wykonane treningi (dla programu użyj Biblioteka → Importuj plan).",
+  "{n} séances fantômes supprimées": "Usunięto {n} treningów-widm"
 };
