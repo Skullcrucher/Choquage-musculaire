@@ -154,7 +154,7 @@ export async function renderSeance(container) {
   }
 }
 
-const LS_START_MODE = "skullcrusher_start_mode"; // "routine" | "plan"
+const LS_START_MODE = "skullcrusher_start_mode"; // "routine" | "plan" | "repmax"
 let planWeekOffset = 0; // semaine du plan affichée (0 = semaine en cours)
 
 // Écran Séance sans séance en cours : deux onglets, « Routines » (démarrer
@@ -174,7 +174,7 @@ async function renderStartScreen(container) {
   const routines = allRoutines.filter(r => !planIds.has(r.id));
   let startMode = null;
   try { startMode = localStorage.getItem(LS_START_MODE); } catch (_) {}
-  if (startMode !== "routine" && startMode !== "plan") startMode = planView?.sessions?.length ? "plan" : "routine";
+  if (!["routine", "plan", "repmax"].includes(startMode)) startMode = planView?.sessions?.length ? "plan" : "routine";
   const weekCount = countThisWeek(workouts);
   container.innerHTML = `
     <h1 class="section-title">${t("Séance")}</h1>
@@ -185,7 +185,7 @@ async function renderStartScreen(container) {
     </div>
     <div id="xp-slot"></div>
     <div id="gift-inbox"></div>
-    <div id="start-tabs">${segHtml([["plan", t("Plan en cours"), "plan"], ["routine", t("Séance libre"), "workouts"]], startMode, "data-smode")}</div>
+    <div id="start-tabs">${segHtml([["plan", t("Plan en cours"), "plan"], ["routine", t("Séance libre"), "workouts"], ["repmax", t("Rep max"), "trophy"]], startMode, "data-smode")}</div>
     <div id="start-body"></div>
   `;
   container.querySelector("#week-hero").onclick = () => openWeekDetail(workouts, refreshAll);
@@ -194,6 +194,7 @@ async function renderStartScreen(container) {
   const body = container.querySelector("#start-body");
   import("./gifts.js").then(m => m.renderGiftInbox(container.querySelector("#gift-inbox"), refreshAll));
   const draw = () => {
+    if (startMode === "repmax") return drawRepMaxTab(body);
     if (startMode === "plan") {
       body.innerHTML = (planView?.html || `<p class="muted">${t("Plan indisponible.")}</p>`) +
         `<button class="btn btn-secondary" id="manage-plans" style="margin-top:12px;">${icon("gear")}${t("Mes plans et programmes (Biblio)")}</button>`;
@@ -250,6 +251,95 @@ async function renderStartScreen(container) {
   draw();
 }
 
+// Onglet REP MAX : méthode (directe ou Lombardi) et exercices à tester.
+let rmMethod = "lombardi";
+const rmPicked = new Set();
+async function drawRepMaxTab(body) {
+  const rmMod = await import("./rep-max.js");
+  const [cands, maxes] = await Promise.all([rmMod.candidateExercises(), rmMod.getRepMaxes()]);
+  const extra = [...rmPicked].filter(n => !cands.some(c => c.name === n)).map(n => ({ name: n, group: "" }));
+  const list = [...extra, ...cands];
+  if (!body.isConnected) return;
+  body.innerHTML = `
+    <div class="rm-tab">
+      <p class="muted" style="margin-top:0;">${t("Teste ta charge maximale (RM) sur les exercices de ton choix. Elle s'affiche dans la fiche de chaque exercice et sert à te proposer des charges. Cette séance ne compte pas dans tes statistiques.")}</p>
+      <div class="rm-methods">
+        ${rmMod.RM_METHODS.map(m => `<button class="rm-method ${m === rmMethod ? "active" : ""}" data-rm-method="${m}">
+          <b>${rmMod.methodName(m)}</b>
+          <small>${m === "direct"
+            ? t("Montée par paliers jusqu'à 1 seule répétition, la plus lourde possible.")
+            : t("Une charge lourde soulevée le plus de fois possible (10 au plus) : RM = charge × coefficient (7 reps → × 1,23).")}</small>
+        </button>`).join("")}
+      </div>
+      <div class="free-head">${t("Exercices à tester")} <span class="muted" id="rm-count"></span></div>
+      <div class="rm-ex-list">
+        ${list.length ? list.map(c => {
+          const m = maxes[c.name.trim().toLowerCase()];
+          return `<label class="rm-ex"><input type="checkbox" data-rm-ex="${esc(c.name)}" ${rmPicked.has(c.name) ? "checked" : ""}>
+            <span class="rm-ex-name">${esc(c.name)}</span>
+            <span class="muted rm-ex-cur">${m ? t("RM {kg} kg", { kg: esc(m.rm) }) : ""}</span></label>`;
+        }).join("") : `<p class="muted">${t("Aucun exercice dans tes routines : ajoute-en un ci-dessous.")}</p>`}
+      </div>
+      <button class="btn btn-secondary btn-compact" id="rm-add-ex" style="margin-top:6px;">+ ${t("Autre exercice")}</button>
+      <p class="muted rm-safety">⚠️ ${t("Échauffe-toi bien, garde une technique stricte et fais-toi parer sur les mouvements lourds (développé couché, squat). Arrête la série dès que la technique se dégrade.")}</p>
+      <button class="btn btn-primary" id="rm-start">${t("Lancer le test REP MAX")}</button>
+    </div>`;
+  const count = () => { body.querySelector("#rm-count").textContent = rmPicked.size ? `· ${rmPicked.size}` : ""; };
+  body.querySelectorAll("[data-rm-method]").forEach(b => b.onclick = () => {
+    rmMethod = b.dataset.rmMethod;
+    body.querySelectorAll("[data-rm-method]").forEach(x => x.classList.toggle("active", x === b));
+  });
+  body.querySelectorAll("[data-rm-ex]").forEach(c => c.onchange = () => { if (c.checked) rmPicked.add(c.dataset.rmEx); else rmPicked.delete(c.dataset.rmEx); count(); });
+  body.querySelector("#rm-add-ex").onclick = async () => {
+    const { openExercisePicker } = await import("./exercise-picker.js");
+    let redraw = null;
+    await openExercisePicker({ onAdd: (name, group, existing) => {
+      rmPicked.add(existing ? existing.name : name);
+      clearTimeout(redraw); redraw = setTimeout(() => drawRepMaxTab(body), 0);
+    } });
+  };
+  body.querySelector("#rm-start").onclick = (e) => {
+    if (!rmPicked.size) { toast(t("Coche au moins un exercice à tester.")); return; }
+    startRepMaxWorkout(rmMethod, list.filter(c => rmPicked.has(c.name)), e.currentTarget);
+  };
+  count();
+}
+
+// Séance de test REP MAX : séries proposées d'après la RM connue
+// (échauffement progressif, puis la ou les séries de test).
+async function startRepMaxWorkout(method, exercises, triggerEl) {
+  if (triggerEl.dataset.busy) return;
+  triggerEl.dataset.busy = "1"; triggerEl.style.opacity = "0.6";
+  try {
+    const rmMod = await import("./rep-max.js");
+    const now = new Date();
+    const title = t("REP MAX · {method}", { method: method === "direct" ? t("directe") : "Lombardi" });
+    const id = await withTimeout(db.createWorkout({ title, start_time: now.toISOString(), extra: { rm_test: true, rm_method: method } }), 15000, t("Création de la séance"));
+    await db.loadRestPrefs().catch(() => null);
+    const refs = await Promise.all(exercises.map(async c => rmMod.referenceRm(c.name, await getSetsForExercise(c.name, { ignoreScope: true }).catch(() => []))));
+    currentWorkout = {
+      id, title, start_time: now.toISOString(), routine_id: null, rm_test: true, rm_method: method,
+      presence: presenceDefault(), playlist_url: "",
+      exercises: exercises.map((c, i) => ({
+        exercise_title: c.name, muscle_group: c.group || "Autre",
+        reps_target: "", target_sets: 0, target_kg: null,
+        cue: rmMod.testCue(method),
+        unilateral: db.isUnilateral(c.name),
+        rest_timer_seconds: method === "direct" ? 240 : 180,
+        sets: rmMod.testSets(method, c.name, refs[i]?.rm).map((s, j) => ({ id: null, set_index: j + 1, set_type: s.set_type, weight_kg: s.weight_kg, reps: s.reps, done: false }))
+      }))
+    };
+    rmPicked.clear();
+    localStorage.setItem(LS_KEY, id);
+    saveLocalState();
+    await renderSeance(document.getElementById("view"));
+  } catch (err) {
+    console.error("Erreur démarrage test REP MAX", err);
+    toast(err.message || t("Impossible de démarrer la séance"));
+    delete triggerEl.dataset.busy; triggerEl.style.opacity = "";
+  }
+}
+
 function withTimeout(promise, ms, label) {
   return Promise.race([
     promise,
@@ -272,26 +362,24 @@ async function startWorkout(routineId, routine = null, triggerEl = null, planInf
 
     const routineExercises = routine?.exercises || [];
     await db.loadRestPrefs().catch(() => null);
-    const lastSetsByExercise = await Promise.all(routineExercises.map(ex => getLastSetsForExercise(ex.exercise_name)));
+    const plans = await Promise.all(routineExercises.map(ex => plannerFor(ex.exercise_name, ex.target_kg ?? null).catch(() => ({ last: [], planner: null }))));
 
     currentWorkout = {
       id, title, start_time: now.toISOString(), routine_id: routine?.id || null,
       presence: presenceDefault(), // statut « à la salle » visible par les amis
       playlist_url: routine?.playlist_url || "",
       exercises: routineExercises.map((ex, i) => {
-        const lastSets = lastSetsByExercise[i];
+        const { last: lastSets, planner } = plans[i];
         const targetCount = ex.target_sets || 3;
-        const sets = lastSets.length
-          ? Array.from({ length: targetCount }, (_, j) => ({
-              id: null, set_index: j + 1, set_type: defaultSetType(),
-              // Charge visée de la routine (progression acceptée) en priorité.
-              weight_kg: ex.target_kg ?? lastSets[j]?.weight_kg ?? null, reps: lastSets[j]?.reps ?? null,
-              target_reps: ex.reps_target || "", done: false
-            }))
-          : Array.from({ length: targetCount }, (_, j) => ({
-              id: null, set_index: j + 1, set_type: defaultSetType(), weight_kg: ex.target_kg ?? null, reps: null,
-              target_reps: ex.reps_target || "", done: false
-            }));
+        const goal = targetRepsOf(ex.reps_target);
+        // Charge : plan > progression acceptée > RM (Lombardi) > dernière séance.
+        const kgAt = (j) => planner ? planner.kgAt(j, goal ?? lastSets[j]?.reps) : (ex.target_kg ?? lastSets[j]?.weight_kg ?? null);
+        const sets = Array.from({ length: targetCount }, (_, j) => ({
+          id: null, set_index: j + 1, set_type: defaultSetType(),
+          // Charge calculée (RM, progression) : reps visées ; sinon celles de la dernière séance.
+          weight_kg: kgAt(j), reps: (["rm", "progression"].includes(planner?.source) && goal) ? goal : (lastSets[j]?.reps ?? null),
+          target_reps: ex.reps_target || "", done: false
+        }));
         return {
           exercise_title: ex.exercise_name,
           muscle_group: ex.muscle_group || "Autre",
@@ -345,7 +433,7 @@ function renderActiveWorkout(container) {
     <div id="exercise-list"></div>
     <button class="btn btn-secondary btn-compact" id="add-exercise" style="margin-top:6px;">+ ${t("Ajouter un exercice")}</button>
     <div style="height:12px"></div>
-    <button class="btn btn-primary" id="finish-workout">${t("Terminer la séance")}</button>
+    <button class="btn btn-primary" id="finish-workout">${currentWorkout.rm_test ? t("Terminer le test et calculer mes RM") : t("Terminer la séance")}</button>
     <div style="text-align:center; margin-top:10px;">
       <button class="btn btn-danger btn-sm" id="cancel-workout">${t("Annuler la séance")}</button>
     </div>
@@ -559,7 +647,8 @@ function drawExerciseList(el) {
         weight_kg: set.weight_kg, reps: set.reps, unilateral: !!ex.unilateral, superset_id: null, exercise_notes: "",
         distance_km: null, duration_seconds: null, rpe: set.rpe ?? null,
         workout_start_time: currentWorkout.start_time, logged_at: set.logged_at,
-        exercise_index: Math.max(0, currentWorkout.exercises.indexOf(ex))
+        exercise_index: Math.max(0, currentWorkout.exercises.indexOf(ex)),
+        ...(currentWorkout.rm_test ? { rm_test: true } : {}) // test REP MAX : hors stats
       };
       if (set.id) await db.updateSet(currentWorkout.id, set.id, payload);
       else {
@@ -816,14 +905,28 @@ async function toggleUnilateral(ex, listEl) {
   }
 }
 
-async function getLastSetsForExercise(exerciseName) {
-  let relevant = await getSetsForExercise(exerciseName, { ignoreScope: true });
-  relevant = relevant.filter(s => s.workout_start_time);
-  if (!relevant.length) return [];
-  const latestTime = relevant.reduce((max, s) => (s.workout_start_time > max ? s.workout_start_time : max), relevant[0].workout_start_time);
-  return relevant
-    .filter(s => s.workout_start_time === latestTime)
-    .sort((a, b) => a.set_index - b.set_index);
+// Séries de l'exercice (fiables, hors tests REP MAX) et celles de sa
+// dernière séance.
+async function exerciseHistory(exerciseName) {
+  const all = (await getSetsForExercise(exerciseName, { ignoreScope: true })).filter(s => s.workout_start_time);
+  if (!all.length) return { all, last: [] };
+  const latestTime = all.reduce((max, s) => (s.workout_start_time > max ? s.workout_start_time : max), all[0].workout_start_time);
+  return { all, last: all.filter(s => s.workout_start_time === latestTime).sort((a, b) => a.set_index - b.set_index) };
+}
+
+// Charges proposées pour un exercice (voir rep-max.js loadPlanner) : plan,
+// progression acceptée, RM ÷ coefficient de Lombardi, dernière séance.
+async function plannerFor(exerciseName, targetKg = null) {
+  const { all, last } = await exerciseHistory(exerciseName);
+  const rmMod = await import("./rep-max.js");
+  const planner = await rmMod.loadPlanner(exerciseName, { sets: all, last, targetKg }).catch(() => null);
+  return { last, planner };
+}
+// Reps visées d'une fourchette (« 8-10 » → 10) : la charge proposée doit
+// permettre d'atteindre le haut de la fourchette.
+function targetRepsOf(range) {
+  const m = String(range || "").match(/(\d{1,3})\s*$/);
+  return m ? +m[1] : null;
 }
 
 // Temps de repos d'un exercice : celui que l'utilisateur a choisi la
@@ -905,14 +1008,19 @@ function addExerciseToWorkout(name, group, existing) {
       .then(() => invalidate("exercises"))
       .catch(err => console.error("[Skullcrusher] Erreur création exercice dans la bibliothèque", err));
   }
-  getLastSetsForExercise(finalName).then(lastSets => {
+  plannerFor(finalName).then(({ last: lastSets, planner }) => {
     const untouched = ex.sets.every(s => !s.id && !s.done && s.weight_kg == null && s.reps == null);
     if (!lastSets.length || !untouched || !currentWorkout || !currentWorkout.exercises.includes(ex)) return;
-    ex.sets = lastSets.map((s, i) => ({ id: null, set_index: i + 1, set_type: defaultSetType(), weight_kg: s.weight_kg ?? null, reps: s.reps ?? null, done: false }));
+    // Test REP MAX en cours : séries de la dernière séance telles quelles.
+    const kgAt = (j, s) => planner && !currentWorkout.rm_test ? planner.kgAt(j, s.reps) : (s.weight_kg ?? null);
+    ex.sets = lastSets.map((s, i) => ({ id: null, set_index: i + 1, set_type: defaultSetType(), weight_kg: kgAt(i, s), reps: s.reps ?? null, done: false }));
     saveLocalState();
     const list = document.getElementById("exercise-list");
     if (list) renderExerciseList(list);
-    toast(t("Séries pré-remplies depuis ta dernière séance de {exercise}", { exercise: finalName }));
+    const src = currentWorkout.rm_test ? "history" : planner?.source;
+    toast(src === "rm" ? t("Charges proposées d'après ta RM de {exercise} ({rm} kg)", { exercise: finalName, rm: planner.ref.rm })
+      : src === "progression" ? t("Charges de ta progression sur {exercise}", { exercise: finalName })
+      : t("Séries pré-remplies depuis ta dernière séance de {exercise}", { exercise: finalName }));
   }).catch(histErr => console.error("[Skullcrusher] Erreur récupération historique exercice (pas de pré-remplissage)", histErr));
 }
 
@@ -1115,6 +1223,9 @@ async function finishWorkout() {
       .map(ex => ex.muscle_group || "Autre")
   )];
   const lastSetAt = currentWorkout.exercises.flatMap(ex => ex.sets.map(st => st.logged_at || "")).sort().pop() || null;
+  // Test REP MAX : pas d'écran de fin (records, partage, XP) ; on
+  // enregistre les RM obtenues et on montre le bilan.
+  if (currentWorkout.rm_test) return finishRepMaxWorkout({ loggedSets, totalTonnage, muscleSummary, lastSetAt, doneSet });
   // Écran de fin : records, son du record, playlist, bande-son Spotify,
   // amis présents, calories, partage.
   const finishBtn = document.getElementById("finish-workout");
@@ -1157,6 +1268,11 @@ async function finishWorkout() {
       invalidate("routines");
     } catch (e) { console.warn("[Skullcrusher] Progression non enregistrée :", e); }
   }
+  // Progression acceptée hors routine : charge proposée la prochaine fois.
+  if (extra.freeProgressions?.length) {
+    try { await (await import("./rep-max.js")).saveNextKg(extra.freeProgressions); }
+    catch (e) { console.warn("[Skullcrusher] Progression (séance libre) non enregistrée :", e); }
+  }
   // Écarts cochés (exercices ajoutés / retirés, séries, ordre) : la routine
   // (et donc le plan) reprend la séance d'aujourd'hui.
   if (extra.routineChanges?.length && extra.routine) {
@@ -1192,6 +1308,45 @@ async function finishWorkout() {
     } catch (e) { console.warn("[Skullcrusher] XP", e); }
   }
   return finished;
+}
+
+async function finishRepMaxWorkout({ loggedSets, totalTonnage, muscleSummary, lastSetAt, doneSet }) {
+  const finishBtn = document.getElementById("finish-workout");
+  if (finishBtn) { finishBtn.disabled = true; finishBtn.textContent = t("Calcul des RM…"); }
+  let results = [];
+  try {
+    const rmMod = await import("./rep-max.js");
+    await db.updateWorkout(currentWorkout.id, {
+      end_time: new Date().toISOString(), muscle_summary: muscleSummary, total_sets: loggedSets,
+      total_tonnage: totalTonnage, shared: false, friends_share: false, records: [], last_set_at: lastSetAt
+    });
+    results = await rmMod.saveTestResults(currentWorkout, doneSet);
+    stopPresence();
+    clearReminder();
+    localStorage.removeItem(LS_KEY);
+    localStorage.removeItem(LS_STATE_KEY);
+    localStorage.removeItem(LS_REST_KEY);
+    invalidate("workouts", "sets");
+    clearInterval(restTimerInterval);
+    if (restTimerEnd) cancelRestPush();
+    restTimerEnd = null;
+    document.querySelectorAll(".rest-timer").forEach(el => el.remove());
+    const finished = currentWorkout;
+    currentWorkout = null;
+    await renderSeance(document.getElementById("view"));
+    openModal(`
+      <h3>🏆 ${t("Tes RM")}</h3>
+      <p class="muted" style="margin-top:-6px;">${t("Enregistrées dans la fiche de chaque exercice : elles servent à te proposer des charges. Ce test ne compte pas dans tes statistiques.")}</p>
+      <div class="rm-results">${rmMod.resultsHtml(results)}</div>
+      <button class="btn btn-primary" id="rm-ok" style="margin-top:14px;">${t("Continuer")}</button>
+    `, (m) => { m.querySelector("#rm-ok").onclick = closeModal; });
+    return finished;
+  } catch (e) {
+    console.error("[Skullcrusher] Fin du test REP MAX", e);
+    toast(t("Enregistrement impossible, réessaie."));
+    if (finishBtn) { finishBtn.disabled = false; finishBtn.textContent = t("Terminer la séance"); }
+    return null;
+  }
 }
 
 async function cancelWorkout() {

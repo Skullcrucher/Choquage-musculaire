@@ -12,8 +12,8 @@ import { t, locale } from "./i18n.js";
 //     worker (CACHE_NAME dans service-worker.js doit valoir
 //     skullcrusher-cache-v<APP_BUILD>).
 // Puis : node tools/stamp-version.mjs
-export const APP_VERSION = "0.96.04";
-export const APP_BUILD = 117;
+export const APP_VERSION = "0.97.00";
+export const APP_BUILD = 119;
 
 const HORNS_SVG = `<img class="toast-horns" src="icons/horns.png" alt="">`;
 
@@ -169,11 +169,49 @@ export function fmtDuration(startIso, endIso) {
   return `${Math.floor(mins / 60)} h ${mins % 60} min`;
 }
 
-// Formule d'Epley : 1RM estimée = poids × (1 + reps/30)
+// RM (charge maximale sur 1 rép.) — formule de Lombardi, d'après le tableau
+// répétitions / coefficient : RM = poids × coefficient (ex. 65 kg × 7 →
+// 65 × 1,23 = 80 kg). Au-delà de 10 reps, le tableau s'arrête : la série
+// ne sert pas à estimer la RM (0).
+export const LOMBARDI = [0, 1.00, 1.07, 1.10, 1.13, 1.16, 1.20, 1.23, 1.27, 1.32, 1.36];
+export const RM_MAX_REPS = 10;
 export function estimate1RM(weight, reps) {
-  if (!weight || !reps) return 0;
-  if (reps === 1) return weight;
-  return Math.round(weight * (1 + reps / 30) * 10) / 10;
+  weight = Number(weight); reps = Math.round(Number(reps));
+  if (!(weight > 0) || !(reps >= 1) || reps > RM_MAX_REPS) return 0;
+  return Math.round(weight * LOMBARDI[reps] * 10) / 10;
+}
+
+// RM d'une liste de séries : la série la plus LOURDE (1 à 10 reps, hors
+// échauffement), à charge égale celle qui a le plus de reps, × coefficient.
+// → { kg, reps, rm, set } ou null.
+export function rmBest(sets) {
+  let best = null;
+  for (const s of sets || []) {
+    const kg = Number(s.weight_kg), reps = Math.round(Number(s.reps));
+    if (!(kg > 0) || !(reps >= 1) || reps > RM_MAX_REPS || s.set_type === "warmup") continue;
+    if (!best || kg > best.kg || (kg === best.kg && reps > best.reps)) best = { kg, reps, set: s };
+  }
+  return best ? { ...best, rm: estimate1RM(best.kg, best.reps) } : null;
+}
+export const rmOf = (sets) => rmBest(sets)?.rm || 0;
+
+// RM par groupe (semaine, mois, séance) : { clé: RM }.
+export function rmByKey(sets, keyFn) {
+  const groups = {};
+  (sets || []).forEach(s => { const k = keyFn(s); (groups[k] ||= []).push(s); });
+  const out = {};
+  Object.entries(groups).forEach(([k, list]) => { const v = rmOf(list); if (v) out[k] = v; });
+  return out;
+}
+
+// Charge à proposer pour un nombre de reps visé, d'après la RM :
+// RM ÷ coefficient (ex. RM 80 kg, 8 reps → 80 ÷ 1,27 = 63 kg), arrondie
+// au pas de charge (step, 2,5 kg par défaut).
+export function kgForReps(rm, reps, step = 2.5) {
+  reps = Math.min(RM_MAX_REPS, Math.max(1, Math.round(Number(reps) || 0)));
+  if (!(rm > 0) || !reps) return null;
+  const v = rm / LOMBARDI[reps];
+  return Math.max(step, Math.floor(v / step) * step);
 }
 
 // Début de semaine choisi dans Réglages : lundi (par défaut) ou dimanche.
@@ -198,7 +236,9 @@ export function setStatsAppOnly(on) {
 }
 // Séances retenues pour les statistiques selon ce réglage.
 export function statsWorkouts(workouts) {
-  return statsAppOnly() ? (workouts || []).filter(w => !w.imported_at) : (workouts || []);
+  // Séances de test REP MAX : jamais dans les statistiques.
+  const list = (workouts || []).filter(w => !w.rm_test);
+  return statsAppOnly() ? list.filter(w => !w.imported_at) : list;
 }
 
 // Premier jour (minuit) de la semaine contenant `date`.

@@ -46,7 +46,8 @@ export function reliableSets(list, { ignoreScope = false } = {}) {
   const uni = (n) => { if (!memo.has(n)) memo.set(n, db.isUnilateral(n)); return memo.get(n); };
   // Réglage « séances Skullcrusher uniquement » : aucune série importée.
   const appOnly = !ignoreScope && statsAppOnly();
-  return (list || []).filter(s => !(isImportedSet(s) && (appOnly || (!s.unilateral && uni(s.exercise_title))))
+  return (list || []).filter(s => !s.rm_test // séries d'une séance de test REP MAX : hors stats
+    && !(isImportedSet(s) && (appOnly || (!s.unilateral && uni(s.exercise_title))))
     // Charge aberrante (faute de frappe : 6659 kg…) : jamais dans les stats.
     && !isAbsurdKg(s.exercise_title, s.weight_kg));
 }

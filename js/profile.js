@@ -8,7 +8,7 @@
 // par un, chiffres globaux derrière une case à cocher.
 // ============================================================
 import * as db from "./db.js";
-import { openModal, closeModal, toast, esc, safeImageUrl, attachAutocomplete, estimate1RM, statsWorkouts } from "./utils.js";
+import { openModal, closeModal, toast, esc, safeImageUrl, attachAutocomplete, estimate1RM, rmBest, rmOf, rmByKey, RM_MAX_REPS, statsWorkouts } from "./utils.js";
 import { getExercises, getWorkouts, getSetsForExercise, getSetsForPeriod } from "./cache.js";
 import { allTrends, trendBadgeHtml, trendDetail, TREND_DAYS } from "./trend.js";
 import { gradeBadgeHtml } from "./xp.js";
@@ -38,23 +38,15 @@ function lastMonths(n) {
 async function computeHighlight(exerciseName) {
   const allSets = (await getSetsForExercise(exerciseName))
     .filter(s => s.weight_kg != null && s.reps != null && s.weight_kg > 0 && s.reps > 0 && s.set_type !== "warmup");
-  // La 1RM estimée (Epley) n'est fiable qu'à peu de répétitions : une série
-  // à 40 kg × 123 (faute de frappe) donnerait 204 kg. On ne garde que les
-  // séries de 15 reps ou moins, sauf s'il n'y en a aucune.
-  const lowRep = allSets.filter(s => s.reps <= 15);
-  const sets = lowRep.length ? lowRep : allSets;
+  // RM de Lombardi : série la plus lourde de 1 à 10 reps (le tableau
+  // s'arrête à 10 reps).
+  const sets = allSets.filter(s => s.reps <= RM_MAX_REPS);
   if (!sets.length) return { exercise: exerciseName, best_1rm: null, best_set: null, progress_pct: null, progress_months: null, monthly: [] };
 
-  let best = sets[0];
-  for (const s of sets) if (estimate1RM(s.weight_kg, s.reps) > estimate1RM(best.weight_kg, best.reps)) best = s;
+  const best = rmBest(sets).set;
 
   const months = lastMonths(12);
-  const byMonth = {};
-  sets.forEach(s => {
-    const k = monthKey(s.workout_start_time);
-    const v = estimate1RM(s.weight_kg, s.reps);
-    if (months.includes(k) && (!byMonth[k] || v > byMonth[k])) byMonth[k] = v;
-  });
+  const byMonth = rmByKey(sets.filter(s => months.includes(monthKey(s.workout_start_time))), s => monthKey(s.workout_start_time));
   const monthly = months.map(m => ({ m, v: byMonth[m] ?? null }));
 
   // Progression : meilleure 1RM récente (8 dernières semaines) comparée au
@@ -64,7 +56,7 @@ async function computeHighlight(exerciseName) {
   const firstMonth = monthly.find(x => x.v != null);
   let progress_pct = null, progress_months = null;
   if (recent.length && firstMonth) {
-    const recentBest = Math.max(...recent.map(s => estimate1RM(s.weight_kg, s.reps)));
+    const recentBest = rmOf(recent);
     const monthsAgo = months.length - 1 - months.indexOf(firstMonth.m);
     if (monthsAgo >= 2 && firstMonth.v > 0) {
       progress_pct = Math.round(((recentBest - firstMonth.v) / firstMonth.v) * 100);
@@ -126,10 +118,11 @@ export async function computeShowcase() {
   const workouts = statsWorkouts(allWorkouts);
   const best = new Map();
   const consider = (exercise, kg, reps, date) => {
-    if (!exercise || !(kg > 0) || !(reps > 0) || reps > 15) return;
+    if (!exercise || !(kg > 0) || !(reps > 0) || reps > RM_MAX_REPS) return;
     const one_rm = estimate1RM(kg, reps);
     const cur = best.get(exercise);
-    if (!cur || one_rm > cur.one_rm) best.set(exercise, { exercise, kg, reps, one_rm, date: String(date || "").slice(0, 10) });
+    // RM de Lombardi : la série la plus lourde (à charge égale, le plus de reps).
+    if (!cur || kg > cur.kg || (kg === cur.kg && reps > cur.reps)) best.set(exercise, { exercise, kg, reps, one_rm, date: String(date || "").slice(0, 10) });
   };
   workouts.forEach(w => (w.records || []).forEach(r => consider(r.exercise, +r.kg, +r.reps, w.start_time)));
   sets.filter(s => s.set_type !== "warmup").forEach(s => consider(s.exercise_title, s.weight_kg, s.reps, s.workout_start_time));
@@ -263,7 +256,7 @@ function progressHtml(pr, full, isMe, updatedAt = null) {
     ${pr.bottom?.length ? `<div class="pf-trend-h">⚠️ ${t("Plus fortes régressions")}</div>${pr.bottom.map(row).join("")}` : ""}
     ${isMe && full?.length ? `<button class="btn btn-secondary btn-sm" data-pf-all style="margin-top:8px;">${t("Voir tous mes exercices ({n})", { n: full.length })}</button>
       <div class="pf-trend-all" hidden>${full.map(row).join("")}</div>` : ""}
-    <p class="muted" style="font-size:12px; margin:6px 0 0;">${t("Sur {n} jours : meilleure 1RM estimée (ou reps sans charge) des dernières séances comparée au début du mois.", { n: TREND_DAYS })}${updatedAt ? ` ${t("Calculé le {date}.", { date: new Date(updatedAt).toLocaleString(locale(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}` : ""}</p>`;
+    <p class="muted" style="font-size:12px; margin:6px 0 0;">${t("Sur {n} jours : RM de Lombardi (ou reps sans charge) des dernières séances comparée au début du mois.", { n: TREND_DAYS })}${updatedAt ? ` ${t("Calculé le {date}.", { date: new Date(updatedAt).toLocaleString(locale(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}` : ""}</p>`;
 }
 function bindProgressToggle(root) {
   const btn = root.querySelector("[data-pf-all]");
@@ -527,7 +520,7 @@ export async function openProfileEditor(onSaved = () => {}) {
     </label>
 
     <div class="profile-section-title">🏆 ${t("Exercices phares ({n} max)", { n: MAX_HIGHLIGHTS })}</div>
-    <p class="muted" style="margin-top:0; font-size:13px;">${t("Pour chacun : ta meilleure 1RM estimée, ta meilleure série et ta progression sur 12 mois, mises à jour après chaque séance.")}</p>
+    <p class="muted" style="margin-top:0; font-size:13px;">${t("Pour chacun : ta RM (Lombardi), ta série la plus lourde et ta progression sur 12 mois, mises à jour après chaque séance.")}</p>
     ${Array.from({ length: MAX_HIGHLIGHTS }, (_, i) => `<div style="position:relative; margin-bottom:8px;"><input class="pf-hl" data-i="${i}" value="${esc(hl[i] || "")}" placeholder="${t("Exercice {n}", { n: i + 1 })}"></div>`).join("")}
 
     <div class="profile-section-title">🎧 ${t("Musique de salle")}</div>

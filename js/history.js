@@ -211,7 +211,7 @@ function renderList(container) {
       list.map(w => `
       <div class="list-row ${dupOf.has(w.id) ? "hist-dup" : ""}" data-w="${w.id}">
         <div>
-          <div class="list-row-title">${esc(w.title)}${w.imported_at ? ` <span class="hist-tag">📥 ${t("importée")}</span>` : ""}${dupOf.has(w.id) ? ` <span class="hist-tag dup">⧉ ${t("doublon")}</span>` : ""}</div>
+          <div class="list-row-title">${esc(w.title)}${w.imported_at ? ` <span class="hist-tag">📥 ${t("importée")}</span>` : ""}${w.rm_test ? ` <span class="hist-tag">🏆 ${t("test RM")}</span>` : ""}${dupOf.has(w.id) ? ` <span class="hist-tag dup">⧉ ${t("doublon")}</span>` : ""}</div>
           <div class="list-row-sub">${fmtDateTime(w.start_time)}${(w.partners || []).length ? " · 🤝" : ""}${w.total_sets ? ` · ${tn(w.total_sets, "{n} série", "{n} séries")}` : ""}${w.total_tonnage ? ` · ${Math.round(w.total_tonnage).toLocaleString(locale())} kg` : w.total_sets ? ` · ${t("sans charges")}` : ""}</div>
         </div>
         <div class="list-row-meta">${fmtDuration(w.start_time, w.end_time)}<div class="kcal-meta" data-kcal="${w.id}" style="font-size:11px;"></div></div>

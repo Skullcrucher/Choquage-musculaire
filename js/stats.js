@@ -9,7 +9,7 @@
 //   - la vue "par exercice" ne charge que l'exercice choisi.
 // "Tout" charge l'historique complet (plus long la première fois).
 // ============================================================
-import { isoWeek, estimate1RM, esc, healthNoteHtml, statsWorkouts } from "./utils.js";
+import { isoWeek, estimate1RM, rmOf, rmByKey, esc, healthNoteHtml, statsWorkouts } from "./utils.js";
 import { getExercises, getWorkouts, getSetsForPeriod, getSetsForExercise, invalidate, onAllSetsProgress } from "./cache.js";
 import { openExerciseDetail } from "./exercise-detail.js";
 import { icon, segHtml } from "./icons.js";
@@ -20,7 +20,7 @@ import { sessionTonnage } from "./sanity.js";
 let chartMuscle = null;
 let chartExercise = null;
 
-// i18n-keys: "4 sem.", "8 sem.", "12 sem.", "26 sem.", "Tout", "1RM estimée (kg)", "Charge max (kg)", "Volume (séries)", "Tonnage (kg)", "Répétitions", "Semaine", "Exercice", "Groupe musculaire"
+// i18n-keys: "4 sem.", "8 sem.", "12 sem.", "26 sem.", "Tout", "RM Lombardi (kg)", "Charge max (kg)", "Volume (séries)", "Tonnage (kg)", "Répétitions", "Semaine", "Exercice", "Groupe musculaire"
 const PERIODS = [
   { label: "4 sem.", weeks: 4 },
   { label: "8 sem.", weeks: 8 },
@@ -35,7 +35,7 @@ const state = {
 };
 
 const Y_METRICS = [
-  { key: "1rm", label: "1RM estimée (kg)" },
+  { key: "1rm", label: "RM Lombardi (kg)" },
   { key: "maxweight", label: "Charge max (kg)" },
   { key: "volume", label: "Volume (séries)" },
   { key: "tonnage", label: "Tonnage (kg)" },
@@ -51,8 +51,7 @@ function aggregate(setsArr, metricKey) {
   const withWeight = setsArr.filter(s => s.weight_kg != null && s.reps != null);
   switch (metricKey) {
     case "1rm": {
-      const vals = withWeight.map(s => estimate1RM(s.weight_kg, s.reps));
-      return vals.length ? Math.max(...vals) : null;
+      return rmOf(withWeight) || null; // RM de Lombardi (série la plus lourde)
     }
     case "maxweight": {
       const vals = withWeight.map(s => s.weight_kg);
@@ -337,10 +336,10 @@ function renderExerciseChart(content, allSets, exerciseName) {
     .sort((a, b) => new Date(a.workout_start_time) - new Date(b.workout_start_time));
 
   const perWeek = {};
+  const rmWeek = rmByKey(sets, s => isoWeek(s.workout_start_time));
   sets.forEach(s => {
     const wk = isoWeek(s.workout_start_time);
-    const oneRM = estimate1RM(s.weight_kg, s.reps);
-    if (!perWeek[wk] || oneRM > perWeek[wk].oneRM) perWeek[wk] = { oneRM, maxWeight: s.weight_kg };
+    perWeek[wk] = { oneRM: rmWeek[wk] ?? null, maxWeight: Math.max(perWeek[wk]?.maxWeight || 0, s.weight_kg) };
   });
   const weeks = Object.keys(perWeek).sort();
 
@@ -351,7 +350,7 @@ function renderExerciseChart(content, allSets, exerciseName) {
     data: {
       labels: weeks,
       datasets: [
-        { label: t("1RM estimée (kg)"), data: weeks.map(w => perWeek[w].oneRM), borderColor: "#E02424", backgroundColor: "transparent", tension: 0.25 },
+        { label: t("RM Lombardi (kg)"), data: weeks.map(w => perWeek[w].oneRM), borderColor: "#E02424", backgroundColor: "transparent", tension: 0.25 },
         { label: t("Charge max (kg)"), data: weeks.map(w => perWeek[w].maxWeight), borderColor: "#B8B8BE", backgroundColor: "transparent", tension: 0.25 }
       ]
     },
@@ -360,7 +359,7 @@ function renderExerciseChart(content, allSets, exerciseName) {
 
   const last = sets[sets.length - 1];
   content.querySelector("#exercise-1rm").textContent = last
-    ? t("Dernière série : {kg} kg × {reps} — 1RM estimée {rm} kg (formule d'Epley)", { kg: last.weight_kg, reps: last.reps, rm: estimate1RM(last.weight_kg, last.reps) })
+    ? t("Dernière série : {kg} kg × {reps} — RM {rm} kg (Lombardi)", { kg: last.weight_kg, reps: last.reps, rm: estimate1RM(last.weight_kg, last.reps) || "—" })
     : t("Pas de série sur cette période.");
 }
 

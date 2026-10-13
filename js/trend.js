@@ -3,14 +3,14 @@
 // régression. Utilisée pendant la séance (à côté du nom de l'exercice),
 // dans la fiche exercice et dans le profil (plus fortes évolutions).
 //
-// Mesure par séance : meilleure 1RM estimée (séries de travail de 15 reps
-// ou moins) ; pour un exercice sans charge (tractions, pompes…), le
+// Mesure par séance : RM de Lombardi (série de travail la plus lourde,
+// 1 à 10 reps) ; pour un exercice sans charge (tractions, pompes…), le
 // meilleur nombre de reps. On compare la forme récente (meilleure des
 // 2 dernières séances du mois, pour qu'une séance légère ne fasse pas
 // croire à une régression) au point de départ : la dernière séance AVANT
 // le mois (jusqu'à 3 mois en arrière), sinon la première du mois.
 // ============================================================
-import { estimate1RM } from "./utils.js";
+import { rmOf } from "./utils.js";
 import { t } from "./i18n.js";
 
 export const TREND_DAYS = 30;
@@ -38,9 +38,8 @@ export function exerciseTrend(sets, { now = Date.now(), excludeWorkoutId = null,
   });
   bySession.forEach(x => {
     if (metric === "1rm") {
-      // Séries de 15 reps ou moins en priorité (Epley peu fiable au-delà).
-      const low = x.sets.filter(s => s.reps <= 15);
-      x.v = Math.max(...(low.length ? low : x.sets).map(s => estimate1RM(s.weight_kg, s.reps)));
+      // RM de Lombardi : série la plus lourde de 1 à 10 reps.
+      x.v = rmOf(x.sets);
     } else x.v = Math.max(...x.sets.map(s => s.reps));
   });
   const sessions = [...bySession.values()].filter(x => x.v > 0).sort((a, b) => a.day.localeCompare(b.day));
@@ -77,7 +76,7 @@ export function trendBadgeHtml(tr, { label = false } = {}) {
 export function trendDetail(tr) {
   if (!tr) return "";
   const unit = tr.metric === "1rm" ? " kg" : " reps";
-  const what = tr.metric === "1rm" ? t("1RM estimée") : t("meilleure série");
+  const what = tr.metric === "1rm" ? t("RM") : t("meilleure série");
   const n = (v) => String(v).replace(".", ",") + unit;
   return `${what} ${n(tr.from)} → ${n(tr.to)} (${fmtPct(tr.pct)})`;
 }

@@ -2,7 +2,7 @@
 // FIN DE SÉANCE — records, "son du record", playlist, bande-son, partage
 // ============================================================
 import * as db from "./db.js";
-import { openModal, closeModal, esc, estimate1RM, healthNoteHtml } from "./utils.js";
+import { openModal, closeModal, esc, rmBest, healthNoteHtml } from "./utils.js";
 import { getSetsForExercise, getRoutines } from "./cache.js";
 import { normalizePlaylistUrl, parseSongInput, songLabel, SPOTIFY_ICON } from "./music.js";
 import { t, tn } from "./i18n.js";
@@ -11,21 +11,13 @@ import { getBody, bodyComplete, autoEffort, estimateKcal, EFFORTS } from "./calo
 // Bande-son jointe à une séance : liens des morceaux uniquement (voir music.js).
 const MAX_SOUNDTRACK = 10;
 
-// Meilleure 1RM estimée d'une liste de séries, en ne gardant que les séries
-// de 15 reps ou moins (au-delà, la formule d'Epley s'emballe), sauf s'il
-// n'y en a aucune.
+// RM (Lombardi) d'une liste de séries : série la plus lourde de 1 à 10 reps.
 function bestSet(sets) {
-  const valid = sets.filter(s => s.weight_kg > 0 && s.reps > 0 && s.set_type !== "warmup");
-  const pool = valid.filter(s => s.reps <= 15).length ? valid.filter(s => s.reps <= 15) : valid;
-  let best = null;
-  for (const s of pool) {
-    const v = estimate1RM(s.weight_kg, s.reps);
-    if (!best || v > best.one_rm) best = { kg: s.weight_kg, reps: s.reps, one_rm: v };
-  }
-  return best;
+  const b = rmBest(sets);
+  return b ? { kg: b.kg, reps: b.reps, one_rm: b.rm } : null;
 }
 
-// Records battus pendant la séance : meilleure 1RM estimée de l'exercice
+// Records battus pendant la séance : RM (Lombardi) de l'exercice
 // supérieure à tout l'historique précédent (un premier essai n'est pas un record).
 export async function computeRecords(workout) {
   const records = [];
@@ -73,18 +65,25 @@ function progressionReason(p) {
   }
 }
 
-// Charges à adapter dans la routine d'origine (double progression).
+// Charges à adapter (double progression, reps faites et ressenti) :
+//  - exercices de la routine d'origine → charge visée de la routine ;
+//  - exercices hors routine (séance libre, exercice ajouté) → charge
+//    proposée à la prochaine séance (objectif : les reps de la série la plus
+//    lourde d'aujourd'hui, sur toutes les séries).
 async function progressionChoices(workout) {
-  if (!workout.routine_id) return { routine: null, list: [] };
-  const routine = (await getRoutines()).find(r => r.id === workout.routine_id);
-  if (!routine) return { routine: null, list: [] };
+  const routine = workout.routine_id ? (await getRoutines()).find(r => r.id === workout.routine_id) || null : null;
   const { suggestProgressions } = await import("./progression.js");
-  const exercises = workout.exercises.map(ex => {
-    const def = (routine.exercises || []).find(e => e.exercise_name === ex.exercise_title);
-    if (!def) return null;
-    return { ...ex, reps_target: def.reps_target, target_sets: def.target_sets, target_kg: def.target_kg ?? null };
-  }).filter(Boolean);
-  return { routine, list: suggestProgressions(exercises) };
+  const inRoutine = [], free = [];
+  workout.exercises.forEach(ex => {
+    const def = (routine?.exercises || []).find(e => e.exercise_name === ex.exercise_title);
+    if (def) { inRoutine.push({ ...ex, reps_target: def.reps_target, target_sets: def.target_sets, target_kg: def.target_kg ?? null }); return; }
+    const work = ex.sets.filter(s => hasData(s) && s.weight_kg > 0 && s.reps > 0 && !["warmup", "dropset"].includes(s.set_type));
+    if (!work.length) return;
+    const top = Math.max(...work.map(s => s.weight_kg));
+    const goal = work.find(s => s.weight_kg === top).reps;
+    free.push({ ...ex, sets: work, reps_target: String(goal), target_sets: work.length, target_kg: null });
+  });
+  return { routine, list: routine ? suggestProgressions(inRoutine) : [], free: suggestProgressions(free) };
 }
 
 // Séance faite depuis une routine (plan) mais différente : exercices
@@ -161,7 +160,7 @@ export async function openFinishDialog(workout, summary) {
     db.getProfile(db.getCurrentUser()?.uid).catch(() => null),
     partnerChoices(workout).catch(() => ({ friends: [], preselected: new Set() })),
     getBody(),
-    progressionChoices(workout).catch(e => { console.warn("[Skullcrusher] Progression", e); return { routine: null, list: [] }; })
+    progressionChoices(workout).catch(e => { console.warn("[Skullcrusher] Progression", e); return { routine: null, list: [], free: [] }; })
   ]);
   const changes = routineChanges(workout, progress.routine);
   const minutes = Math.min(300, Math.round(((summary.lastSetAt ? Math.min(Date.now(), Date.parse(summary.lastSetAt) + 10 * 60000) : Date.now()) - Date.parse(workout.start_time)) / 60000));
@@ -214,6 +213,21 @@ export async function openFinishDialog(workout, summary) {
         </div>
         <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Coché = la routine (et ton plan) utilisera cette charge à la prochaine séance. Décoche pour garder la charge actuelle.")}</p>
         ${healthNoteHtml()}
+      ` : ""}
+
+      ${progress.free?.length ? `
+        <label>📈 ${t("Progression — prochaine séance")}</label>
+        <div id="fin-free-progress">
+          ${progress.free.map((p, i) => `
+            <label class="list-row" style="cursor:pointer; align-items:flex-start;">
+              <span style="font-size:14px;">
+                ${p.direction === "up" ? "⬆️" : "⬇️"} <b>${esc(p.exercise)}</b> : ${esc(p.from)} → <b>${esc(p.to)} kg</b>
+                <br><span class="muted" style="font-size:12px;">${progressionReason(p)}</span>
+              </span>
+              <input type="checkbox" data-free-prog="${i}" ${p.checked ? "checked" : ""} style="width:auto; margin-top:4px;">
+            </label>`).join("")}
+        </div>
+        <p class="muted" style="font-size:12px; margin:4px 0 0;">${t("Coché = cette charge te sera proposée la prochaine fois que tu feras l'exercice.")}</p>
       ` : ""}
 
       ${changes.length ? `
@@ -300,6 +314,7 @@ export async function openFinishDialog(workout, summary) {
           friends_share: shareScope === "friends",
           routine: progress.routine,
           progressions: [...m.querySelectorAll("[data-prog]:checked")].map(c => progress.list[+c.dataset.prog]),
+          freeProgressions: [...m.querySelectorAll("[data-free-prog]:checked")].map(c => progress.free[+c.dataset.freeProg]),
           routineChanges: [...m.querySelectorAll("[data-change]:checked")].map(c => changes[+c.dataset.change]),
           partners: [...m.querySelectorAll("[data-partner].active")].map(c => c.dataset.partner).slice(0, db.MAX_PARTNERS),
           effort: hasBody ? effort : null,
