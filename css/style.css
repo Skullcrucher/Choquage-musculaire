@@ -1506,16 +1506,3 @@ html.desktop .mw-pls { display: grid; grid-template-columns: 1fr 1fr; }
 .hist-dups { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; margin-bottom: 8px; border-radius: var(--radius); border: 1px solid var(--orange); background: rgba(240,162,59,0.08); font-size: 13px; }
 .hist-dups .btn { align-self: flex-start; }
 .kg-absurd { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px; margin: 0 0 10px; border-radius: var(--radius); border: 1px solid var(--red); background: rgba(255,92,92,0.08); font-size: 13px; }
-
-/* Mes max */
-.max-progress { margin: 4px 0 12px; font-size: 13px; }
-.max-progress .xp-bar { margin-top: 6px; }
-.max-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-.max-row.done .max-name { color: var(--green); }
-.max-main { flex: 1; min-width: 0; }
-.max-name { font-weight: 600; }
-.max-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
-.max-form { flex-basis: 100%; }
-.max-form .field-row { display: flex; gap: 8px; }
-.max-form .field-row > div { flex: 1; min-width: 0; }
-.max-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 10px; font-size: 13px; }
