@@ -1582,5 +1582,12 @@ export default {
   "Tes RM": "Twoje RM",
   "Enregistrées dans la fiche de chaque exercice : elles servent à te proposer des charges. Ce test ne compte pas dans tes statistiques.": "Zapisane na karcie każdego ćwiczenia: służą do proponowania ciężarów. Ten test nie liczy się do statystyk.",
   "REP MAX · {method}": "REP MAX · {method}",
-  "directe": "bezpośrednia"
+  "directe": "bezpośrednia",
+  "Publication refusée par les règles Firestore : republie le fichier firestore.rules (console Firebase → Firestore → Règles).": "Publikacja odrzucona przez reguły Firestore: opublikuj ponownie firestore.rules (konsola Firebase → Firestore → Reguły).",
+  "Publication impossible : {msg}": "Publikacja nie powiodła się: {msg}",
+  "Trop de séances différentes dans ce plan ({n}, 120 au plus).": "Za dużo różnych treningów w tym planie ({n}, maks. 120).",
+  "Trop de blocs dans ce plan ({n}, 60 au plus).": "Za dużo bloków w tym planie ({n}, maks. 60).",
+  "Amis de tes amis": "Znajomi twoich znajomych",
+  "{n} ami en commun": "{n} wspólny znajomy",
+  "{n} amis en commun": "{n} wspólnych znajomych"
 };

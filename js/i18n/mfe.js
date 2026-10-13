@@ -1572,5 +1572,12 @@ export default {
   "Tes RM": "To bann RM",
   "Enregistrées dans la fiche de chaque exercice : elles servent à te proposer des charges. Ce test ne compte pas dans tes statistiques.": "Anrezistre dan fiche sak egzersis : zot servi pou propoze sarz. Sa test-la pa kont dan to statistik.",
   "REP MAX · {method}": "REP MAX · {method}",
-  "directe": "direk"
+  "directe": "direk",
+  "Publication refusée par les règles Firestore : republie le fichier firestore.rules (console Firebase → Firestore → Règles).": "Piblikasion refize par reg Firestore : repiblie fisie firestore.rules (konsol Firebase → Firestore → Reg).",
+  "Publication impossible : {msg}": "Piblikasion pa marse : {msg}",
+  "Trop de séances différentes dans ce plan ({n}, 120 au plus).": "Tro boukou seans diferan dan sa plan-la ({n}, 120 maximum).",
+  "Trop de blocs dans ce plan ({n}, 60 au plus).": "Tro boukou blok dan sa plan-la ({n}, 60 maximum).",
+  "Amis de tes amis": "Kamarad to bann kamarad",
+  "{n} ami en commun": "{n} kamarad an komen",
+  "{n} amis en commun": "{n} kamarad an komen"
 };

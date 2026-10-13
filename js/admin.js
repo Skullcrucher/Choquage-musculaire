@@ -102,7 +102,13 @@ function metaModal({ title, name, description, level, goal, extra = "" }, onOk) 
       if (/[<>]/.test(meta.name + meta.description)) { err.textContent = t("Les caractères < et > ne sont pas autorisés."); return; }
       e.target.disabled = true;
       try { await onOk(meta); closeModal(); toast(t("Publié dans les contenus officiels") + " ⭐"); }
-      catch (ex) { console.error("[Skullcrusher] Publication officielle", ex); err.textContent = t("Publication impossible (règles Firestore à jour ?)"); e.target.disabled = false; }
+      catch (ex) {
+        console.error("[Skullcrusher] Publication officielle", ex);
+        err.textContent = ex.userMessage
+          || (ex.code === "permission-denied" ? t("Publication refusée par les règles Firestore : republie le fichier firestore.rules (console Firebase → Firestore → Règles).")
+          : t("Publication impossible : {msg}", { msg: ex.message || ex.code || "?" }));
+        e.target.disabled = false;
+      }
     };
   });
 }
@@ -127,6 +133,8 @@ export async function publishPlanOfficial(plan, routines, onDone) {
     name: plan.name, description: plan.description, level: plan.level, goal: plan.goal
   }, async (meta) => {
     const tpl = planTemplateFrom(plan, routines);
+    if (tpl.routines.length > 120) throw Object.assign(new Error("too-many"), { userMessage: t("Trop de séances différentes dans ce plan ({n}, 120 au plus).", { n: tpl.routines.length }) });
+    if (tpl.blocks.length > 60) throw Object.assign(new Error("too-many"), { userMessage: t("Trop de blocs dans ce plan ({n}, 60 au plus).", { n: tpl.blocks.length }) });
     const id = plan.official_id || safeId("off-p-" + plan.id);
     await db.saveOfficialProgram(id, {
       kind: "plan", name: meta.name, description: meta.description, level: meta.level || tpl.level, goal: meta.goal || tpl.goal,

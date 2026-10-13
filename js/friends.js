@@ -5,7 +5,7 @@ import * as db from "./db.js";
 import { toast, esc, safeImageUrl, debounce } from "./utils.js";
 import { invalidate } from "./cache.js";
 import { openProfile } from "./profile.js";
-import { t } from "./i18n.js";
+import { t, tn } from "./i18n.js";
 
 function avatar(profile, size = 36) {
   const photo = safeImageUrl(profile?.photo_data_url);
@@ -63,6 +63,7 @@ export async function renderFriends(container) {
         <button class="btn btn-sm btn-primary" data-accept="${esc(f.id)}">${t("Accepter")}</button>
         <button class="btn btn-sm btn-secondary" data-remove="${esc(f.id)}">${t("Refuser")}</button>`)).join("")}
     </div>` : ""}
+    <div id="fof"></div>
     <div class="card">
       <div class="card-title">${t("Mes amis ({n})", { n: friends.length })}</div>
       ${friends.length ? friends.map(f => personRow({ uid: f.other_uid, ...profiles[f.other_uid] }, `<button class="btn btn-sm btn-secondary" data-remove="${esc(f.id)}" data-confirm="1">${t("Retirer")}</button>`)).join("")
@@ -81,6 +82,10 @@ export async function renderFriends(container) {
 
 
   const refresh = () => renderFriends(container);
+  // Sa liste d'amis (lisible par ses amis) puis suggestions d'amis d'amis.
+  const friendUids = friends.map(f => f.other_uid);
+  db.syncMyFriendList(friendUids).catch(e => console.warn("[Skullcrusher] Liste d'amis :", e));
+  renderFriendsOfFriends(container.querySelector("#fof"), friendUids, knownUids, refresh).catch(e => console.warn("[Skullcrusher] Amis d'amis :", e));
   const bindProfiles = (root) => root.querySelectorAll("[data-profile]").forEach(el => {
     el.onclick = () => openProfile(el.dataset.profile);
   });
@@ -154,4 +159,40 @@ export async function renderFriends(container) {
       await refresh();
     });
   }, 300));
+}
+
+// Suggestions : amis de mes amis, classés par nombre d'amis en commun.
+async function renderFriendsOfFriends(el, friendUids, knownUids, refresh) {
+  if (!el || !friendUids.length) return;
+  const myUid = db.getCurrentUser()?.uid;
+  const lists = await db.getFriendLists(friendUids);
+  const mutual = new Map();
+  Object.values(lists).forEach(uids => uids.forEach(u => {
+    if (u === myUid || knownUids.has(u)) return;
+    mutual.set(u, (mutual.get(u) || 0) + 1);
+  }));
+  const top = [...mutual.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (!top.length || !el.isConnected) return;
+  const profiles = await db.getProfiles(top.map(([u]) => u));
+  const shown = top.filter(([u]) => profiles[u]?.display_name);
+  if (!shown.length || !el.isConnected) return;
+  el.innerHTML = `<div class="card">
+    <div class="card-title">${t("Amis de tes amis")}</div>
+    ${shown.map(([u, n]) => personRow({ uid: u, ...profiles[u] }, `
+      <span class="muted" style="font-size:12px; align-self:center;">${tn(n, "{n} ami en commun", "{n} amis en commun")}</span>
+      <button class="btn btn-sm btn-primary" data-fof="${esc(u)}">${t("Ajouter")}</button>`)).join("")}
+  </div>`;
+  el.querySelectorAll("[data-profile]").forEach(x => x.onclick = () => openProfile(x.dataset.profile));
+  el.querySelectorAll("[data-fof]").forEach(btn => btn.onclick = async () => {
+    btn.disabled = true;
+    try {
+      await db.sendFriendRequest(btn.dataset.fof);
+      toast(t("Demande envoyée"));
+      await refresh();
+    } catch (err) {
+      console.error("[Skullcrusher] Erreur demande d'ami", err);
+      toast(t("Demande impossible (déjà envoyée ?)"));
+      btn.disabled = false;
+    }
+  });
 }

@@ -1482,13 +1482,6 @@ html.desktop .mw-pls { display: grid; grid-template-columns: 1fr 1fr; }
 .p3 .podium-block { height: 40px; background: linear-gradient(#E0A46A, #A8642C); }
 .p1 .profile-avatar { box-shadow: 0 0 0 3px #F2C14E, 0 0 18px rgba(242,193,78,0.6); }
 
-/* ---------- Rappel des défis ---------- */
-.ch-reminder { text-align: center; }
-.ch-reminder-icon { font-size: 52px; filter: drop-shadow(0 0 16px rgba(242,193,78,0.6)); }
-.ch-reminder-title { font-family: 'Anton', sans-serif; font-size: 24px; text-transform: uppercase; line-height: 1.15; }
-.ch-reminder-box { text-align: left; background: var(--surface-raised); border-radius: var(--radius); padding: 10px 12px; margin-top: 8px; }
-.ch-reminder-k { font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-dim); }
-.ch-reminder-v { font-weight: 700; font-size: 15px; margin-top: 2px; }
 
 /* Bande-son d'une séance : titres (lisibles partout, même sans lecteur intégré). */
 .soundtrack-list { margin: 6px 0 0; padding-left: 22px; display: grid; gap: 6px; font-size: 14px; }

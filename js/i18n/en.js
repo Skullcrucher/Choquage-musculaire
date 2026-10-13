@@ -1573,5 +1573,12 @@ export default {
   "Tes RM": "Your RMs",
   "Enregistrées dans la fiche de chaque exercice : elles servent à te proposer des charges. Ce test ne compte pas dans tes statistiques.": "Saved on each exercise's page: they are used to suggest loads. This test does not count in your stats.",
   "REP MAX · {method}": "REP MAX · {method}",
-  "directe": "direct"
+  "directe": "direct",
+  "Publication refusée par les règles Firestore : republie le fichier firestore.rules (console Firebase → Firestore → Règles).": "Publishing refused by the Firestore rules: republish firestore.rules (Firebase console → Firestore → Rules).",
+  "Publication impossible : {msg}": "Publishing failed: {msg}",
+  "Trop de séances différentes dans ce plan ({n}, 120 au plus).": "Too many different sessions in this plan ({n}, 120 at most).",
+  "Trop de blocs dans ce plan ({n}, 60 au plus).": "Too many blocks in this plan ({n}, 60 at most).",
+  "Amis de tes amis": "Friends of your friends",
+  "{n} ami en commun": "{n} mutual friend",
+  "{n} amis en commun": "{n} mutual friends"
 };

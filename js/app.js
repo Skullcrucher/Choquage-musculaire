@@ -235,10 +235,9 @@ initAuth((user) => {
       // Nouvelle version publiée ? Proposée d'abord, puis les conditions.
       import("./update-check.js").then(m => m.checkForUpdate({ force: true })).catch(() => null)
         .then(() => import("./terms.js")).then(m => m.ensureTermsAccepted(user)).catch(e => console.warn("[Skullcrusher] Conditions :", e))
-        // Puis, au plus une fois par jour : rappel des défis ouverts à tous.
-        .then(() => new Promise(r => setTimeout(r, 2500)))
-        .then(() => import("./challenge-reminder.js")).then(m => m.maybeShowChallengeReminder())
-        .catch(e => console.warn("[Skullcrusher] Rappel des défis :", e));
+        // Puis inscription automatique aux défis (sauf si on s'en est retiré).
+        .then(() => import("./challenges.js")).then(m => m.autoJoinChallenges())
+        .catch(e => console.warn("[Skullcrusher] Défis :", e));
       // Préférences synchronisées (temps de repos, exercices unilatéraux),
       // puis, une fois par jour, vitrine et progression du profil public
       // recalculées : les visiteurs voient des chiffres à jour.
@@ -246,6 +245,8 @@ initAuth((user) => {
         const key = "skullcrusher_profile_refresh_day", today = new Date().toDateString();
         let last = null; try { last = localStorage.getItem(key); } catch (_) {}
         if (last === today) return;
+        // Liste d'amis lisible par ses amis (suggestions « amis d'amis »).
+        import("./db.js").then(async m => m.syncMyFriendList(await m.listFriendUids())).catch(e => console.warn("[Skullcrusher] Liste d'amis :", e));
         setTimeout(() => import("./profile.js").then(m => m.refreshMyProfileHighlights())
           .then(() => { try { localStorage.setItem(key, today); } catch (_) {} })
           .catch(e => console.warn("[Skullcrusher] Profil public non mis à jour :", e)), 8000);

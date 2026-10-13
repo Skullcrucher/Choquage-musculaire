@@ -81,6 +81,17 @@ export async function computeMyWeeks() {
   return { opt_in: true, weekly: totalsFor(workouts, new Date()), prev: totalsFor(workouts, new Date(Date.now() - 7 * DAY)) };
 }
 
+// Tout le monde participe aux défis par défaut : inscription automatique
+// au démarrage, sauf pour qui s'en est retiré (opt_in: false).
+export async function autoJoinChallenges() {
+  const uid = db.getCurrentUser()?.uid;
+  if (!uid) return false;
+  const p = await db.getProfile(uid).catch(() => null);
+  if (p?.challenge?.opt_in === true || p?.challenge?.opt_in === false) return false;
+  await db.updatePublicProfile({ challenge: await computeMyWeeks() });
+  return true;
+}
+
 function statsFor(profile, week) {
   const c = profile?.challenge;
   if (!c?.opt_in) return null;
@@ -119,7 +130,12 @@ export async function renderChallenges(container) {
   const myUid = db.getCurrentUser()?.uid;
   const [myProfile, friendships] = await Promise.all([db.getProfile(myUid).catch(() => null), db.listFriendships()]);
   const friendUids = friendships.filter(f => f.status === "accepted").map(f => f.other_uid);
-  const participating = !!myProfile?.challenge?.opt_in;
+  let participating = !!myProfile?.challenge?.opt_in;
+  // Jamais inscrit (ni retiré) : inscription automatique.
+  if (!participating && myProfile?.challenge?.opt_in !== false) {
+    participating = await autoJoinChallenges().catch(e => { console.warn("[Skullcrusher] Inscription aux défis", e); return false; });
+    if (participating) return renderChallenges(container);
+  }
   const wcMod = await import("./weekly-challenge.js");
   const wc = await wcMod.weeklyChallengeHtml().catch(e => { console.warn("[Skullcrusher] Défi de la semaine", e); return { html: "", challenge: null }; });
   const redraw = () => renderChallenges(container);
