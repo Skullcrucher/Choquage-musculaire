@@ -1482,13 +1482,6 @@ html.desktop .mw-pls { display: grid; grid-template-columns: 1fr 1fr; }
 .p3 .podium-block { height: 40px; background: linear-gradient(#E0A46A, #A8642C); }
 .p1 .profile-avatar { box-shadow: 0 0 0 3px #F2C14E, 0 0 18px rgba(242,193,78,0.6); }
 
-/* ---------- Rappel des défis ---------- */
-.ch-reminder { text-align: center; }
-.ch-reminder-icon { font-size: 52px; filter: drop-shadow(0 0 16px rgba(242,193,78,0.6)); }
-.ch-reminder-title { font-family: 'Anton', sans-serif; font-size: 24px; text-transform: uppercase; line-height: 1.15; }
-.ch-reminder-box { text-align: left; background: var(--surface-raised); border-radius: var(--radius); padding: 10px 12px; margin-top: 8px; }
-.ch-reminder-k { font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-dim); }
-.ch-reminder-v { font-weight: 700; font-size: 15px; margin-top: 2px; }
 
 /* Bande-son d'une séance : titres (lisibles partout, même sans lecteur intégré). */
 .soundtrack-list { margin: 6px 0 0; padding-left: 22px; display: grid; gap: 6px; font-size: 14px; }
@@ -1505,3 +1498,49 @@ html.desktop .mw-pls { display: grid; grid-template-columns: 1fr 1fr; }
 .list-row.hist-dup { opacity: 0.7; }
 .hist-dups { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; margin-bottom: 8px; border-radius: var(--radius); border: 1px solid var(--orange); background: rgba(240,162,59,0.08); font-size: 13px; }
 .hist-dups .btn { align-self: flex-start; }
+.kg-absurd { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px; margin: 0 0 10px; border-radius: var(--radius); border: 1px solid var(--red); background: rgba(255,92,92,0.08); font-size: 13px; }
+
+/* REP MAX */
+.rm-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 14px; }
+.rm-method { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); cursor: pointer; font: inherit; }
+.rm-method b { font-size: 14px; }
+.rm-method small { font-size: 12px; color: var(--text-dim); line-height: 1.35; }
+.rm-method.active { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); }
+.rm-ex-list { display: flex; flex-direction: column; }
+.rm-ex { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.rm-ex input { width: auto; margin: 0; }
+.rm-ex-name { flex: 1; min-width: 0; }
+.rm-ex-cur { font-size: 12px; white-space: nowrap; }
+.rm-safety { font-size: 12px; margin: 12px 0; }
+.rm-res { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.rm-val { color: var(--amber); font-size: 16px; }
+.rm-line { margin: 0 0 10px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.rm-line:empty { display: none; }
+.rm-main { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.rm-big { font-family: 'Anton', sans-serif; font-size: 26px; color: var(--amber); }
+.rm-sub { font-size: 12px; margin-top: 4px; line-height: 1.5; }
+@media (max-width: 360px) { .rm-methods { grid-template-columns: 1fr; } }
+
+/* Contenu d'un plan, semaine par semaine */
+.pv-strip { display: flex; gap: 4px; overflow-x: auto; padding: 2px 0 8px; margin-bottom: 6px; scrollbar-width: thin; }
+.pv-wk { flex: 0 0 auto; min-width: 32px; height: 32px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; border-bottom-width: 3px; }
+.pv-wk.b0 { border-bottom-color: var(--amber); }
+.pv-wk.b1 { border-bottom-color: var(--blue); }
+.pv-wk.b2 { border-bottom-color: var(--green); }
+.pv-wk.b3 { border-bottom-color: var(--orange); }
+.pv-wk.now { color: var(--text); }
+.pv-wk.active { background: var(--amber); border-color: var(--amber); color: var(--on-accent); }
+.pv-week-head { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; }
+.pv-week-head .btn { width: auto; flex: 0 0 auto; }
+.pv-week-title { flex: 1; min-width: 0; display: flex; flex-direction: column; text-align: center; font-size: 13px; }
+.pv-week-title b { font-size: 15px; }
+.pv-session { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 10px 12px; margin-bottom: 10px; }
+.pv-session-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.pv-day { font-weight: 800; text-transform: capitalize; }
+.pv-day small { font-weight: 400; color: var(--text-dim); text-transform: none; }
+.pv-routine { color: var(--amber); font-weight: 700; font-size: 14px; }
+.pv-ex { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.pv-ex-main { min-width: 0; display: flex; flex-direction: column; }
+.pv-ex-cue { font-size: 12px; color: var(--text-dim); }
+.pv-ex-load { flex: 0 0 auto; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pv-session-foot { font-size: 12px; margin-top: 4px; }

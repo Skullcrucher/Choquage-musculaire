@@ -467,6 +467,9 @@ async function openWorkoutEditor(workout, sets, body, onSaved, onCancel) {
       if (!(minutes >= 1 && minutes <= 600)) { err.textContent = t("Durée : entre 1 et 600 minutes."); return; }
       const bad = state.exercises.some(ex => ex.sets.some(st => (st.weight_kg != null && (st.weight_kg < 0 || st.weight_kg > 1000)) || (st.reps != null && (st.reps < 0 || st.reps > 1000))));
       if (bad) { err.textContent = t("Poids ou répétitions hors limites."); return; }
+      const { isAbsurdKg } = await import("./sanity.js");
+      const absurd = state.exercises.flatMap(ex => ex.sets.filter(st => isAbsurdKg(ex.name, st.weight_kg)).map(st => `${ex.name} : ${st.weight_kg} kg`));
+      if (absurd.length) { err.textContent = t("Charge incohérente à corriger : {list}", { list: absurd.join(", ") }); return; }
 
       const start_time = startDate.toISOString();
       const end_time = new Date(startDate.getTime() + minutes * 60000).toISOString();

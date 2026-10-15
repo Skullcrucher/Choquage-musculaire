@@ -69,6 +69,7 @@ function parseHevyDate(str) {
 // Groupe musculaire deviné d'après le nom : voir muscles.js.
 export { guessMuscleGroup } from "./muscles.js";
 import { guessMuscleGroup } from "./muscles.js";
+import { isAbsurdKg } from "./sanity.js";
 
 function num(v) {
   if (v === undefined || v === null || v === "") return null;
@@ -88,6 +89,7 @@ export function parseCsvText(csvText) {
   const rows = [];
   const unparsedDates = new Set();
   const skippedFuture = new Set();
+  let absurdWeights = 0;
   // Hevy autorise le même exercice plusieurs fois dans une séance, avec
   // set_index qui repart de 0 : on numérote ces occurrences pour ne pas
   // confondre leurs séries avec des doublons.
@@ -117,8 +119,10 @@ export function parseCsvText(csvText) {
     const kgCell = r.weight_kg ?? r["weight (kg)"] ?? r.weight ?? r.poids ?? r.charge ?? r["poids (kg)"];
     const lbs = num(r.weight_lbs ?? r["weight (lbs)"]);
     const miles = num(r.distance_miles);
-    const weightKg = num(kgCell) ?? (lbs != null ? Math.round(lbs * LBS_TO_KG * 100) / 100 : null);
+    let weightKg = num(kgCell) ?? (lbs != null ? Math.round(lbs * LBS_TO_KG * 100) / 100 : null);
     const distanceKm = num(r.distance_km) ?? (miles != null ? Math.round(miles * MILES_TO_KM * 1000) / 1000 : null);
+    // Charge aberrante (ex. 6659 kg) : non importée, signalée.
+    if (weightKg != null && isAbsurdKg(exerciseTitle, weightKg)) { absurdWeights++; weightKg = null; }
     const reps = num(r.reps);
     const duration = num(r.duration_seconds);
 
@@ -144,7 +148,7 @@ export function parseCsvText(csvText) {
   if (unparsedDates.size) {
     console.warn(`[Skullcrusher] ${unparsedDates.size} date(s) non reconnue(s), ex. :`, [...unparsedDates].slice(0, 3));
   }
-  return { rows, unparsedDates: [...unparsedDates], headers: parsed.meta.fields || [], skippedFuture: skippedFuture.size };
+  return { rows, unparsedDates: [...unparsedDates], headers: parsed.meta.fields || [], skippedFuture: skippedFuture.size, absurdWeights };
 }
 
 // Exercice qui se fait toujours avec une charge (barre, haltères, machine…).
@@ -200,5 +204,6 @@ export async function importCsvFile(file, onProgress) {
   stats.weightColumn = headers.some(h => /^(weight|poids|charge)/i.test(h));
   stats.skippedFuture = skippedFuture;
   stats.skippedProgramme = programme;
+  stats.absurdWeights = parsedCsv.absurdWeights;
   return stats;
 }

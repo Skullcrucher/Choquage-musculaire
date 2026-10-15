@@ -635,7 +635,8 @@ export async function listOfficialPrograms() {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 export async function saveOfficialProgram(id, data) {
-  await setDoc(doc(dbase, "official_programs", id), { ...data, updated_at: new Date().toISOString(), updated_by: requireUid() });
+  // JSON : retire les champs indéfinis (exercice importé sans repos…), que Firestore refuse.
+  await setDoc(doc(dbase, "official_programs", id), JSON.parse(JSON.stringify({ ...data, updated_at: new Date().toISOString(), updated_by: requireUid() })));
 }
 export async function deleteOfficialProgram(id) {
   await deleteDoc(doc(dbase, "official_programs", id));
@@ -747,6 +748,25 @@ export async function listFriendships() {
 
 export async function listFriendUids() {
   return (await listFriendships()).filter(f => f.status === "accepted").map(f => f.other_uid);
+}
+
+// Liste de ses amis acceptés, lisible par eux seuls (suggestions « amis
+// d'amis ») : friend_lists/{uid}. Réécrite seulement si elle a changé.
+let lastFriendList = null;
+export async function syncMyFriendList(uids) {
+  const uid = requireUid();
+  const list = [...new Set(uids)].sort().slice(0, 500);
+  const key = uid + ":" + list.join(",");
+  if (key === lastFriendList) return;
+  await setDoc(doc(dbase, "friend_lists", uid), { uids: list, updated_at: new Date().toISOString() });
+  lastFriendList = key;
+}
+// Listes d'amis de ses amis (celles qu'on ne peut pas lire sont ignorées).
+export async function getFriendLists(uids) {
+  const res = await Promise.allSettled(uids.map(u => getDoc(doc(dbase, "friend_lists", u))));
+  const out = {};
+  res.forEach((r, i) => { if (r.status === "fulfilled" && r.value.exists()) out[uids[i]] = r.value.data().uids || []; });
+  return out;
 }
 
 export async function sendFriendRequest(toUid) {

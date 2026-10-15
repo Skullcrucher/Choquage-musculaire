@@ -11,6 +11,7 @@ import { songHtml, bindSongLinks, parseMusicLink, providerIcon } from "./music.j
 import { icon, segHtml } from "./icons.js";
 import { openComments } from "./comments.js";
 import { gradeBadgeHtml } from "./xp.js";
+import { sessionTonnage } from "./sanity.js";
 import { t, tn } from "./i18n.js";
 
 // Records, "son du record", playlist et bande-son d'une séance partagée.
@@ -188,7 +189,7 @@ async function renderFeedWorkouts(body, root) {
         const photo = safeImageUrl(profile?.photo_data_url || w.owner_photo);
         const muscles = w.muscle_summary || [];
         const vibe = vibeTag(w.total_sets);
-        const fun = tonnageFun(w.total_tonnage);
+        const fun = tonnageFun(sessionTonnage(w));
         const propsCount = votes(w);
         const iReacted = !!(w.props && myUid && w.props[myUid]);
         const comments = Math.max(0, w.comment_count || 0);
@@ -208,7 +209,7 @@ async function renderFeedWorkouts(body, root) {
         </div>
         ${(w.partners || []).length ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">🤝 ${t("Avec")} ${partnersHtml(w.partners, profiles, myUid)}${social ? "" : ` · 🔒 ${t("visible par les partenaires")}`}</p>` : ""}
         ${muscles.length ? `<div class="chip-row" style="margin-top:10px; margin-bottom:0;">${muscles.map(m => `<span class="feed-muscle-badge">${MUSCLE_EMOJI[m] || "⚡"} ${esc(t(m))}</span>`).join("")}</div>` : ""}
-        ${fun ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">🏋️ ${t("{kg} kg soulevés — ça pèse {comparison} !", { kg: w.total_tonnage, comparison: fun })}</p>` : ""}
+        ${fun ? `<p class="muted" style="margin:8px 0 0; font-size:13px;">🏋️ ${t("{kg} kg soulevés — ça pèse {comparison} !", { kg: sessionTonnage(w), comparison: fun })}</p>` : ""}
         ${workoutMusicHtml(w)}
         <div class="feed-actions">
           ${social ? `<button class="props-btn ${iReacted ? "reacted" : ""}" data-props="${esc(w.id)}" aria-label="${t("Vote positif")}">

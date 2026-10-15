@@ -15,6 +15,7 @@ import { getRoutines, getWorkouts, invalidate } from "./cache.js";
 import { t, tn, locale } from "./i18n.js";
 import { sessionsBetween, sessionMinutes } from "./week-sessions.js";
 import { guessMuscleGroup } from "./muscles.js";
+import { sessionTonnage } from "./sanity.js";
 
 export const MAX_PLANS = 20;
 const DAY_MS = 86400000;
@@ -416,7 +417,7 @@ function planStats(plan, routines, workouts) {
   return {
     weeks, due, done, planned, streak,
     adherence: due ? Math.round(done / due * 100) : null,
-    tonnage: list.reduce((n, w) => n + (w.total_tonnage || 0), 0),
+    tonnage: list.reduce((n, w) => n + sessionTonnage(w), 0),
     sets: list.reduce((n, w) => n + (w.total_sets || 0), 0),
     minutes: list.reduce((n, w) => n + sessionMinutes(w), 0),
     workouts: list.sort((a, b) => String(b.start_time).localeCompare(String(a.start_time)))
@@ -617,6 +618,7 @@ export async function renderPlans(content) {
           ${p.id === active && pos.status === "running" ? weekStripHtml(stripCells(p, new Date(), routines, workouts)) : ""}
           ${rs.length ? `<div class="plan-routines"><span class="muted">${t("Séances du plan :")}</span> ${rs.map(r => `<button class="chip chip-sm" data-redit="${esc(r.id)}">✏️ ${esc(r.name)}</button>`).join("")}</div>` : ""}
           <div class="btn-row btn-row-wrap" style="margin-top:8px;">
+            <button class="btn btn-sm btn-primary" data-pview="${esc(p.id)}">👁 ${t("Voir les semaines")}</button>
             <button class="btn btn-sm btn-secondary" data-activate="${esc(p.id)}">${p.id === active ? t("Désactiver") : t("Activer")}</button>
             <button class="btn btn-sm btn-secondary" data-pedit="${esc(p.id)}">${t("Modifier")}</button>
             ${rs.length ? `<button class="btn btn-sm btn-secondary" data-preplace="${esc(p.id)}">🔁 ${t("Remplacer un exercice")}</button>` : ""}
@@ -653,6 +655,10 @@ export async function renderPlans(content) {
     openRoutineEditor(routines.find(r => r.id === b.dataset.redit), async () => { invalidate("routines"); refresh(); });
   });
   content.querySelectorAll("[data-preplace]").forEach(b => b.onclick = () => openReplaceExercise(plans.find(p => p.id === b.dataset.preplace), refresh));
+  content.querySelectorAll("[data-pview]").forEach(b => b.onclick = () => openPlanPreview(plans.find(p => p.id === b.dataset.pview), routines, {
+    active: b.dataset.pview === active,
+    onActivate: () => content.querySelector(`[data-activate="${CSS.escape(b.dataset.pview)}"]`)?.click()
+  }));
   content.querySelectorAll("[data-pedit]").forEach(b => b.onclick = () => openPlanEditor(plans.find(p => p.id === b.dataset.pedit), routines, refresh));
   content.querySelectorAll("[data-activate]").forEach(b => b.onclick = async () => {
     const id = b.dataset.activate;
@@ -690,6 +696,91 @@ export async function renderPlans(content) {
     if (gone?.shared_id) await db.deleteSharedPlan(gone.shared_id).catch(() => null);
     await savePlans(plans.filter(p => p.id !== id), active === id ? null : active);
     refresh();
+  });
+}
+
+// ---------- Contenu d'un plan, semaine par semaine ----------
+// Consultable même si le plan n'est pas activé : bloc, jours, séances et,
+// pour chaque séance, exercices avec séries × reps, charge et consigne.
+function blockAtWeek(plan, week) {
+  let acc = 0;
+  for (const [i, b] of (plan.blocks || []).entries()) {
+    if (week <= acc + (b.weeks || 0)) return { block: b, index: i, blockWeek: week - acc };
+    acc += b.weeks || 0;
+  }
+  return null;
+}
+
+export function openPlanPreview(plan, routines, { active = false, onActivate = null } = {}) {
+  if (!plan) return;
+  const total = totalWeeks(plan);
+  if (!total) { toast(t("Ce plan n'a encore aucune semaine.")); return; }
+  const pos = planPosition(plan);
+  let week = pos.status === "running" ? pos.week : 1;
+  const start = mondayOf(parseDay(plan.start_date));
+  const byId = new Map(routines.map(r => [r.id, r]));
+  // Repère de couleur par bloc dans la frise des semaines.
+  const weekBlocks = Array.from({ length: total }, (_, i) => blockAtWeek(plan, i + 1)?.index ?? 0);
+
+  const exRow = (e) => {
+    const sets = Number(e.target_sets) || 0;
+    const load = [sets ? `${sets} × ${esc(e.reps_target || "?")}` : esc(e.reps_target || ""), e.target_kg != null && e.target_kg !== "" ? `${esc(e.target_kg)} kg` : ""].filter(Boolean).join(" · ");
+    return `<div class="pv-ex">
+      <div class="pv-ex-main"><span class="pv-ex-name">${esc(e.exercise_name)}</span>${e.cue ? `<span class="pv-ex-cue">🎯 ${esc(e.cue)}</span>` : ""}</div>
+      <span class="pv-ex-load">${load || "—"}</span>
+    </div>`;
+  };
+  const weekHtml = () => {
+    const at = blockAtWeek(plan, week);
+    const monday = new Date(start); monday.setDate(start.getDate() + 7 * (week - 1));
+    const days = at ? weekDows().filter(d => at.block.days?.[d]) : [];
+    const sessions = days.map(d => {
+      const r = byId.get(at.block.days[d]);
+      const date = new Date(monday); date.setDate(monday.getDate() + ((d - dowOf(monday) + 7) % 7));
+      return `<div class="pv-session">
+        <div class="pv-session-head">
+          <span class="pv-day">${esc(dowLabel(d, "long"))} <small>${date.toLocaleDateString(locale(), { day: "numeric", month: "short" })}</small></span>
+          <span class="pv-routine">${esc(r?.name || t("Séance supprimée"))}</span>
+        </div>
+        ${r ? (r.exercises || []).map(exRow).join("") || `<p class="muted" style="margin:6px 0 0;">${t("Aucun exercice.")}</p>` : ""}
+        ${r ? `<div class="muted pv-session-foot">${tn((r.exercises || []).length, "{n} exercice", "{n} exercices")} · ${tn((r.exercises || []).reduce((n, e) => n + (Number(e.target_sets) || 0), 0), "{n} série", "{n} séries")}</div>` : ""}
+      </div>`;
+    }).join("");
+    return `
+      <div class="pv-week-head">
+        <button class="btn btn-secondary btn-sm" data-pv-step="-1" ${week <= 1 ? "disabled" : ""}>‹</button>
+        <div class="pv-week-title">
+          <b>${t("Semaine {w}/{total}", { w: week, total })}</b>
+          <span class="muted">${at ? `${esc(at.block.name || t("Bloc {n}", { n: at.index + 1 }))} · ${t("sem. {w}/{n}", { w: at.blockWeek, n: at.block.weeks })} · ` : ""}${t("du {date}", { date: monday.toLocaleDateString(locale(), { day: "numeric", month: "short" }) })}</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" data-pv-step="1" ${week >= total ? "disabled" : ""}>›</button>
+      </div>
+      ${sessions || `<p class="muted">${t("Semaine de repos.")}</p>`}`;
+  };
+
+  openModal(`
+    <h3 style="margin-bottom:2px;">${esc(plan.name)}</h3>
+    <p class="muted" style="margin-top:0; font-size:13px;">${(plan.blocks || []).map(b => `${esc(b.name || "")} ${b.weeks} ${t("sem.")}`).join(" → ")}</p>
+    <div class="pv-strip" id="pv-strip">
+      ${Array.from({ length: total }, (_, i) => `<button class="pv-wk b${weekBlocks[i] % 4} ${pos.status === "running" && pos.week === i + 1 ? "now" : ""}" data-pv-week="${i + 1}">${i + 1}</button>`).join("")}
+    </div>
+    <div id="pv-week"></div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn btn-secondary" id="pv-close">${t("Fermer")}</button>
+      ${!active && onActivate ? `<button class="btn btn-primary" id="pv-activate">${t("Activer ce plan")}</button>` : ""}
+    </div>
+  `, (m) => {
+    const draw = () => {
+      m.querySelector("#pv-week").innerHTML = weekHtml();
+      m.querySelectorAll("[data-pv-week]").forEach(b => b.classList.toggle("active", +b.dataset.pvWeek === week));
+      m.querySelector(`[data-pv-week="${week}"]`)?.scrollIntoView({ block: "nearest", inline: "center" });
+      m.querySelectorAll("[data-pv-step]").forEach(b => b.onclick = () => { week = Math.min(total, Math.max(1, week + +b.dataset.pvStep)); draw(); });
+    };
+    m.querySelectorAll("[data-pv-week]").forEach(b => b.onclick = () => { week = +b.dataset.pvWeek; draw(); });
+    m.querySelector("#pv-close").onclick = closeModal;
+    const act = m.querySelector("#pv-activate");
+    if (act) act.onclick = () => { closeModal(); onActivate(); };
+    draw();
   });
 }
 

@@ -14,6 +14,7 @@ import { normalizePlaylistUrl, spotifyEmbed } from "./music.js";
 import { openProfile } from "./profile.js";
 import { t, locale } from "./i18n.js";
 import { gradeBadgeHtml } from "./xp.js";
+import { sessionTonnage } from "./sanity.js";
 
 const METRICS = {
   // i18n-keys: "Score", "Tonnage", "Séances", "Séries"
@@ -60,11 +61,11 @@ function totalsFor(workouts, refDate) {
   // Moyenne de tonnage des 4 semaines précédentes où il y a eu entraînement.
   const past = [1, 2, 3, 4]
     .map(k => weekOf(new Date(refDate.getTime() - k * 7 * DAY)))
-    .map(wk => workouts.filter(w => inWeek(w, wk)).reduce((a, w) => a + (w.total_tonnage || 0), 0))
+    .map(wk => workouts.filter(w => inWeek(w, wk)).reduce((a, w) => a + sessionTonnage(w), 0))
     .filter(v => v > 0);
   const totals = {
     week,
-    tonnage: ws.reduce((a, w) => a + (w.total_tonnage || 0), 0),
+    tonnage: ws.reduce((a, w) => a + sessionTonnage(w), 0),
     sets: ws.reduce((a, w) => a + (w.total_sets || 0), 0),
     workouts: ws.length,
     valid_workouts: ws.filter(w => (w.total_sets ?? MIN_SETS) >= MIN_SETS).length,
@@ -78,6 +79,17 @@ function totalsFor(workouts, refDate) {
 export async function computeMyWeeks() {
   const workouts = await getWorkouts();
   return { opt_in: true, weekly: totalsFor(workouts, new Date()), prev: totalsFor(workouts, new Date(Date.now() - 7 * DAY)) };
+}
+
+// Tout le monde participe aux défis par défaut : inscription automatique
+// au démarrage, sauf pour qui s'en est retiré (opt_in: false).
+export async function autoJoinChallenges() {
+  const uid = db.getCurrentUser()?.uid;
+  if (!uid) return false;
+  const p = await db.getProfile(uid).catch(() => null);
+  if (p?.challenge?.opt_in === true || p?.challenge?.opt_in === false) return false;
+  await db.updatePublicProfile({ challenge: await computeMyWeeks() });
+  return true;
 }
 
 function statsFor(profile, week) {
@@ -118,7 +130,12 @@ export async function renderChallenges(container) {
   const myUid = db.getCurrentUser()?.uid;
   const [myProfile, friendships] = await Promise.all([db.getProfile(myUid).catch(() => null), db.listFriendships()]);
   const friendUids = friendships.filter(f => f.status === "accepted").map(f => f.other_uid);
-  const participating = !!myProfile?.challenge?.opt_in;
+  let participating = !!myProfile?.challenge?.opt_in;
+  // Jamais inscrit (ni retiré) : inscription automatique.
+  if (!participating && myProfile?.challenge?.opt_in !== false) {
+    participating = await autoJoinChallenges().catch(e => { console.warn("[Skullcrusher] Inscription aux défis", e); return false; });
+    if (participating) return renderChallenges(container);
+  }
   const wcMod = await import("./weekly-challenge.js");
   const wc = await wcMod.weeklyChallengeHtml().catch(e => { console.warn("[Skullcrusher] Défi de la semaine", e); return { html: "", challenge: null }; });
   const redraw = () => renderChallenges(container);

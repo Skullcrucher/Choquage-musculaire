@@ -44,7 +44,9 @@ export function sessionsBetween(workouts, from, to) {
   const now = new Date();
   const end = to < now ? to : now;
   const list = workouts.filter(w => {
-    if (!w.end_time || !w.start_time) return false;
+    // Séance de test REP MAX : ne compte ni dans la semaine, ni dans les
+    // stats, l'XP, les défis ou le plan.
+    if (!w.end_time || !w.start_time || w.rm_test) return false;
     const start = new Date(w.start_time);
     return !isNaN(start) && start >= from && start <= end;
   }).sort((a, b) => keepScore(b) - keepScore(a) || new Date(a.start_time) - new Date(b.start_time));

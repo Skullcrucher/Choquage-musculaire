@@ -10,7 +10,7 @@
 //     d'une autre app (Hevy…) avec son équivalent Skullcrusher, ou perso.
 // ============================================================
 import * as db from "./db.js";
-import { openModal, closeModal, toast, esc, estimate1RM, fmtDate } from "./utils.js";
+import { openModal, closeModal, toast, esc, rmOf, fmtDate } from "./utils.js";
 import { getExercises, getSetsForExercise } from "./cache.js";
 import { EXERCISE_GUIDES } from "./exercise-guides.js";
 import { GUIDE_TO_GROUP, guessMuscleGroup } from "./muscles.js";
@@ -92,8 +92,8 @@ async function fillHistory(el, name) {
     if (!el.isConnected) return;
     if (!sets.length) { el.textContent = t("Tu n'as encore jamais fait cet exercice."); return; }
     const last = sets.slice().sort((a, b) => String(b.workout_start_time).localeCompare(String(a.workout_start_time)))[0];
-    const best = Math.max(...sets.filter(s => s.reps <= 15).map(s => estimate1RM(s.weight_kg, s.reps)), 0);
-    el.textContent = t("Dernière fois : {kg} kg × {reps} ({date}) · meilleure 1RM estimée : {rm} kg", { kg: last.weight_kg, reps: last.reps, date: fmtDate(last.workout_start_time, { year: undefined }), rm: best || "—" });
+    const best = rmOf(sets);
+    el.textContent = t("Dernière fois : {kg} kg × {reps} ({date}) · RM : {rm} kg", { kg: last.weight_kg, reps: last.reps, date: fmtDate(last.workout_start_time, { year: undefined }), rm: best || "—" });
   } catch (_) {
     if (el.isConnected) el.textContent = "";
   }

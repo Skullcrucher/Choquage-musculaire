@@ -10,10 +10,11 @@
 // Aucun envoi à un serveur : l'image est fabriquée sur l'appareil.
 // ============================================================
 import * as db from "./db.js";
-import { openModal, closeModal, toast, esc, estimate1RM, isoWeek, safeImageUrl, statsWorkouts } from "./utils.js";
+import { openModal, closeModal, toast, esc, estimate1RM, rmOf, rmByKey, RM_MAX_REPS, isoWeek, safeImageUrl, statsWorkouts } from "./utils.js";
 import { getWorkouts, getSetsForPeriod, getSetsForExercise, getExercises } from "./cache.js";
 import { t, locale } from "./i18n.js";
 import { sessionsBetween, sessionMinutes } from "./week-sessions.js";
+import { sessionTonnage } from "./sanity.js";
 
 // ---------- Palette et polices de l'app ----------
 const C = {
@@ -320,7 +321,7 @@ async function periodData(days) {
   return {
     days, since, workouts,
     count: workouts.length,
-    tonnage: workouts.reduce((a, w) => a + (w.total_tonnage || 0), 0),
+    tonnage: workouts.reduce((a, w) => a + sessionTonnage(w), 0),
     sets: workouts.reduce((a, w) => a + (w.total_sets || 0), 0),
     minutes: workouts.reduce((a, w) => a + workoutMinutes(w), 0),
     activeDays: dayKeys,
@@ -334,20 +335,15 @@ async function exerciseData(name, days) {
   const since = days ? Date.now() - days * 86400000 : 0;
   const all = (await getSetsForExercise(name)).filter(s => s.weight_kg > 0 && s.reps > 0 && s.set_type !== "warmup");
   const sets = all.filter(s => Date.parse(s.workout_start_time || 0) >= since);
-  const valid = sets.filter(s => s.reps <= 15);
+  const valid = sets.filter(s => s.reps <= RM_MAX_REPS);
   // Meilleure 1RM estimée par semaine, ou par mois sur une longue période
   // (courbe plus lisible).
   const spanDays = valid.length ? (Date.now() - Math.min(...valid.map(s => Date.parse(s.workout_start_time)))) / 86400000 : 0;
   const byMonth = spanDays > 200;
-  const perKey = {};
-  valid.forEach(s => {
-    const key = byMonth ? String(s.workout_start_time).slice(0, 7) : isoWeek(s.workout_start_time);
-    const rm = estimate1RM(s.weight_kg, s.reps);
-    if (!perKey[key] || rm > perKey[key]) perKey[key] = rm;
-  });
+  const perKey = rmByKey(valid, s => byMonth ? String(s.workout_start_time).slice(0, 7) : isoWeek(s.workout_start_time));
   const weeks = Object.keys(perKey).sort();
   const series = weeks.map(k => perKey[k]);
-  const best1rm = valid.length ? Math.max(...valid.map(s => estimate1RM(s.weight_kg, s.reps))) : null;
+  const best1rm = rmOf(valid) || null;
   const first = series[0], last = series[series.length - 1];
   return {
     name, days, sets, best1rm, best: bestOf(sets),
@@ -509,7 +505,7 @@ function renderExercise(ctx, W, H, d, assets, fmt, periodLabel) {
       ...(d.opts.showWeights ? [{ label: t("Volume total"), value: fmtLoad(d.volume) }] : [])
     ].slice(0, Math.max(1, Math.floor((footerTop - y) / 78))));
   }
-  footer(ctx, W, H, pad, assets, d.opts.showWeights ? t("1RM estimée (formule d'Epley) : valeur indicative") : "");
+  footer(ctx, W, H, pad, assets, d.opts.showWeights ? t("RM estimée (formule de Lombardi) : valeur indicative") : "");
 }
 
 // ---------- Carte de profil ----------

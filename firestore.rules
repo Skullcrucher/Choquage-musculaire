@@ -90,9 +90,9 @@ service cloud.firestore {
                             && isSafeText(request.resource.data.get('description', ''), 500)
                             && request.resource.data.routines is list
                             && request.resource.data.routines.size() >= 1
-                            && request.resource.data.routines.size() <= 14
+                            && request.resource.data.routines.size() <= 120
                             && request.resource.data.get('blocks', []) is list
-                            && request.resource.data.get('blocks', []).size() <= 20));
+                            && request.resource.data.get('blocks', []).size() <= 60));
       allow delete: if isAdmin();
     }
 
@@ -191,6 +191,22 @@ service cloud.firestore {
     // Amitiés : document friendships/{uidA_uidB} (uids triés). Celui qui
     // demande le crée en "pending", seul le destinataire peut l'accepter,
     // chacun des deux peut le supprimer (refus, annulation, retrait).
+    // Liste d'amis d'un utilisateur (suggestions « amis d'amis ») : écrite
+    // par lui seul, lisible par lui et par ses amis acceptés.
+    function pairId(a, b) {
+      return a < b ? a + '_' + b : b + '_' + a;
+    }
+    match /friend_lists/{uid} {
+      allow get: if isSignedIn() && (request.auth.uid == uid
+                    || (exists(/databases/$(database)/documents/friendships/$(pairId(request.auth.uid, uid)))
+                        && get(/databases/$(database)/documents/friendships/$(pairId(request.auth.uid, uid))).data.status == 'accepted'));
+      allow create, update: if isSignedIn() && request.auth.uid == uid
+                    && request.resource.data.keys().hasOnly(['uids', 'updated_at'])
+                    && request.resource.data.uids is list
+                    && request.resource.data.uids.size() <= 500;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
     match /friendships/{friendshipId} {
       allow read: if isSignedIn() && request.auth.uid in resource.data.users;
       allow create: if isSignedIn()

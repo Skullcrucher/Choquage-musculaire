@@ -1,7 +1,7 @@
 // ============================================================
 // FICHE D'EXERCICE — muscles, conseils, vidéo, historique
 // ============================================================
-import { openModal, closeModal, estimate1RM, isoWeek, fmtDateTime, esc, healthNoteHtml, statsAppOnly, toast } from "./utils.js";
+import { openModal, closeModal, estimate1RM, rmBest, rmOf, rmByKey, isoWeek, fmtDateTime, fmtDate, esc, healthNoteHtml, statsAppOnly, toast } from "./utils.js";
 import { getSetsForExercise, getWorkouts } from "./cache.js";
 import { EXERCISE_GUIDES } from "./exercise-guides.js";
 import { t, tn, getLang } from "./i18n.js";
@@ -18,7 +18,7 @@ let detailChart = null;
 
 // onClose : appelé à la fermeture (ex. rouvrir la séance d'où l'on vient).
 // Séries regroupées par séance (la plus récente d'abord), avec la
-// meilleure série (1RM estimée) de chacune.
+// meilleure série (la plus lourde, RM de Lombardi) de chacune.
 function sessionsOf(sets) {
   const by = new Map();
   sets.forEach(s => {
@@ -26,7 +26,7 @@ function sessionsOf(sets) {
     if (!by.has(id)) by.set(id, { id, start: s.workout_start_time, sets: [] });
     by.get(id).sets.push(s);
   });
-  return [...by.values()].map(x => ({ ...x, best: x.sets.reduce((b, s) => estimate1RM(s.weight_kg, s.reps) > estimate1RM(b.weight_kg, b.reps) ? s : b) }))
+  return [...by.values()].map(x => ({ ...x, best: rmBest(x.sets)?.set || x.sets.reduce((b, s) => (s.weight_kg || 0) > (b.weight_kg || 0) ? s : b) }))
     .sort((a, b) => String(b.start).localeCompare(String(a.start)));
 }
 
@@ -34,13 +34,17 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "",
   const guide = EXERCISE_GUIDES[exerciseName];
   const [rawSets, allSets] = await Promise.all([getSetsForExercise(exerciseName), getSetsForExercise(exerciseName, { raw: true })]);
   // Exercice unilatéral : séries importées hors statistiques (saisie inconnue).
-  const excluded = allSets.length - rawSets.length;
+  // Charges aberrantes (faute de frappe) : hors stats, signalées pour correction.
+  const { isAbsurdKg } = await import("./sanity.js");
+  const absurdSets = allSets.filter(s => isAbsurdKg(exerciseName, s.weight_kg));
+  // (les séries des tests REP MAX sont hors stats par principe, pas « exclues »)
+  const excluded = allSets.filter(s => !s.rm_test).length - rawSets.length - absurdSets.filter(s => !s.rm_test).length;
   const trend = exerciseTrend(rawSets);
   const sets = rawSets
     .filter(s => s.weight_kg != null && s.reps != null)
     .sort((a, b) => new Date(b.workout_start_time || 0) - new Date(a.workout_start_time || 0));
 
-  const best1RM = sets.length ? Math.max(...sets.map(s => estimate1RM(s.weight_kg, s.reps))) : null;
+  const best1RM = rmOf(sets) || null;
   // Recherche de vidéos dans la langue de l'app (nom anglais de la fiche si dispo).
   const videoName = getLang() !== "fr" && guide?.en ? guide.en : exerciseName;
   const videoQuery = encodeURIComponent(`${videoName} ${t("exercice musculation technique")}`);
@@ -77,6 +81,10 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "",
 
     <div style="margin-top:18px;">
       <div class="muted" style="margin-bottom:5px;">${t("Historique")}</div>
+      <div class="rm-line" id="detail-rm"></div>
+      ${absurdSets.length ? `<div class="kg-absurd">⚠️ ${tn(absurdSets.length, "{n} série avec une charge incohérente est ignorée :", "{n} séries avec une charge incohérente sont ignorées :", {})}
+        ${absurdSets.slice(0, 5).map(s => `<button type="button" class="chip chip-sm" data-ex-w="${esc(s.workout_id)}">${esc(String(s.weight_kg).replace(".", ","))} kg × ${esc(s.reps ?? "—")} · ${esc(fmtDateTime(s.workout_start_time))} ✏️</button>`).join("")}
+        <span class="muted" style="font-size:12px;">${t("Touche pour ouvrir la séance, puis « Modifier la séance » pour corriger.")}</span></div>` : ""}
       ${excluded > 0 && statsAppOnly() ? `<p class="muted" style="font-size:12px; margin:0 0 8px;">📥 ${tn(excluded, "{n} série importée n'est pas comptée (Réglages : statistiques sur les séances Skullcrusher uniquement).", "{n} séries importées ne sont pas comptées (Réglages : statistiques sur les séances Skullcrusher uniquement).")}</p>` : ""}
       ${excluded > 0 && !statsAppOnly() ? `<p class="muted" style="font-size:12px; margin:0 0 8px;">↔ ${tn(excluded, "{n} série importée n'est pas comptée : exercice unilatéral, on ne sait pas si elle était notée par côté ou au total.", "{n} séries importées ne sont pas comptées : exercice unilatéral, on ne sait pas si elles étaient notées par côté ou au total.")} ${t("Pour les inclure, active G|D en séance et indique comment elles étaient notées.")}</p>` : ""}
       ${trend ? `<div class="trend-line trend-line-${trend.status}">${trendBadgeHtml(trend, { label: true })}<span>${esc(trendDetail(trend))} · ${tn(trend.sessions, "{n} séance ce mois-ci", "{n} séances ce mois-ci")}</span></div>`
@@ -84,7 +92,7 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "",
       ${sets.length ? `
         <div class="stat-grid" style="grid-template-columns: repeat(2,1fr);">
           <div class="stat-box"><span class="num">${sets.length}</span><span class="lbl">${t("séries loggées")}</span></div>
-          <div class="stat-box"><span class="num">${best1RM}</span><span class="lbl">${t("1RM estimée (kg)")}</span></div>
+          <div class="stat-box"><span class="num">${best1RM ?? "—"}</span><span class="lbl">${t("RM Lombardi (kg)")}</span></div>
         </div>
         <canvas id="detail-chart" height="160"></canvas>
         ${healthNoteHtml()}
@@ -94,7 +102,7 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "",
             <div class="list-row" data-ex-w="${esc(x.id)}" role="button" style="cursor:pointer;">
               <div><div class="list-row-title" data-ex-wtitle="${esc(x.id)}">${fmtDateTime(x.start)}</div>
                 <div class="list-row-sub">${tn(x.sets.length, "{n} série", "{n} séries")} · ${t("meilleure : {kg} kg × {reps}", { kg: esc(x.best.weight_kg), reps: esc(x.best.reps) })}${x.best.unilateral ? ` ${t("/côté")}` : ""}</div></div>
-              <div class="list-row-meta">${estimate1RM(x.best.weight_kg, x.best.reps)} kg ›</div>
+              <div class="list-row-meta">${estimate1RM(x.best.weight_kg, x.best.reps) ? `${estimate1RM(x.best.weight_kg, x.best.reps)} kg ` : ""}›</div>
             </div>
           `).join("")}
         </div>
@@ -110,6 +118,21 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "",
     const shareBtn = modalEl.querySelector("#detail-share");
     if (shareBtn) shareBtn.onclick = async () => { closeModal(); (await import("./share-card.js")).openShareCard({ kind: "exercise", exercise: exerciseName }); };
     if (sets.length) renderDetailChart(modalEl, sets);
+    // RM : testée (séance REP MAX) ou d'après l'historique, et charges proposées.
+    import("./rep-max.js").then(async rmMod => {
+      const [test, ref] = await Promise.all([rmMod.repMaxFor(exerciseName), rmMod.referenceRm(exerciseName, sets)]);
+      const el = modalEl.querySelector("#detail-rm");
+      if (!el || !ref) return;
+      const hist = rmBest(sets);
+      const day = (d) => fmtDate(d + "T12:00", { year: undefined });
+      el.innerHTML = `
+        <div class="rm-main"><span class="rm-big">${esc(ref.rm)} kg</span><span class="muted">${t("RM de référence")} · ${ref.source === "test" ? t("test du {date}", { date: esc(day(ref.date)) }) : t("historique")}</span></div>
+        <div class="muted rm-sub">
+          ${test ? `🏆 ${t("Test REP MAX ({method}) : {rm} kg — {kg} kg × {reps}, le {date}", { method: esc(rmMod.methodName(test.method)), rm: esc(test.rm), kg: esc(test.kg), reps: esc(test.reps), date: esc(day(test.date)) })}<br>` : ""}
+          ${hist ? `📈 ${t("Historique : {rm} kg — série la plus lourde {kg} kg × {reps}", { rm: esc(hist.rm), kg: esc(hist.kg), reps: esc(hist.reps) })}<br>` : ""}
+          ${t("Charges proposées")} : ${[3, 5, 8, 10].map(r => `${r} ${t("reps")} → <b>${esc(rmMod.suggestKg(exerciseName, ref.rm, r))} kg</b>`).join(" · ")}
+        </div>`;
+    }).catch(e => console.warn("[Skullcrusher] RM", e));
     // Séances : titre, puis ouverture du détail au toucher.
     getWorkouts().then(ws => {
       const byId = new Map(ws.map(w => [w.id, w]));
@@ -128,12 +151,8 @@ export async function openExerciseDetail(exerciseName, muscleGroupFallback = "",
 }
 
 function renderDetailChart(modalEl, sets) {
-  const perWeek = {};
-  [...sets].reverse().forEach(s => {
-    const wk = isoWeek(s.workout_start_time);
-    const oneRM = estimate1RM(s.weight_kg, s.reps);
-    if (!perWeek[wk] || oneRM > perWeek[wk]) perWeek[wk] = oneRM;
-  });
+  // RM de Lombardi par semaine : série la plus lourde de la semaine.
+  const perWeek = rmByKey(sets, s => isoWeek(s.workout_start_time));
   const weeks = Object.keys(perWeek).sort();
   const canvasEl = modalEl.querySelector("#detail-chart");
   if (!canvasEl || weeks.length < 2) return; // pas assez de points pour une courbe utile
@@ -142,7 +161,7 @@ function renderDetailChart(modalEl, sets) {
     type: "line",
     data: {
       labels: weeks,
-      datasets: [{ label: t("1RM estimée (kg)"), data: weeks.map(w => perWeek[w]), borderColor: "#E02424", backgroundColor: "transparent", tension: 0.25 }]
+      datasets: [{ label: t("RM Lombardi (kg)"), data: weeks.map(w => perWeek[w]), borderColor: "#E02424", backgroundColor: "transparent", tension: 0.25 }]
     },
     options: {
       responsive: true,
