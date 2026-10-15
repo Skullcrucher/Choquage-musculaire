@@ -1589,5 +1589,11 @@ export default {
   "Trop de blocs dans ce plan ({n}, 60 au plus).": "Za dużo bloków w tym planie ({n}, maks. 60).",
   "Amis de tes amis": "Znajomi twoich znajomych",
   "{n} ami en commun": "{n} wspólny znajomy",
-  "{n} amis en commun": "{n} wspólnych znajomych"
+  "{n} amis en commun": "{n} wspólnych znajomych",
+  "Voir les semaines": "Zobacz tygodnie",
+  "Ce plan n'a encore aucune semaine.": "Ten plan nie ma jeszcze tygodni.",
+  "Séance supprimée": "Usunięty trening",
+  "sem. {w}/{n}": "tydz. {w}/{n}",
+  "du {date}": "od {date}",
+  "Semaine de repos.": "Tydzień odpoczynku."
 };

@@ -1580,5 +1580,11 @@ export default {
   "Trop de blocs dans ce plan ({n}, 60 au plus).": "Too many blocks in this plan ({n}, 60 at most).",
   "Amis de tes amis": "Friends of your friends",
   "{n} ami en commun": "{n} mutual friend",
-  "{n} amis en commun": "{n} mutual friends"
+  "{n} amis en commun": "{n} mutual friends",
+  "Voir les semaines": "View the weeks",
+  "Ce plan n'a encore aucune semaine.": "This plan has no weeks yet.",
+  "Séance supprimée": "Deleted session",
+  "sem. {w}/{n}": "wk {w}/{n}",
+  "du {date}": "from {date}",
+  "Semaine de repos.": "Rest week."
 };

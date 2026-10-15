@@ -1579,5 +1579,11 @@ export default {
   "Trop de blocs dans ce plan ({n}, 60 au plus).": "Tro boukou blok dan sa plan-la ({n}, 60 maximum).",
   "Amis de tes amis": "Kamarad to bann kamarad",
   "{n} ami en commun": "{n} kamarad an komen",
-  "{n} amis en commun": "{n} kamarad an komen"
+  "{n} amis en commun": "{n} kamarad an komen",
+  "Voir les semaines": "Get bann semenn",
+  "Ce plan n'a encore aucune semaine.": "Sa plan-la pa ankor ena okenn semenn.",
+  "Séance supprimée": "Seans efase",
+  "sem. {w}/{n}": "sem. {w}/{n}",
+  "du {date}": "depi {date}",
+  "Semaine de repos.": "Semenn repo."
 };

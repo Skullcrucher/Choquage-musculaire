@@ -1520,3 +1520,27 @@ html.desktop .mw-pls { display: grid; grid-template-columns: 1fr 1fr; }
 .rm-big { font-family: 'Anton', sans-serif; font-size: 26px; color: var(--amber); }
 .rm-sub { font-size: 12px; margin-top: 4px; line-height: 1.5; }
 @media (max-width: 360px) { .rm-methods { grid-template-columns: 1fr; } }
+
+/* Contenu d'un plan, semaine par semaine */
+.pv-strip { display: flex; gap: 4px; overflow-x: auto; padding: 2px 0 8px; margin-bottom: 6px; scrollbar-width: thin; }
+.pv-wk { flex: 0 0 auto; min-width: 32px; height: 32px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; border-bottom-width: 3px; }
+.pv-wk.b0 { border-bottom-color: var(--amber); }
+.pv-wk.b1 { border-bottom-color: var(--blue); }
+.pv-wk.b2 { border-bottom-color: var(--green); }
+.pv-wk.b3 { border-bottom-color: var(--orange); }
+.pv-wk.now { color: var(--text); }
+.pv-wk.active { background: var(--amber); border-color: var(--amber); color: var(--on-accent); }
+.pv-week-head { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; }
+.pv-week-head .btn { width: auto; flex: 0 0 auto; }
+.pv-week-title { flex: 1; min-width: 0; display: flex; flex-direction: column; text-align: center; font-size: 13px; }
+.pv-week-title b { font-size: 15px; }
+.pv-session { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 10px 12px; margin-bottom: 10px; }
+.pv-session-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.pv-day { font-weight: 800; text-transform: capitalize; }
+.pv-day small { font-weight: 400; color: var(--text-dim); text-transform: none; }
+.pv-routine { color: var(--amber); font-weight: 700; font-size: 14px; }
+.pv-ex { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.pv-ex-main { min-width: 0; display: flex; flex-direction: column; }
+.pv-ex-cue { font-size: 12px; color: var(--text-dim); }
+.pv-ex-load { flex: 0 0 auto; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pv-session-foot { font-size: 12px; margin-top: 4px; }
