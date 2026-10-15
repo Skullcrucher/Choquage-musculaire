@@ -1586,5 +1586,8 @@ export default {
   "Séance supprimée": "Deleted session",
   "sem. {w}/{n}": "wk {w}/{n}",
   "du {date}": "from {date}",
-  "Semaine de repos.": "Rest week."
+  "Semaine de repos.": "Rest week.",
+  "Rechercher un exercice": "Search for an exercise",
+  "Tester « {name} »": "Test “{name}”",
+  "Aucun exercice dans tes routines : cherche-le ci-dessus.": "No exercises in your routines: search for one above."
 };

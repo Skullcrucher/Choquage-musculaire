@@ -1585,5 +1585,8 @@ export default {
   "Séance supprimée": "Seans efase",
   "sem. {w}/{n}": "sem. {w}/{n}",
   "du {date}": "depi {date}",
-  "Semaine de repos.": "Semenn repo."
+  "Semaine de repos.": "Semenn repo.",
+  "Rechercher un exercice": "Rod enn egzersis",
+  "Tester « {name} »": "Teste « {name} »",
+  "Aucun exercice dans tes routines : cherche-le ci-dessus.": "Okenn egzersis dan to rutinn : rod li anler."
 };

@@ -1595,5 +1595,8 @@ export default {
   "Séance supprimée": "Usunięty trening",
   "sem. {w}/{n}": "tydz. {w}/{n}",
   "du {date}": "od {date}",
-  "Semaine de repos.": "Tydzień odpoczynku."
+  "Semaine de repos.": "Tydzień odpoczynku.",
+  "Rechercher un exercice": "Szukaj ćwiczenia",
+  "Tester « {name} »": "Testuj „{name}”",
+  "Aucun exercice dans tes routines : cherche-le ci-dessus.": "Brak ćwiczeń w rutynach: wyszukaj powyżej."
 };

@@ -254,11 +254,23 @@ async function renderStartScreen(container) {
 // Onglet REP MAX : méthode (directe ou Lombardi) et exercices à tester.
 let rmMethod = "lombardi";
 const rmPicked = new Set();
+let rmQuery = "";
 async function drawRepMaxTab(body) {
   const rmMod = await import("./rep-max.js");
-  const [cands, maxes] = await Promise.all([rmMod.candidateExercises(), rmMod.getRepMaxes()]);
-  const extra = [...rmPicked].filter(n => !cands.some(c => c.name === n)).map(n => ({ name: n, group: "" }));
+  const [cands, maxes, library, search] = await Promise.all([
+    rmMod.candidateExercises(), rmMod.getRepMaxes(),
+    // Bibliothèque de l'utilisateur + exercices standards de l'app.
+    Promise.all([getExercises().catch(() => []), import("./exercises-seed.js").then(m => m.EXERCISE_SEED).catch(() => [])])
+      .then(([own, seed]) => [...own, ...seed.map(([name, muscle_group]) => ({ name, muscle_group }))]),
+    import("./exercise-search.js").then(async m => { await m.loadAliases(); return m; }).catch(() => null)
+  ]);
+  // Groupe musculaire de chaque exercice connu (routines, bibliothèque).
+  const groupOf = new Map();
+  library.forEach(e => e?.name && !groupOf.has(e.name) && groupOf.set(e.name, e.muscle_group || ""));
+  cands.forEach(c => c.group && groupOf.set(c.name, c.group));
+  const extra = [...rmPicked].filter(n => !cands.some(c => c.name === n)).map(n => ({ name: n, group: groupOf.get(n) || "" }));
   const list = [...extra, ...cands];
+  const allNames = [...new Set([...list.map(c => c.name), ...library.map(e => e?.name).filter(Boolean)])];
   if (!body.isConnected) return;
   body.innerHTML = `
     <div class="rm-tab">
@@ -272,24 +284,44 @@ async function drawRepMaxTab(body) {
         </button>`).join("")}
       </div>
       <div class="free-head">${t("Exercices à tester")} <span class="muted" id="rm-count"></span></div>
-      <div class="rm-ex-list">
-        ${list.length ? list.map(c => {
-          const m = maxes[c.name.trim().toLowerCase()];
-          return `<label class="rm-ex"><input type="checkbox" data-rm-ex="${esc(c.name)}" ${rmPicked.has(c.name) ? "checked" : ""}>
-            <span class="rm-ex-name">${esc(c.name)}</span>
-            <span class="muted rm-ex-cur">${m ? t("RM {kg} kg", { kg: esc(m.rm) }) : ""}</span></label>`;
-        }).join("") : `<p class="muted">${t("Aucun exercice dans tes routines : ajoute-en un ci-dessous.")}</p>`}
-      </div>
+      <input id="rm-search" type="search" placeholder="🔍 ${t("Rechercher un exercice")}" autocomplete="off" value="${esc(rmQuery)}">
+      <div class="rm-ex-list" id="rm-ex-list"></div>
       <button class="btn btn-secondary btn-compact" id="rm-add-ex" style="margin-top:6px;">+ ${t("Autre exercice")}</button>
       <p class="muted rm-safety">⚠️ ${t("Échauffe-toi bien, garde une technique stricte et fais-toi parer sur les mouvements lourds (développé couché, squat). Arrête la série dès que la technique se dégrade.")}</p>
       <button class="btn btn-primary" id="rm-start">${t("Lancer le test REP MAX")}</button>
     </div>`;
   const count = () => { body.querySelector("#rm-count").textContent = rmPicked.size ? `· ${rmPicked.size}` : ""; };
+  const row = (name) => {
+    const m = maxes[name.trim().toLowerCase()];
+    return `<label class="rm-ex"><input type="checkbox" data-rm-ex="${esc(name)}" ${rmPicked.has(name) ? "checked" : ""}>
+      <span class="rm-ex-name">${esc(name)}</span>
+      <span class="muted rm-ex-cur">${m ? t("RM {kg} kg", { kg: esc(m.rm) }) : ""}</span></label>`;
+  };
+  // Liste : exercices des routines (et cochés) ; en recherche, toute la
+  // bibliothèque (noms français ou anglais, sans accents), cochés en tête.
+  const listEl = body.querySelector("#rm-ex-list");
+  const drawList = () => {
+    const q = rmQuery.trim();
+    let names;
+    if (q.length >= 2 && search) names = search.searchExercises(q, allNames, 40).map(x => x.name);
+    else if (q.length >= 2) names = allNames.filter(n => n.toLowerCase().includes(q.toLowerCase())).slice(0, 40);
+    else names = list.map(c => c.name);
+    // Exercices cochés toujours visibles, en tête.
+    names = [...[...rmPicked].filter(n => !names.includes(n)), ...names];
+    listEl.innerHTML = names.length ? names.map(row).join("")
+      : q.length >= 2 ? `<p class="muted">${t("Aucun exercice trouvé.")}</p><button class="btn btn-secondary btn-compact" id="rm-use-q">+ ${t("Tester « {name} »", { name: esc(q.slice(0, 80)) })}</button>`
+      : `<p class="muted">${t("Aucun exercice dans tes routines : cherche-le ci-dessus.")}</p>`;
+    listEl.querySelectorAll("[data-rm-ex]").forEach(c => c.onchange = () => { if (c.checked) rmPicked.add(c.dataset.rmEx); else rmPicked.delete(c.dataset.rmEx); count(); });
+    const useQ = listEl.querySelector("#rm-use-q");
+    if (useQ) useQ.onclick = () => { rmPicked.add(q.slice(0, 80)); rmQuery = ""; drawRepMaxTab(body); };
+  };
+  const searchEl = body.querySelector("#rm-search");
+  searchEl.oninput = () => { rmQuery = searchEl.value; drawList(); };
+  drawList();
   body.querySelectorAll("[data-rm-method]").forEach(b => b.onclick = () => {
     rmMethod = b.dataset.rmMethod;
     body.querySelectorAll("[data-rm-method]").forEach(x => x.classList.toggle("active", x === b));
   });
-  body.querySelectorAll("[data-rm-ex]").forEach(c => c.onchange = () => { if (c.checked) rmPicked.add(c.dataset.rmEx); else rmPicked.delete(c.dataset.rmEx); count(); });
   body.querySelector("#rm-add-ex").onclick = async () => {
     const { openExercisePicker } = await import("./exercise-picker.js");
     let redraw = null;
@@ -300,7 +332,8 @@ async function drawRepMaxTab(body) {
   };
   body.querySelector("#rm-start").onclick = (e) => {
     if (!rmPicked.size) { toast(t("Coche au moins un exercice à tester.")); return; }
-    startRepMaxWorkout(rmMethod, list.filter(c => rmPicked.has(c.name)), e.currentTarget);
+    rmQuery = "";
+    startRepMaxWorkout(rmMethod, [...rmPicked].map(n => ({ name: n, group: groupOf.get(n) || "" })), e.currentTarget);
   };
   count();
 }
